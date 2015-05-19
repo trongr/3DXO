@@ -7,17 +7,18 @@ window.onload = function(){
 	var mouse, raycaster, isShiftDown = false;
 
 	var rollOverMesh, rollOverMaterial;
-	var cubeGeo, cubeMaterial;
+	var cubeGeo;
 
 	var objects = [];
 
     var rollOverColor = 0xff0000;
-    var boxColor = 0x75E1FF;
     var gridColor = 0x000000;
     // var planeColor = 0xFFEBAD;
     var planeColor = 0xFFEEBD;
     var directionalLightColor = 0xffffff;
     var clearColor = 0xFFF5D6;
+
+    var playerIndex = 0; // 1, 2, 3, 4, etc.
 
 	init();
 	render();
@@ -51,7 +52,6 @@ window.onload = function(){
 		// cubes
 
 		cubeGeo = new THREE.BoxGeometry( 50, 50, 50 );
-		cubeMaterial = new THREE.MeshLambertMaterial( { color:boxColor, shading:THREE.FlatShading, opacity:0.9, transparent:true } );
 
 		// grid
 
@@ -95,7 +95,8 @@ window.onload = function(){
 		// Lights
 
 		var directionalLight = new THREE.DirectionalLight( directionalLightColor );
-		directionalLight.position.set( 1000, 2000, 750 );
+		directionalLight.position.set( 1000, 2000, -750 );
+        directionalLight.intensity = 1.2;
         directionalLight.castShadow = true;
         directionalLight.shadowDarkness = 0.2
         // directionalLight.shadowCameraVisible = true;
@@ -170,50 +171,31 @@ window.onload = function(){
 	}
 
 	function onDocumentMouseDown( event ) {
-
 		event.preventDefault();
-
 		mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
-
 		raycaster.setFromCamera( mouse, camera );
-
 		var intersects = raycaster.intersectObjects( objects );
-
 		if ( intersects.length > 0 ) {
-
 			var intersect = intersects[ 0 ];
-
-			// delete cube
-
 			if ( isShiftDown ) {
-
 				if ( intersect.object != plane ) {
-
 					scene.remove( intersect.object );
-
 					objects.splice( objects.indexOf( intersect.object ), 1 );
-
+                    updateTurn(-1)
 				}
-
-				// create cube
-
 			} else {
-
+                var cubeMaterial = new THREE.MeshLambertMaterial( { color:getPlayerColor(playerIndex), shading:THREE.FlatShading, opacity:0.9, transparent:true } );
 				var voxel = new THREE.Mesh( cubeGeo, cubeMaterial );
 				voxel.position.copy( intersect.point ).add( intersect.face.normal );
 				voxel.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
                 voxel.castShadow = true;
                 voxel.receiveShadow = true;
 				scene.add( voxel );
-
 				objects.push( voxel );
-
+                updateTurn(1)
 			}
-
 			render();
-
 		}
-
 	}
 
 	function onDocumentKeyDown( event ) {
@@ -242,5 +224,14 @@ window.onload = function(){
 
 	}
 
+    var playerColor = [0x75E1FF, 0xD0FF80]
 
+    function getPlayerColor(playerIndex){
+        return playerColor[playerIndex]
+    }
+
+    function updateTurn(incr){
+        playerIndex = (playerIndex + incr + playerColor.length) % playerColor.length
+        console.log(playerIndex)
+    }
 }
