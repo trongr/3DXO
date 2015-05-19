@@ -181,31 +181,37 @@ window.onload = function(){
 	}
 
 	function onDocumentMouseDown( event ) {
-		event.preventDefault();
-		mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
-		raycaster.setFromCamera( mouse, camera );
-		var intersects = raycaster.intersectObjects( objects );
-		if ( intersects.length > 0 ) {
-			var intersect = intersects[ 0 ];
-			if ( isShiftDown ) {
-				if ( intersect.object != plane ) {
-					scene.remove( intersect.object );
-					objects.splice( objects.indexOf( intersect.object ), 1 );
-                    updateTurn(-1)
-				}
-			} else {
-                var cubeMaterial = new THREE.MeshLambertMaterial( { color:getPlayerColor(playerIndex), shading:THREE.FlatShading, opacity:0.9, transparent:true } );
-				var voxel = new THREE.Mesh( cubeGeo, cubeMaterial );
-				voxel.position.copy( intersect.point ).add( intersect.face.normal );
-				voxel.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
-                voxel.castShadow = true;
-                voxel.receiveShadow = true;
-				scene.add( voxel );
-				objects.push( voxel );
-                updateTurn(1)
-			}
-			render();
-		}
+        event.preventDefault();
+        if (event.which == 1){ // left mouse button
+		    mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
+		    raycaster.setFromCamera( mouse, camera );
+		    var intersects = raycaster.intersectObjects( objects );
+		    if ( intersects.length > 0 ) {
+			    var intersect = intersects[ 0 ];
+			    if ( isShiftDown ) {
+				    if ( intersect.object != plane ) {
+					    scene.remove( intersect.object );
+					    objects.splice( objects.indexOf( intersect.object ), 1 );
+                        updateTurn(-1)
+				    }
+			    } else {
+                    var cubeMaterial = new THREE.MeshLambertMaterial( { color:getPlayerColor(playerIndex), shading:THREE.FlatShading, opacity:0.9, transparent:true } );
+				    var voxel = new THREE.Mesh( cubeGeo, cubeMaterial );
+				    voxel.position.copy( intersect.point ).add( intersect.face.normal );
+				    voxel.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
+                    voxel.castShadow = true;
+                    voxel.receiveShadow = true;
+				    scene.add( voxel );
+				    objects.push( voxel );
+                    updateTurn(1)
+			    }
+			    render();
+		    }
+        } else if (event.which == 2){ // middle mouse
+            // using middle
+        } else if (event.which == 3){ // right mouse
+            // and right mouse buttons for navigation
+        }
 	}
 
 	function onDocumentKeyDown( event ) {
