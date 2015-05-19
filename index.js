@@ -1,8 +1,27 @@
+// todo
+// BUGS
+// + adding boxes from the other side of the plane can add them to an existing box
+
 window.onload = function(){
 
-    var log = function(msg, obj){
+    function log(msg, obj){
         if (obj) console.log(new Date() + " " + msg + " " + JSON.stringify(obj, 0, 2))
         else console.log(new Date() + " " + msg)
+    }
+
+    function createDirectionalLight(x, y, z){
+		var directionalLight = new THREE.DirectionalLight( directionalLightColor );
+		directionalLight.position.set(x, y, z);
+        directionalLight.intensity = 1.2;
+        directionalLight.castShadow = true;
+        directionalLight.shadowDarkness = 0.2
+        // directionalLight.shadowCameraVisible = true;
+        // var shadowCamera = 20; // TODO config
+        // directionalLight.shadowCameraLeft = -shadowCamera;
+        // directionalLight.shadowCameraRight = shadowCamera;
+        // directionalLight.shadowCameraTop = shadowCamera;
+        // directionalLight.shadowCameraBottom = -shadowCamera;
+        return directionalLight
     }
 
 	if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
@@ -26,6 +45,8 @@ window.onload = function(){
 
     var playerIndex = 0; // 1, 2, 3, 4, etc.
 
+    var SIZE = 1000
+
 	init();
 	render();
 
@@ -37,13 +58,13 @@ window.onload = function(){
 		var info = document.createElement( 'div' );
 		info.style.position = 'absolute';
 		info.style.top = '10px';
-		info.style.width = '100%';
-		info.style.textAlign = 'center';
-		info.innerHTML = '3DXO<br><strong>click</strong>: add box, <strong>shift + click</strong>: remove box';
+        info.style.right = "10px";
+		info.style.textAlign = 'right';
+		info.innerHTML = '3DXO<br><strong>click</strong>: add box<strong><br>shift + click</strong>: remove box';
 		container.appendChild( info );
 
-		camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
-		camera.position.set( 0, 1000, -450 );
+		camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, SIZE * 4 );
+		camera.position.set( 0, 1000, 0 );
 		camera.lookAt( new THREE.Vector3() );
 
 		controls = new THREE.OrbitControls( camera );
@@ -63,24 +84,19 @@ window.onload = function(){
 
 		cubeGeo = new THREE.BoxGeometry( 50, 50, 50 );
 
-		// grid
+		// grid. TODO let people move the grid up and down like the
+		// other voxel painter, so you can add cubes in different
+		// directions
 
-		var size = 2500, step = 50;
-
+		var step = 50;
 		var geometry = new THREE.Geometry();
-
-		for ( var i = - size; i <= size; i += step ) {
-
-			geometry.vertices.push( new THREE.Vector3( - size, 0, i ) );
-			geometry.vertices.push( new THREE.Vector3(   size, 0, i ) );
-
-			geometry.vertices.push( new THREE.Vector3( i, 0, - size ) );
-			geometry.vertices.push( new THREE.Vector3( i, 0,   size ) );
-
+		for ( var i = - SIZE; i <= SIZE; i += step ) {
+			geometry.vertices.push( new THREE.Vector3( - SIZE, 0, i ) );
+			geometry.vertices.push( new THREE.Vector3(   SIZE, 0, i ) );
+			geometry.vertices.push( new THREE.Vector3( i, 0, - SIZE ) );
+			geometry.vertices.push( new THREE.Vector3( i, 0,   SIZE ) );
 		}
-
 		var material = new THREE.LineBasicMaterial( { color:gridColor, opacity: 0.2, transparent: true } );
-
 		var line = new THREE.Line( geometry, material, THREE.LinePieces );
 		scene.add( line );
 
@@ -89,33 +105,25 @@ window.onload = function(){
 		raycaster = new THREE.Raycaster();
 		mouse = new THREE.Vector2();
 
-		var geometry = new THREE.PlaneBufferGeometry( 1000, 1000 );
-        // var planeMaterial = new THREE.MeshLambertMaterial( {color:planeColor, shading:THREE.FlatShading, reflectivity:0.5 } );
-        var planeMaterial = new THREE.MeshPhongMaterial( {color:planeColor, shading:THREE.FlatShading, reflectivity:0.5 } );
-		geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+        // TODO. remove plane and grid. add starter cube
 
+		var geometry = new THREE.PlaneBufferGeometry( SIZE, SIZE );
+        // var planeMaterial = new THREE.MeshLambertMaterial( {color:planeColor, shading:THREE.FlatShading, reflectivity:0.5 } );
+        // var planeMaterial = new THREE.MeshPhongMaterial( {color:planeColor, shading:THREE.FlatShading, reflectivity:0.5 } );
+        var planeMaterial = new THREE.MeshPhongMaterial( {side:THREE.DoubleSide} );
+		geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
 		plane = new THREE.Mesh( geometry, planeMaterial );
-		plane.visible = true;
-        plane.castShadow = true;
-        plane.receiveShadow = true;
+		plane.visible = false;
+        // plane.castShadow = true;
+        // plane.receiveShadow = true;
 		scene.add( plane );
 
 		objects.push( plane );
 
 		// Lights
 
-		var directionalLight = new THREE.DirectionalLight( directionalLightColor );
-		directionalLight.position.set( 1000, 2000, -750 );
-        directionalLight.intensity = 1.2;
-        directionalLight.castShadow = true;
-        directionalLight.shadowDarkness = 0.2
-        // directionalLight.shadowCameraVisible = true;
-        // var shadowCamera = 20; // TODO config
-        // directionalLight.shadowCameraLeft = -shadowCamera;
-        // directionalLight.shadowCameraRight = shadowCamera;
-        // directionalLight.shadowCameraTop = shadowCamera;
-        // directionalLight.shadowCameraBottom = -shadowCamera;
-		scene.add( directionalLight );
+        scene.add(createDirectionalLight(1000, 2000, -750));
+		scene.add(createDirectionalLight(-1000, -2000, 750));
 
 		renderer = new THREE.WebGLRenderer( { antialias: true, alpha:true } );
 		renderer.setClearColor( clearColor, 1 );
@@ -146,6 +154,11 @@ window.onload = function(){
 
 		window.addEventListener( 'resize', onWindowResize, false );
 
+        stats = new Stats();
+		stats.domElement.style.position = 'absolute';
+		stats.domElement.style.top = '0px';
+		stats.domElement.style.zIndex = 100;
+		container.appendChild( stats.domElement );
 	}
 
 	function onWindowResize() {
@@ -236,7 +249,7 @@ window.onload = function(){
 
 	function render() {
 		renderer.render( scene, camera );
-        // stats.update()
+        stats.update()
 	}
 
     var playerColor = [0x75E1FF, 0xD0FF80]
