@@ -1,4 +1,10 @@
 window.onload = function(){
+
+    var log = function(msg, obj){
+        if (obj) console.log(new Date() + " " + msg + " " + JSON.stringify(obj, 0, 2))
+        else console.log(new Date() + " " + msg)
+    }
+
 	if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
 	var container;
@@ -39,6 +45,10 @@ window.onload = function(){
 		camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
 		camera.position.set( 0, 1000, -450 );
 		camera.lookAt( new THREE.Vector3() );
+
+		controls = new THREE.OrbitControls( camera );
+		controls.damping = 0.2;
+		controls.addEventListener( 'change', render );
 
 		scene = new THREE.Scene();
 
@@ -219,9 +229,8 @@ window.onload = function(){
 	}
 
 	function render() {
-
 		renderer.render( scene, camera );
-
+        // stats.update()
 	}
 
     var playerColor = [0x75E1FF, 0xD0FF80]
@@ -231,7 +240,25 @@ window.onload = function(){
     }
 
     function updateTurn(incr){
+        msg.info("Player " + playerIndex)
         playerIndex = (playerIndex + incr + playerColor.length) % playerColor.length
-        console.log(playerIndex)
     }
+
+    // stats.js
+    // var stats = new Stats();
+    // stats.setMode(0); // 0: fps, 1: ms
+
+    // // align top-left
+    // stats.domElement.style.position = 'absolute';
+    // stats.domElement.style.left = '0px';
+    // stats.domElement.style.top = '0px';
+
+    // document.body.appendChild( stats.domElement );
+
+    // var update = function () {
+    //     requestAnimationFrame( update );
+    // };
+
+    // requestAnimationFrame( update );
+
 }
