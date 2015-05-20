@@ -75,7 +75,7 @@ window.onload = function(){
 		info.innerHTML = '3DXO<br><strong>click</strong>: add box<strong><br>shift + click</strong>: remove box';
 		container.appendChild( info );
 
-		camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, BOARD_SIZE * 4 );
+		camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, BOARD_SIZE * 10 );
 		camera.position.set( 0, 1000, 0 );
 		camera.lookAt( new THREE.Vector3() );
 
@@ -111,10 +111,15 @@ window.onload = function(){
 		var line = new THREE.Line( geometry, material, THREE.LinePieces );
 		scene.add( line );
 
-		//
-
-		raycaster = new THREE.Raycaster();
-		mouse = new THREE.Vector2();
+        var geometry = new THREE.PlaneBufferGeometry( BOARD_SIZE * 2, BOARD_SIZE * 2 );
+        var planeMaterial = new THREE.MeshPhongMaterial( {color:planeColor, shading:THREE.FlatShading, reflectivity:0.5 } );
+		geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+		plane = new THREE.Mesh( geometry, planeMaterial );
+		plane.visible = true;
+        plane.position.add(new THREE.Vector3(0, gridYOffset, 0))
+        // plane.castShadow = true;
+        plane.receiveShadow = true;
+		scene.add( plane );
 
         var startCubeSize = 3; // 3X3X3
         for ( var x = 0; x < CUBE_SIZE * startCubeSize; x += CUBE_SIZE ) {
@@ -126,6 +131,9 @@ window.onload = function(){
                 }
             }
 		}
+
+        raycaster = new THREE.Raycaster();
+		mouse = new THREE.Vector2();
 
 		// Lights
 
