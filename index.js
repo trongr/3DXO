@@ -1,43 +1,9 @@
-// todo
-// BUGS
-// + adding boxes from the other side of the plane can add them to an existing box
-
 window.onload = function(){
-
-    function log(msg, obj){
-        if (obj) console.log(new Date() + " " + msg + " " + JSON.stringify(obj, 0, 2))
-        else console.log(new Date() + " " + msg)
-    }
-
-    function createDirectionalLight(x, y, z){
-		var directionalLight = new THREE.DirectionalLight( directionalLightColor );
-		directionalLight.position.set(x, y, z);
-        directionalLight.intensity = 1.2;
-        directionalLight.castShadow = true;
-        directionalLight.shadowDarkness = 0.2
-        // directionalLight.shadowCameraVisible = true;
-        // var shadowCamera = 20; // TODO config
-        // directionalLight.shadowCameraLeft = -shadowCamera;
-        // directionalLight.shadowCameraRight = shadowCamera;
-        // directionalLight.shadowCameraTop = shadowCamera;
-        // directionalLight.shadowCameraBottom = -shadowCamera;
-        return directionalLight
-    }
-
-    function createBox(position, playerIndex){
-        var cubeMaterial = new THREE.MeshLambertMaterial( { color:getPlayerColor(playerIndex), shading:THREE.FlatShading, opacity:0.9, transparent:true } );
-		var voxel = new THREE.Mesh( CUBE_GEO, cubeMaterial );
-		voxel.position.copy(position);
-		voxel.position.divideScalar( CUBE_SIZE ).floor().multiplyScalar( CUBE_SIZE ).addScalar( CUBE_SIZE / 2 );
-        voxel.castShadow = true;
-        voxel.receiveShadow = true;
-        return voxel
-    }
-
 	if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
-	var container;
-	var camera, scene, renderer;
+	var container, stats;
+	var camera, controls, scene, renderer;
+
 	var plane, cube;
 	var mouse, raycaster, isShiftDown = false;
 
@@ -47,43 +13,49 @@ window.onload = function(){
 
     var rollOverColor = 0xff0000;
     var gridColor = 0x000000;
-    // var planeColor = 0xFFEBAD;
     var planeColor = 0xFFEEBD;
     var directionalLightColor = 0xffffff;
     var clearColor = 0xFFF5D6;
 
+    var WALL_MATERIAL = new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5});
     var playerIndex = 0; // 1, 2, 3, 4, etc.
-    var playerColor = [0x75E1FF, 0xD0FF80]
+    var PLAYER_MATERIAL = [
+        new THREE.MeshLambertMaterial({color:0x75E1FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
+        new THREE.MeshLambertMaterial({color:0xD0FF80, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
+    ]
 
     var BOARD_SIZE = 1000
     var CUBE_SIZE = 50
 	var CUBE_GEO = new THREE.BoxGeometry( CUBE_SIZE, CUBE_SIZE, CUBE_SIZE );
 
 	init();
-	render();
+	animate();
 
 	function init() {
-
 		container = document.createElement( 'div' );
 		document.body.appendChild( container );
 
-		var info = document.createElement( 'div' );
-		info.style.position = 'absolute';
-		info.style.top = '10px';
-        info.style.right = "10px";
-		info.style.textAlign = 'right';
-		info.innerHTML = '3DXO<br><strong>click</strong>: add box<strong><br>shift + click</strong>: remove box';
-		container.appendChild( info );
+        raycaster = new THREE.Raycaster();
+		mouse = new THREE.Vector2();
 
-		camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, BOARD_SIZE * 10 );
-		camera.position.set( 0, 1000, 0 );
-		camera.lookAt( new THREE.Vector3() );
+		camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, BOARD_SIZE * 10 );
+		camera.position.z = 750; // for some reason you need this or track ball controls won't work properly
 
-		controls = new THREE.OrbitControls( camera );
-		controls.damping = 0.2;
+		controls = new THREE.TrackballControls( camera );
+		controls.rotateSpeed = 2.5;
+		controls.zoomSpeed = 1.5;
+		controls.panSpeed = 1.0;
+		controls.noZoom = false;
+		controls.noPan = false;
+		controls.staticMoving = true;
+		controls.dynamicDampingFactor = 0.3;
+		controls.keys = [ 65, 83, 68 ];
 		controls.addEventListener( 'change', render );
 
+		// world
+
 		scene = new THREE.Scene();
+		// scene.fog = new THREE.FogExp2( 0xcccccc, 0.002 );
 
 		// roll-over helpers
 
@@ -94,53 +66,27 @@ window.onload = function(){
 
 		// cubes
 
-		// grid. TODO let people move the grid up and down like the
-		// other voxel painter, so you can add cubes in different
-		// directions
-
-		var step = CUBE_SIZE;
-		var geometry = new THREE.Geometry();
-        var gridYOffset = -1000;
-		for ( var i = - BOARD_SIZE; i <= BOARD_SIZE; i += step ) {
-			geometry.vertices.push( new THREE.Vector3( - BOARD_SIZE, gridYOffset, i ) );
-			geometry.vertices.push( new THREE.Vector3(   BOARD_SIZE, gridYOffset, i ) );
-			geometry.vertices.push( new THREE.Vector3( i, gridYOffset, - BOARD_SIZE ) );
-			geometry.vertices.push( new THREE.Vector3( i, gridYOffset,   BOARD_SIZE ) );
-		}
-		var material = new THREE.LineBasicMaterial( { color:gridColor, opacity: 0.2, transparent: true } );
-		var line = new THREE.Line( geometry, material, THREE.LinePieces );
-		scene.add( line );
-
-        var geometry = new THREE.PlaneBufferGeometry( BOARD_SIZE * 2, BOARD_SIZE * 2 );
-        var planeMaterial = new THREE.MeshPhongMaterial( {color:planeColor, shading:THREE.FlatShading, reflectivity:0.5 } );
-		geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
-		plane = new THREE.Mesh( geometry, planeMaterial );
-		plane.visible = true;
-        plane.position.add(new THREE.Vector3(0, gridYOffset, 0))
-        // plane.castShadow = true;
-        plane.receiveShadow = true;
-		scene.add( plane );
-
-        var startCubeSize = 3; // 3X3X3
-        for ( var x = 0; x < CUBE_SIZE * startCubeSize; x += CUBE_SIZE ) {
-            for (var y = 0; y < CUBE_SIZE * startCubeSize; y += CUBE_SIZE){
-                for (var z = 0; z < CUBE_SIZE * startCubeSize; z += CUBE_SIZE){
-                    var starterBox = createBox(new THREE.Vector3(x, y, z), null) // null will create a default white cube
+        var starterCubeSize = 2; // 3X3X3
+        for ( var x = -CUBE_SIZE * starterCubeSize; x < CUBE_SIZE * starterCubeSize; x += CUBE_SIZE ) {
+            for (var y = -CUBE_SIZE * starterCubeSize; y < CUBE_SIZE * starterCubeSize; y += CUBE_SIZE){
+                for (var z = -CUBE_SIZE * starterCubeSize; z < CUBE_SIZE * starterCubeSize; z += CUBE_SIZE){
+                    var starterBox = createBox(new THREE.Vector3(x, y, z), WALL_MATERIAL) // null will create a default white cube
                     scene.add(starterBox)
                     objects.push(starterBox)
                 }
             }
 		}
 
-        raycaster = new THREE.Raycaster();
-		mouse = new THREE.Vector2();
-
 		// Lights
 
-        scene.add(createDirectionalLight(1000, 2000, -750));
-		scene.add(createDirectionalLight(-1000, -2000, 750));
+        scene.add(createDirectionalLight(1000, 750, 2000));
+		scene.add(createDirectionalLight(-1000, -750, -2000));
+		scene.add(createDirectionalLight(-2000, 1000, 0));
+		scene.add(createDirectionalLight(1000, -2000, 750));
 
-		renderer = new THREE.WebGLRenderer( { antialias: true, alpha:true } );
+		// renderer
+
+		renderer = new THREE.WebGLRenderer( { antialias:false, alpha:true } );
 		renderer.setClearColor( clearColor, 1 );
 		renderer.setPixelRatio( window.devicePixelRatio );
 		renderer.setSize( window.innerWidth, window.innerHeight );
@@ -152,7 +98,7 @@ window.onload = function(){
         renderer.shadowCameraFar = camera.far;
         renderer.shadowCameraFov = 45;
 
-        renderer.shadowMapType = THREE.PCFSoftShadowMap; // options are THREE.BasicShadowMap | THREE.PCFShadowMap | THREE.PCFSoftShadowMap
+        renderer.shadowMapType = THREE.PCFSoftShadowMap;
         renderer.shadowMapBias = 0.0039;
         renderer.shadowMapDarkness = 0.5;
         renderer.shadowMapWidth = 1024;
@@ -160,29 +106,28 @@ window.onload = function(){
 
 		container.appendChild( renderer.domElement );
 
-		document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-		document.addEventListener( 'mousedown', onDocumentMouseDown, false );
-		document.addEventListener( 'keydown', onDocumentKeyDown, false );
-		document.addEventListener( 'keyup', onDocumentKeyUp, false );
+		var info = document.createElement( 'div' );
+		info.style.position = 'absolute';
+		info.style.top = '10px';
+        info.style.right = "10px";
+		info.style.textAlign = 'right';
+		info.innerHTML = '3DXO<br><strong>click</strong>: add box<strong><br>shift + click</strong>: remove box';
+		container.appendChild( info );
 
-		//
-
-		window.addEventListener( 'resize', onWindowResize, false );
-
-        stats = new Stats();
+		stats = new Stats();
 		stats.domElement.style.position = 'absolute';
 		stats.domElement.style.top = '0px';
 		stats.domElement.style.zIndex = 100;
 		container.appendChild( stats.domElement );
-	}
 
-	function onWindowResize() {
+		document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+		document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+		document.addEventListener( 'keydown', onDocumentKeyDown, false );
+		document.addEventListener( 'keyup', onDocumentKeyUp, false );
+		window.addEventListener( 'resize', onWindowResize, false );
+		window.addEventListener( 'resize', onWindowResize, false );
 
-		camera.aspect = window.innerWidth / window.innerHeight;
-		camera.updateProjectionMatrix();
-
-		renderer.setSize( window.innerWidth, window.innerHeight );
-
+		render();
 	}
 
 	function onDocumentMouseMove( event ) {
@@ -214,7 +159,7 @@ window.onload = function(){
 				    }
 			    } else {
                     var newPosition = new THREE.Vector3().copy(intersect.point).add(intersect.face.normal)
-                    var voxel = createBox(newPosition, playerIndex)
+                    var voxel = createBox(newPosition, getPlayerMaterial(playerIndex))
 				    scene.add( voxel );
 				    objects.push( voxel );
                     updateTurn(1)
@@ -229,37 +174,65 @@ window.onload = function(){
 	}
 
 	function onDocumentKeyDown( event ) {
-
 		switch( event.keyCode ) {
-
 		case 16: isShiftDown = true; break;
-
 		}
-
 	}
 
 	function onDocumentKeyUp( event ) {
-
 		switch ( event.keyCode ) {
-
 		case 16: isShiftDown = false; break;
-
 		}
+	}
 
+	function onWindowResize() {
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+		renderer.setSize( window.innerWidth, window.innerHeight );
+		controls.handleResize();
+		render();
+	}
+
+	function animate() {
+		requestAnimationFrame( animate );
+		controls.update();
 	}
 
 	function render() {
 		renderer.render( scene, camera );
-        stats.update()
+		stats.update();
 	}
 
-    function getPlayerColor(playerIndex){
-        return playerColor[playerIndex]
+    function createDirectionalLight(x, y, z){
+		var directionalLight = new THREE.DirectionalLight( directionalLightColor );
+		directionalLight.position.set(x, y, z);
+        directionalLight.intensity = 1.2;
+        directionalLight.castShadow = true;
+        directionalLight.shadowDarkness = 0.2
+        return directionalLight
+    }
+
+    function createBox(position, material){
+		var voxel = new THREE.Mesh( CUBE_GEO, material );
+		voxel.position.copy(position);
+		voxel.position.divideScalar( CUBE_SIZE ).floor().multiplyScalar( CUBE_SIZE ).addScalar( CUBE_SIZE / 2 );
+        voxel.castShadow = true;
+        voxel.receiveShadow = true;
+        return voxel
+    }
+
+    function getPlayerMaterial(playerIndex){
+        return PLAYER_MATERIAL[playerIndex]
     }
 
     function updateTurn(incr){
         msg.info("Player " + playerIndex)
-        playerIndex = (playerIndex + incr + playerColor.length) % playerColor.length
+        playerIndex = (playerIndex + incr + PLAYER_MATERIAL.length) % PLAYER_MATERIAL.length
+    }
+
+    function log(msg, obj){
+        if (obj) console.log(new Date() + " " + msg + " " + JSON.stringify(obj, 0, 2))
+        else console.log(new Date() + " " + msg)
     }
 
 }
