@@ -24,6 +24,16 @@ window.onload = function(){
         return directionalLight
     }
 
+    function createBox(position, playerIndex){
+        var cubeMaterial = new THREE.MeshLambertMaterial( { color:getPlayerColor(playerIndex), shading:THREE.FlatShading, opacity:0.9, transparent:true } );
+		var voxel = new THREE.Mesh( CUBE_GEO, cubeMaterial );
+		voxel.position.copy(position);
+		voxel.position.divideScalar( CUBE_SIZE ).floor().multiplyScalar( CUBE_SIZE ).addScalar( CUBE_SIZE / 2 );
+        voxel.castShadow = true;
+        voxel.receiveShadow = true;
+        return voxel
+    }
+
 	if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
 	var container;
@@ -32,7 +42,6 @@ window.onload = function(){
 	var mouse, raycaster, isShiftDown = false;
 
 	var rollOverMesh, rollOverMaterial;
-	var cubeGeo;
 
 	var objects = [];
 
@@ -44,8 +53,11 @@ window.onload = function(){
     var clearColor = 0xFFF5D6;
 
     var playerIndex = 0; // 1, 2, 3, 4, etc.
+    var playerColor = [0x75E1FF, 0xD0FF80]
 
-    var SIZE = 1000
+    var BOARD_SIZE = 1000
+    var CUBE_SIZE = 50
+	var CUBE_GEO = new THREE.BoxGeometry( CUBE_SIZE, CUBE_SIZE, CUBE_SIZE );
 
 	init();
 	render();
@@ -63,7 +75,7 @@ window.onload = function(){
 		info.innerHTML = '3DXO<br><strong>click</strong>: add box<strong><br>shift + click</strong>: remove box';
 		container.appendChild( info );
 
-		camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, SIZE * 4 );
+		camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, BOARD_SIZE * 4 );
 		camera.position.set( 0, 1000, 0 );
 		camera.lookAt( new THREE.Vector3() );
 
@@ -75,26 +87,25 @@ window.onload = function(){
 
 		// roll-over helpers
 
-		rollOverGeo = new THREE.BoxGeometry( 50, 50, 50 );
+		rollOverGeo = new THREE.BoxGeometry( CUBE_SIZE, CUBE_SIZE, CUBE_SIZE );
 		rollOverMaterial = new THREE.MeshBasicMaterial( { color:rollOverColor, opacity: 0.5, transparent: true } );
 		rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
 		scene.add( rollOverMesh );
 
 		// cubes
 
-		cubeGeo = new THREE.BoxGeometry( 50, 50, 50 );
-
 		// grid. TODO let people move the grid up and down like the
 		// other voxel painter, so you can add cubes in different
 		// directions
 
-		var step = 50;
+		var step = CUBE_SIZE;
 		var geometry = new THREE.Geometry();
-		for ( var i = - SIZE; i <= SIZE; i += step ) {
-			geometry.vertices.push( new THREE.Vector3( - SIZE, 0, i ) );
-			geometry.vertices.push( new THREE.Vector3(   SIZE, 0, i ) );
-			geometry.vertices.push( new THREE.Vector3( i, 0, - SIZE ) );
-			geometry.vertices.push( new THREE.Vector3( i, 0,   SIZE ) );
+        var gridYOffset = -1000;
+		for ( var i = - BOARD_SIZE; i <= BOARD_SIZE; i += step ) {
+			geometry.vertices.push( new THREE.Vector3( - BOARD_SIZE, gridYOffset, i ) );
+			geometry.vertices.push( new THREE.Vector3(   BOARD_SIZE, gridYOffset, i ) );
+			geometry.vertices.push( new THREE.Vector3( i, gridYOffset, - BOARD_SIZE ) );
+			geometry.vertices.push( new THREE.Vector3( i, gridYOffset,   BOARD_SIZE ) );
 		}
 		var material = new THREE.LineBasicMaterial( { color:gridColor, opacity: 0.2, transparent: true } );
 		var line = new THREE.Line( geometry, material, THREE.LinePieces );
@@ -105,20 +116,16 @@ window.onload = function(){
 		raycaster = new THREE.Raycaster();
 		mouse = new THREE.Vector2();
 
-        // TODO. remove plane and grid. add starter cube
-
-		var geometry = new THREE.PlaneBufferGeometry( SIZE, SIZE );
-        // var planeMaterial = new THREE.MeshLambertMaterial( {color:planeColor, shading:THREE.FlatShading, reflectivity:0.5 } );
-        // var planeMaterial = new THREE.MeshPhongMaterial( {color:planeColor, shading:THREE.FlatShading, reflectivity:0.5 } );
-        var planeMaterial = new THREE.MeshPhongMaterial( {side:THREE.DoubleSide} );
-		geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
-		plane = new THREE.Mesh( geometry, planeMaterial );
-		plane.visible = false;
-        // plane.castShadow = true;
-        // plane.receiveShadow = true;
-		scene.add( plane );
-
-		objects.push( plane );
+        var startCubeSize = 3; // 3X3X3
+        for ( var x = 0; x < CUBE_SIZE * startCubeSize; x += CUBE_SIZE ) {
+            for (var y = 0; y < CUBE_SIZE * startCubeSize; y += CUBE_SIZE){
+                for (var z = 0; z < CUBE_SIZE * startCubeSize; z += CUBE_SIZE){
+                    var starterBox = createBox(new THREE.Vector3(x, y, z), null) // null will create a default white cube
+                    scene.add(starterBox)
+                    objects.push(starterBox)
+                }
+            }
+		}
 
 		// Lights
 
@@ -171,26 +178,16 @@ window.onload = function(){
 	}
 
 	function onDocumentMouseMove( event ) {
-
 		event.preventDefault();
-
 		mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
-
 		raycaster.setFromCamera( mouse, camera );
-
 		var intersects = raycaster.intersectObjects( objects );
-
 		if ( intersects.length > 0 ) {
-
 			var intersect = intersects[ 0 ];
-
 			rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal );
-			rollOverMesh.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
-
+			rollOverMesh.position.divideScalar( CUBE_SIZE ).floor().multiplyScalar( CUBE_SIZE ).addScalar( CUBE_SIZE / 2 );
 		}
-
 		render();
-
 	}
 
 	function onDocumentMouseDown( event ) {
@@ -208,12 +205,8 @@ window.onload = function(){
                         updateTurn(-1)
 				    }
 			    } else {
-                    var cubeMaterial = new THREE.MeshLambertMaterial( { color:getPlayerColor(playerIndex), shading:THREE.FlatShading, opacity:0.9, transparent:true } );
-				    var voxel = new THREE.Mesh( cubeGeo, cubeMaterial );
-				    voxel.position.copy( intersect.point ).add( intersect.face.normal );
-				    voxel.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
-                    voxel.castShadow = true;
-                    voxel.receiveShadow = true;
+                    var newPosition = new THREE.Vector3().copy(intersect.point).add(intersect.face.normal)
+                    var voxel = createBox(newPosition, playerIndex)
 				    scene.add( voxel );
 				    objects.push( voxel );
                     updateTurn(1)
@@ -252,8 +245,6 @@ window.onload = function(){
         stats.update()
 	}
 
-    var playerColor = [0x75E1FF, 0xD0FF80]
-
     function getPlayerColor(playerIndex){
         return playerColor[playerIndex]
     }
@@ -262,22 +253,5 @@ window.onload = function(){
         msg.info("Player " + playerIndex)
         playerIndex = (playerIndex + incr + playerColor.length) % playerColor.length
     }
-
-    // stats.js
-    // var stats = new Stats();
-    // stats.setMode(0); // 0: fps, 1: ms
-
-    // // align top-left
-    // stats.domElement.style.position = 'absolute';
-    // stats.domElement.style.left = '0px';
-    // stats.domElement.style.top = '0px';
-
-    // document.body.appendChild( stats.domElement );
-
-    // var update = function () {
-    //     requestAnimationFrame( update );
-    // };
-
-    // requestAnimationFrame( update );
 
 }
