@@ -51,6 +51,7 @@ window.onload = function(){
 		controls.dynamicDampingFactor = 0.3;
 		controls.keys = [ 65, 83, 68 ];
 		controls.addEventListener( 'change', render );
+        document.addEventListener( 'mousemove', controls.update.bind( controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
 
 		// world
 
@@ -195,7 +196,7 @@ window.onload = function(){
 
 	function animate() {
 		requestAnimationFrame( animate );
-		controls.update();
+		// controls.update(); // NOTE. see: document.addEventListener( 'mousemove', controls.update.bind( controls ), false );
 	}
 
 	function render() {
