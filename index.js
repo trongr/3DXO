@@ -198,7 +198,7 @@ window.onload = function(){
 
 	function animate() {
 		requestAnimationFrame( animate );
-		// controls.update(); // NOTE. see: document.addEventListener( 'mousemove', controls.update.bind( controls ), false );
+		controls.update(); // use this too cause zooming's weird without it
 	}
 
 	function render() {
