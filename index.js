@@ -1,3 +1,6 @@
+// TODO center board on keypress
+// keyboard box placement
+// ambient light
 window.onload = function(){
 	if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
@@ -124,7 +127,6 @@ window.onload = function(){
 		document.addEventListener( 'mousedown', onDocumentMouseDown, false );
 		document.addEventListener( 'keydown', onDocumentKeyDown, false );
 		document.addEventListener( 'keyup', onDocumentKeyUp, false );
-		window.addEventListener( 'resize', onWindowResize, false );
 		window.addEventListener( 'resize', onWindowResize, false );
 
 		render();
