@@ -13,9 +13,9 @@ window.onload = function(){
 	var objects = [];
 
     var playerIndex = 0; // 1, 2, 3, 4, etc.
-    var PLAYER_MATERIAL = [
-        new THREE.MeshLambertMaterial({color:0x3392FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
-        new THREE.MeshLambertMaterial({color:0x74FF33, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
+    var PLAYER_COLORS = [
+        0x3392FF,
+        0x74FF33,
     ]
 
     var BOARD_SIZE = 1000
@@ -74,7 +74,7 @@ window.onload = function(){
 
     function initRollOver(scene){
 		var rollOverGeo = new THREE.BoxGeometry( CUBE_SIZE, CUBE_SIZE, CUBE_SIZE );
-		var rollOverMaterial = new THREE.MeshBasicMaterial( { color:0xff0000, opacity: 0.5, transparent: true } );
+		var rollOverMaterial = new THREE.MeshBasicMaterial( { color:PLAYER_COLORS[0], opacity: 0.5, transparent: true } );
 		rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
 		scene.add( rollOverMesh );
     }
@@ -158,6 +158,7 @@ window.onload = function(){
 		var intersects = raycaster.intersectObjects( objects );
 		if ( intersects.length > 0 ) {
 			var intersect = intersects[ 0 ];
+            // mk
 			rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal );
 			rollOverMesh.position.divideScalar( CUBE_SIZE ).floor().multiplyScalar( CUBE_SIZE ).addScalar( CUBE_SIZE / 2 );
 		}
@@ -183,6 +184,7 @@ window.onload = function(){
 				    objects.push( voxel );
                     updateTurn(1)
 			    }
+                changeRolloverColor(playerIndex)
 			    render();
 		    }
         } else if (event.which == 2){ // middle mouse
@@ -241,12 +243,22 @@ window.onload = function(){
     }
 
     function getPlayerMaterial(playerIndex){
-        return PLAYER_MATERIAL[playerIndex]
+        return new THREE.MeshLambertMaterial({
+            color:PLAYER_COLORS[playerIndex],
+            shading:THREE.FlatShading,
+            opacity:1,
+            transparent:false,
+            side:THREE.DoubleSide
+        })
     }
 
     function updateTurn(incr){
         msg.info("Player " + playerIndex)
-        playerIndex = (playerIndex + incr + PLAYER_MATERIAL.length) % PLAYER_MATERIAL.length
+        playerIndex = (playerIndex + incr + PLAYER_COLORS.length) % PLAYER_COLORS.length
+    }
+
+    function changeRolloverColor(playerIndex){
+        rollOverMesh.material.color = getPlayerMaterial(playerIndex).color
     }
 
     function log(msg, obj){
