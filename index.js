@@ -1,26 +1,17 @@
 // TODO center board on keypress
 // keyboard box placement
-// ambient light
 window.onload = function(){
 	if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
-	var container, stats;
+	var stats;
 	var camera, controls, scene, renderer;
 
-	var plane, cube;
 	var mouse, raycaster, isShiftDown = false;
 
-	var rollOverMesh, rollOverMaterial;
+	var rollOverMesh;
 
 	var objects = [];
 
-    var rollOverColor = 0xff0000;
-    var gridColor = 0x000000;
-    var planeColor = 0xFFEEBD;
-    var directionalLightColor = 0xFFFB87;
-    var clearColor = 0x02002B;
-
-    var WALL_MATERIAL = new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5});
     var playerIndex = 0; // 1, 2, 3, 4, etc.
     var PLAYER_MATERIAL = [
         new THREE.MeshLambertMaterial({color:0x3392FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
@@ -35,12 +26,36 @@ window.onload = function(){
 	animate();
 
 	function init() {
-		container = document.createElement( 'div' );
-		document.body.appendChild( container );
-
         raycaster = new THREE.Raycaster();
 		mouse = new THREE.Vector2();
 
+        var container = initContainer()
+        initStats(container)
+        initInfo(container)
+
+        scene = initScene()
+
+        initLights(scene)
+        initCamera()
+        initListeners()
+
+        initRenderer(container)
+	}
+
+    function initScene(){
+        var scene = new THREE.Scene();
+        initRollOver(scene)
+        initStarterCubes(scene, objects)
+        return scene
+    }
+
+    function initContainer(){
+		var container = document.createElement( 'div' );
+		document.body.appendChild( container );
+        return container
+    }
+
+    function initCamera(){
 		camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, BOARD_SIZE * 10 );
 		camera.position.z = 600; // for some reason you need this or track ball controls won't work properly
 
@@ -55,44 +70,39 @@ window.onload = function(){
 		controls.keys = [ 65, 83, 68 ];
 		controls.addEventListener( 'change', render );
         document.addEventListener( 'mousemove', controls.update.bind( controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
+    }
 
-		// world
-
-		scene = new THREE.Scene();
-		// scene.fog = new THREE.FogExp2( 0xcccccc, 0.002 );
-
-		// roll-over helpers
-
-		rollOverGeo = new THREE.BoxGeometry( CUBE_SIZE, CUBE_SIZE, CUBE_SIZE );
-		rollOverMaterial = new THREE.MeshBasicMaterial( { color:rollOverColor, opacity: 0.5, transparent: true } );
+    function initRollOver(scene){
+		var rollOverGeo = new THREE.BoxGeometry( CUBE_SIZE, CUBE_SIZE, CUBE_SIZE );
+		var rollOverMaterial = new THREE.MeshBasicMaterial( { color:0xff0000, opacity: 0.5, transparent: true } );
 		rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
 		scene.add( rollOverMesh );
+    }
 
-		// cubes
-
-        var starterCubeSize = 2; // 3X3X3
+    function initStarterCubes(scene, objects){
+        var wallMat = new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5});
+        var starterCubeSize = 2; // 4 by 4 by 4
         for ( var x = -CUBE_SIZE * starterCubeSize; x < CUBE_SIZE * starterCubeSize; x += CUBE_SIZE ) {
             for (var y = -CUBE_SIZE * starterCubeSize; y < CUBE_SIZE * starterCubeSize; y += CUBE_SIZE){
                 for (var z = -CUBE_SIZE * starterCubeSize; z < CUBE_SIZE * starterCubeSize; z += CUBE_SIZE){
-                    var starterBox = createBox(new THREE.Vector3(x, y, z), WALL_MATERIAL) // null will create a default white cube
+                    var starterBox = createBox(new THREE.Vector3(x, y, z), wallMat)
                     scene.add(starterBox)
                     objects.push(starterBox)
                 }
             }
 		}
+    }
 
-		// Lights
-
-        var light = new THREE.AmbientLight(0xB080D1);
-        scene.add( light );
-
+    function initLights(scene){
+        var ambientLight = new THREE.AmbientLight(0xB080D1);
+        scene.add(ambientLight);
         scene.add(createDirectionalLight(500, 1000, 1500));
         scene.add(createDirectionalLight(-500, -1000, -1500));
+    }
 
-		// renderer
-
+    function initRenderer(container){
 		renderer = new THREE.WebGLRenderer( { antialias:false, alpha:true } );
-		renderer.setClearColor( clearColor, 1 );
+		renderer.setClearColor(0x02002B, 1);
 		renderer.setPixelRatio( window.devicePixelRatio );
 		renderer.setSize( window.innerWidth, window.innerHeight );
 
@@ -111,28 +121,35 @@ window.onload = function(){
 
 		container.appendChild( renderer.domElement );
 
+        render();
+    }
+
+    function initListeners(){
+		document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+		document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+		document.addEventListener( 'keydown', onDocumentKeyDown, false );
+		document.addEventListener( 'keyup', onDocumentKeyUp, false );
+		window.addEventListener( 'resize', onWindowResize, false );
+    }
+
+    function initInfo(container){
 		var info = document.createElement( 'div' );
+        info.style.color = "white"
 		info.style.position = 'absolute';
 		info.style.top = '10px';
         info.style.right = "10px";
 		info.style.textAlign = 'right';
 		info.innerHTML = '3DXO<br><strong>click</strong>: add box<strong><br>shift + click</strong>: remove box';
 		container.appendChild( info );
+    }
 
+    function initStats(container){
 		stats = new Stats();
 		stats.domElement.style.position = 'absolute';
 		stats.domElement.style.top = '0px';
 		stats.domElement.style.zIndex = 100;
 		container.appendChild( stats.domElement );
-
-		document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-		document.addEventListener( 'mousedown', onDocumentMouseDown, false );
-		document.addEventListener( 'keydown', onDocumentKeyDown, false );
-		document.addEventListener( 'keyup', onDocumentKeyUp, false );
-		window.addEventListener( 'resize', onWindowResize, false );
-
-		render();
-	}
+    }
 
 	function onDocumentMouseMove( event ) {
 		event.preventDefault();
@@ -156,11 +173,9 @@ window.onload = function(){
 		    if ( intersects.length > 0 ) {
 			    var intersect = intersects[ 0 ];
 			    if ( isShiftDown ) {
-				    if ( intersect.object != plane ) {
-					    scene.remove( intersect.object );
-					    objects.splice( objects.indexOf( intersect.object ), 1 );
-                        updateTurn(-1)
-				    }
+					scene.remove( intersect.object );
+					objects.splice( objects.indexOf( intersect.object ), 1 );
+                    updateTurn(-1)
 			    } else {
                     var newPosition = new THREE.Vector3().copy(intersect.point).add(intersect.face.normal)
                     var voxel = createBox(newPosition, getPlayerMaterial(playerIndex))
@@ -208,7 +223,7 @@ window.onload = function(){
 	}
 
     function createDirectionalLight(x, y, z){
-		var directionalLight = new THREE.DirectionalLight( directionalLightColor );
+		var directionalLight = new THREE.DirectionalLight(0xFFFB87);
 		directionalLight.position.set(x, y, z);
         directionalLight.intensity = 1;
         directionalLight.castShadow = true;
