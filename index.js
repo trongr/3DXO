@@ -17,14 +17,14 @@ window.onload = function(){
     var rollOverColor = 0xff0000;
     var gridColor = 0x000000;
     var planeColor = 0xFFEEBD;
-    var directionalLightColor = 0xffffff;
-    var clearColor = 0xFFF5D6;
+    var directionalLightColor = 0xFFFB87;
+    var clearColor = 0x02002B;
 
     var WALL_MATERIAL = new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5});
     var playerIndex = 0; // 1, 2, 3, 4, etc.
     var PLAYER_MATERIAL = [
-        new THREE.MeshLambertMaterial({color:0x75E1FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
-        new THREE.MeshLambertMaterial({color:0xD0FF80, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
+        new THREE.MeshLambertMaterial({color:0x3392FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
+        new THREE.MeshLambertMaterial({color:0x74FF33, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
     ]
 
     var BOARD_SIZE = 1000
@@ -42,7 +42,7 @@ window.onload = function(){
 		mouse = new THREE.Vector2();
 
 		camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, BOARD_SIZE * 10 );
-		camera.position.z = 750; // for some reason you need this or track ball controls won't work properly
+		camera.position.z = 600; // for some reason you need this or track ball controls won't work properly
 
 		controls = new THREE.TrackballControls( camera );
 		controls.rotateSpeed = 2.5;
@@ -83,10 +83,11 @@ window.onload = function(){
 
 		// Lights
 
-        scene.add(createDirectionalLight(1000, 750, 2000));
-		scene.add(createDirectionalLight(-1000, -750, -2000));
-		scene.add(createDirectionalLight(-2000, 1000, 0));
-		scene.add(createDirectionalLight(1000, -2000, 750));
+        var light = new THREE.AmbientLight(0xB080D1);
+        scene.add( light );
+
+        scene.add(createDirectionalLight(500, 1000, 1500));
+        scene.add(createDirectionalLight(-500, -1000, -1500));
 
 		// renderer
 
@@ -209,7 +210,7 @@ window.onload = function(){
     function createDirectionalLight(x, y, z){
 		var directionalLight = new THREE.DirectionalLight( directionalLightColor );
 		directionalLight.position.set(x, y, z);
-        directionalLight.intensity = 1.2;
+        directionalLight.intensity = 1;
         directionalLight.castShadow = true;
         directionalLight.shadowDarkness = 0.2
         return directionalLight
