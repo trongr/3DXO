@@ -20,6 +20,7 @@ window.onload = function(){
 	var mouse, raycaster, isShiftDown = false;
 
 	var rollOverMesh;
+    var normalLine;
 
 	var objects = [];
 
@@ -56,6 +57,7 @@ window.onload = function(){
     function initScene(){
         var scene = new THREE.Scene();
         initRollOver(scene)
+        initNormalLine(scene)
         initStarterCubes(scene, objects)
         return scene
     }
@@ -88,6 +90,17 @@ window.onload = function(){
 		var rollOverMaterial = new THREE.MeshBasicMaterial( { color:PLAYER_COLORS[0], opacity: 0.5, transparent: true } );
 		rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
 		scene.add( rollOverMesh );
+    }
+
+    function initNormalLine(scene){
+        // todo. use LineDashedMaterial.linewidth once it's implemented on windows
+        var material = new THREE.LineDashedMaterial({color:0xff0000, dashSize:1, gapSize:1});
+        var geometry = new THREE.Geometry();
+        geometry.vertices.push(new THREE.Vector3(0, 0, 0));
+        geometry.vertices.push(new THREE.Vector3(CUBE_SIZE * 2)); // for some weird reason this affects the dashing
+        geometry.computeLineDistances();
+        normalLine = new THREE.Line(geometry, material);
+        scene.add(normalLine);
     }
 
     function initStarterCubes(scene, objects){
@@ -164,28 +177,23 @@ window.onload = function(){
 
 	function onDocumentMouseMove( event ) {
 		event.preventDefault();
-		mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
-		raycaster.setFromCamera( mouse, camera );
-		var intersects = raycaster.intersectObjects( objects );
-		if ( intersects.length > 0 ) {
-			var intersect = intersects[ 0 ];
+        var intersect = getIntersect(event.clientX, event.clientY)
+		if (intersect) {
 			rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal );
 			rollOverMesh.position.divideScalar( CUBE_SIZE ).floor().multiplyScalar( CUBE_SIZE ).addScalar( CUBE_SIZE / 2 );
             changeRolloverColor(playerIndex)
 		} else {
             changeRolloverColor(null)
         }
+        updateNormalLine(intersect)
 		render();
 	}
 
 	function onDocumentMouseDown( event ) {
         event.preventDefault();
         if (event.which == 1){ // left mouse button
-		    mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
-		    raycaster.setFromCamera( mouse, camera );
-		    var intersects = raycaster.intersectObjects( objects );
-		    if ( intersects.length > 0 ) {
-			    var intersect = intersects[ 0 ];
+            var intersect = getIntersect(event.clientX, event.clientY)
+		    if (intersect) {
 			    if ( isShiftDown ) {
 					scene.remove( intersect.object );
 					objects.splice( objects.indexOf( intersect.object ), 1 );
@@ -273,6 +281,34 @@ window.onload = function(){
     function changeRolloverColor(playerIndex){
         if (playerIndex == null) rollOverMesh.material.color.setRGB(1, 0, 0)
         else rollOverMesh.material.color = getPlayerMaterial(playerIndex).color
+    }
+
+    function getIntersect(clientX, clientY){
+		mouse.set( ( clientX / window.innerWidth ) * 2 - 1, - ( clientY / window.innerHeight ) * 2 + 1 );
+		raycaster.setFromCamera( mouse, camera );
+		return raycaster.intersectObjects( objects )[0];
+    }
+
+    function updateNormalLine(intersect){
+        if (intersect){
+            var point1 = new THREE.Vector3()
+                .copy(intersect.point)
+                .add(intersect.face.normal)
+                .divideScalar(CUBE_SIZE).floor()
+                .multiplyScalar( CUBE_SIZE )
+                .addScalar( CUBE_SIZE / 2 )
+                .sub(new THREE.Vector3()
+                    .copy(intersect.face.normal)
+                    .multiplyScalar(CUBE_SIZE / 2))
+            var point2 = new THREE.Vector3()
+                .copy(point1)
+                .add(new THREE.Vector3()
+                     .copy(intersect.face.normal)
+                     .multiplyScalar(CUBE_SIZE * 2));
+            normalLine.geometry.vertices[0] = point1
+            normalLine.geometry.vertices[1] = point2
+            normalLine.geometry.verticesNeedUpdate = true;
+        }
     }
 
 }
