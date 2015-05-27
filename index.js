@@ -1,3 +1,14 @@
+var H = (function(){
+    var H = {}
+
+    H.log = function(msg, obj){
+        if (obj) console.log(new Date() + " " + msg + " " + JSON.stringify(obj, 0, 2))
+        else console.log(new Date() + " " + msg)
+    }
+
+    return H
+}())
+
 // TODO center board on keypress
 // keyboard box placement
 window.onload = function(){
@@ -158,10 +169,12 @@ window.onload = function(){
 		var intersects = raycaster.intersectObjects( objects );
 		if ( intersects.length > 0 ) {
 			var intersect = intersects[ 0 ];
-            // mk
 			rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal );
 			rollOverMesh.position.divideScalar( CUBE_SIZE ).floor().multiplyScalar( CUBE_SIZE ).addScalar( CUBE_SIZE / 2 );
-		}
+            changeRolloverColor(playerIndex)
+		} else {
+            changeRolloverColor(null)
+        }
 		render();
 	}
 
@@ -258,12 +271,8 @@ window.onload = function(){
     }
 
     function changeRolloverColor(playerIndex){
-        rollOverMesh.material.color = getPlayerMaterial(playerIndex).color
-    }
-
-    function log(msg, obj){
-        if (obj) console.log(new Date() + " " + msg + " " + JSON.stringify(obj, 0, 2))
-        else console.log(new Date() + " " + msg)
+        if (playerIndex == null) rollOverMesh.material.color.setRGB(1, 0, 0)
+        else rollOverMesh.material.color = getPlayerMaterial(playerIndex).color
     }
 
 }
