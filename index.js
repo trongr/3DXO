@@ -1,3 +1,5 @@
+// TODO center board on keypress
+
 var H = (function(){
     var H = {}
 
@@ -9,8 +11,6 @@ var H = (function(){
     return H
 }())
 
-// TODO center board on keypress
-// keyboard box placement
 window.onload = function(){
 	if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
@@ -94,10 +94,11 @@ window.onload = function(){
 
     function initNormalLine(scene){
         // todo. use LineDashedMaterial.linewidth once it's implemented on windows
-        var material = new THREE.LineDashedMaterial({color:0xff0000, dashSize:1, gapSize:1});
+        // var material = new THREE.LineDashedMaterial({color:0xffffff, dashSize:1, gapSize:1});
+        var material = new THREE.LineBasicMaterial({color:0xffffff, dashSize:1, gapSize:1});
         var geometry = new THREE.Geometry();
         geometry.vertices.push(new THREE.Vector3(0, 0, 0));
-        geometry.vertices.push(new THREE.Vector3(CUBE_SIZE * 2)); // for some weird reason this affects the dashing
+        geometry.vertices.push(new THREE.Vector3(0, 0, CUBE_SIZE * 3)); // for some weird reason this affects the dashing
         geometry.computeLineDistances();
         normalLine = new THREE.Line(geometry, material);
         scene.add(normalLine);
@@ -179,13 +180,12 @@ window.onload = function(){
 		event.preventDefault();
         var intersect = getIntersect(event.clientX, event.clientY)
 		if (intersect) {
-			rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal );
-			rollOverMesh.position.divideScalar( CUBE_SIZE ).floor().multiplyScalar( CUBE_SIZE ).addScalar( CUBE_SIZE / 2 );
+            moveToPoint(rollOverMesh, new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
             changeRolloverColor(playerIndex)
 		} else {
             changeRolloverColor(null)
         }
-        updateNormalLine(intersect)
+        updateNormalLineWithIntersect(normalLine, intersect)
 		render();
 	}
 
@@ -217,8 +217,15 @@ window.onload = function(){
 
 	function onDocumentKeyDown( event ) {
 		switch( event.keyCode ) {
+        case 65: rolloverLeft(); break; // A
+        case 68: rolloverRight(); break; // D
+        case 81: rolloverAway(); break; // Q
+        case 83: rolloverDown(); break; // S
+        case 87: rolloverUp(); break; // W
+        case 69: rolloverInto(); break; // E
 		case 16: isShiftDown = true; break;
 		}
+        render()
 	}
 
 	function onDocumentKeyUp( event ) {
@@ -289,7 +296,14 @@ window.onload = function(){
 		return raycaster.intersectObjects( objects )[0];
     }
 
-    function updateNormalLine(intersect){
+    // mk
+    function displaceLine(line, displacement){
+        line.geometry.vertices[0].add(displacement)
+        line.geometry.vertices[1].add(displacement)
+        line.geometry.verticesNeedUpdate = true
+    }
+
+    function updateNormalLineWithIntersect(normalLine, intersect){
         if (intersect){
             var point1 = new THREE.Vector3()
                 .copy(intersect.point)
@@ -304,11 +318,55 @@ window.onload = function(){
                 .copy(point1)
                 .add(new THREE.Vector3()
                      .copy(intersect.face.normal)
-                     .multiplyScalar(CUBE_SIZE * 2));
+                     .multiplyScalar(CUBE_SIZE * 3));
             normalLine.geometry.vertices[0] = point1
             normalLine.geometry.vertices[1] = point2
             normalLine.geometry.verticesNeedUpdate = true;
         }
+    }
+
+    function rolloverInto(){
+        var displacement = getUnitVector(normalLine).multiplyScalar(-CUBE_SIZE)
+        rollOverMesh.position.add(displacement)
+        displaceLine(normalLine, displacement)
+    }
+
+    // mk
+    function rolloverAway(){
+        var displacement = getUnitVector(normalLine).multiplyScalar(CUBE_SIZE)
+        rollOverMesh.position.add(displacement)
+        displaceLine(normalLine, displacement)
+    }
+
+    function rolloverUp(){
+
+    }
+
+    function rolloverDown(){
+
+    }
+
+    function rolloverLeft(){
+
+    }
+
+    function rolloverRight(){
+
+    }
+
+    function moveToPoint(obj, point){
+		obj.position
+            .copy(point)
+		    .divideScalar( CUBE_SIZE ).floor()
+            .multiplyScalar( CUBE_SIZE )
+            .addScalar( CUBE_SIZE / 2 );
+    }
+
+    // unit vector form of a line
+    function getUnitVector(line){
+        var start = normalLine.geometry.vertices[0]
+        var end = normalLine.geometry.vertices[1]
+        return new THREE.Vector3().copy(end).sub(start).normalize()
     }
 
 }
