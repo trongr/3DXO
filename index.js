@@ -20,7 +20,7 @@ window.onload = function(){
 	var mouse, raycaster, isShiftDown = false;
 
 	var rollOverMesh;
-    var normalLine;
+    var normal;
 
 	var objects = [];
 
@@ -57,7 +57,6 @@ window.onload = function(){
     function initScene(){
         var scene = new THREE.Scene();
         initRollOver(scene)
-        initNormalLine(scene)
         initStarterCubes(scene, objects)
         return scene
     }
@@ -90,18 +89,6 @@ window.onload = function(){
 		var rollOverMaterial = new THREE.MeshBasicMaterial( { color:PLAYER_COLORS[0], opacity: 0.5, transparent: true } );
 		rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
 		scene.add( rollOverMesh );
-    }
-
-    function initNormalLine(scene){
-        // todo. use LineDashedMaterial.linewidth once it's implemented on windows
-        // var material = new THREE.LineDashedMaterial({color:0xffffff, dashSize:1, gapSize:1});
-        var material = new THREE.LineBasicMaterial({color:0xffffff, dashSize:1, gapSize:1});
-        var geometry = new THREE.Geometry();
-        geometry.vertices.push(new THREE.Vector3(0, 0, 0));
-        geometry.vertices.push(new THREE.Vector3(0, 0, CUBE_SIZE * 3)); // for some weird reason this affects the dashing
-        geometry.computeLineDistances();
-        normalLine = new THREE.Line(geometry, material);
-        scene.add(normalLine);
     }
 
     function initStarterCubes(scene, objects){
@@ -180,12 +167,12 @@ window.onload = function(){
 		event.preventDefault();
         var intersect = getIntersect(event.clientX, event.clientY)
 		if (intersect) {
+            normal = intersect.face.normal
             moveToPoint(rollOverMesh, new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
             changeRolloverColor(playerIndex)
 		} else {
             changeRolloverColor(null)
         }
-        updateNormalLineWithIntersect(normalLine, intersect)
 		render();
 	}
 
@@ -296,46 +283,20 @@ window.onload = function(){
 		return raycaster.intersectObjects( objects )[0];
     }
 
-    // mk
+    // change the positions of the vertices instead of the lines or you'll get unexpected results
     function displaceLine(line, displacement){
         line.geometry.vertices[0].add(displacement)
         line.geometry.vertices[1].add(displacement)
         line.geometry.verticesNeedUpdate = true
     }
 
-    function updateNormalLineWithIntersect(normalLine, intersect){
-        if (intersect){
-            var point1 = new THREE.Vector3()
-                .copy(intersect.point)
-                .add(intersect.face.normal)
-                .divideScalar(CUBE_SIZE).floor()
-                .multiplyScalar( CUBE_SIZE )
-                .addScalar( CUBE_SIZE / 2 )
-                .sub(new THREE.Vector3()
-                    .copy(intersect.face.normal)
-                    .multiplyScalar(CUBE_SIZE / 2))
-            var point2 = new THREE.Vector3()
-                .copy(point1)
-                .add(new THREE.Vector3()
-                     .copy(intersect.face.normal)
-                     .multiplyScalar(CUBE_SIZE * 3));
-            normalLine.geometry.vertices[0] = point1
-            normalLine.geometry.vertices[1] = point2
-            normalLine.geometry.verticesNeedUpdate = true;
-        }
-    }
-
     function rolloverInto(){
-        var displacement = getUnitVector(normalLine).multiplyScalar(-CUBE_SIZE)
-        rollOverMesh.position.add(displacement)
-        displaceLine(normalLine, displacement)
+        if (normal) rollOverMesh.position.add(new THREE.Vector3().copy(normal).multiplyScalar(-CUBE_SIZE))
     }
 
     // mk
     function rolloverAway(){
-        var displacement = getUnitVector(normalLine).multiplyScalar(CUBE_SIZE)
-        rollOverMesh.position.add(displacement)
-        displaceLine(normalLine, displacement)
+        if (normal) rollOverMesh.position.add(new THREE.Vector3().copy(normal).multiplyScalar(CUBE_SIZE))
     }
 
     function rolloverUp(){
@@ -360,13 +321,6 @@ window.onload = function(){
 		    .divideScalar( CUBE_SIZE ).floor()
             .multiplyScalar( CUBE_SIZE )
             .addScalar( CUBE_SIZE / 2 );
-    }
-
-    // unit vector form of a line
-    function getUnitVector(line){
-        var start = normalLine.geometry.vertices[0]
-        var end = normalLine.geometry.vertices[1]
-        return new THREE.Vector3().copy(end).sub(start).normalize()
     }
 
 }
