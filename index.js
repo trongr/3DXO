@@ -202,14 +202,15 @@ window.onload = function(){
         }
 	}
 
+    // mk
 	function onDocumentKeyDown( event ) {
 		switch( event.keyCode ) {
-        case 65: rolloverLeft(); break; // A
-        case 68: rolloverRight(); break; // D
-        case 81: rolloverAway(); break; // Q
-        case 83: rolloverDown(); break; // S
-        case 87: rolloverUp(); break; // W
-        case 69: rolloverInto(); break; // E
+        case 65: rolloverLeft(normal, camera.up); break; // A
+        case 68: rolloverRight(normal, camera.up); break; // D
+        case 81: rolloverAway(normal); break; // Q
+        case 83: rolloverDown(normal, camera.up); break; // S
+        case 87: rolloverUp(normal, camera.up); break; // W
+        case 69: rolloverInto(normal); break; // E
 		case 16: isShiftDown = true; break;
 		}
         render()
@@ -290,28 +291,70 @@ window.onload = function(){
         line.geometry.verticesNeedUpdate = true
     }
 
-    function rolloverInto(){
+    function rolloverInto(normal){
         if (normal) rollOverMesh.position.add(new THREE.Vector3().copy(normal).multiplyScalar(-CUBE_SIZE))
     }
 
-    // mk
-    function rolloverAway(){
+    function rolloverAway(normal){
         if (normal) rollOverMesh.position.add(new THREE.Vector3().copy(normal).multiplyScalar(CUBE_SIZE))
     }
 
-    function rolloverUp(){
-
+    function rolloverUp(normal, cameraUp){
+        rollOverMesh.position.add(getCubeOrientation(normal, cameraUp).up.multiplyScalar(CUBE_SIZE))
     }
 
-    function rolloverDown(){
-
+    function rolloverDown(normal, cameraUp){
+        rollOverMesh.position.add(getCubeOrientation(normal, cameraUp).up.multiplyScalar(-CUBE_SIZE))
     }
 
-    function rolloverLeft(){
-
+    function rolloverLeft(normal, cameraUp){
+        // console.log(JSON.stringify(getCubeOrientation(normal, cameraUp), 0, 2))
+        rollOverMesh.position.add(getCubeOrientation(normal, cameraUp).right.multiplyScalar(CUBE_SIZE))
     }
 
-    function rolloverRight(){
+    function rolloverRight(normal, cameraUp){
+        // console.log(JSON.stringify(getCubeOrientation(normal, cameraUp), 0, 2))
+        rollOverMesh.position.add(getCubeOrientation(normal, cameraUp).right.multiplyScalar(-CUBE_SIZE))
+    }
+
+    // up is whichever component is bigger of cameraUp aside from normal axis
+    // right is the cross product of normal and up
+    function getCubeOrientation(normal, cameraUp){
+        var up = null
+        var right = null
+        var axis = null
+        if (Math.abs(normal.x) == 1) axis = "x"
+        if (Math.abs(normal.y) == 1) axis = "y"
+        if (Math.abs(normal.z) == 1) axis = "z"
+        if (axis == "x"){
+            if (Math.abs(cameraUp.y) > Math.abs(cameraUp.z)){
+                up = new THREE.Vector3().setY(cameraUp.y)
+            } else {
+                up = new THREE.Vector3().setZ(cameraUp.z)
+            }
+        } else if (axis == "y"){
+            if (Math.abs(cameraUp.x) > Math.abs(cameraUp.z)){
+                up = new THREE.Vector3().setX(cameraUp.x)
+            } else {
+                up = new THREE.Vector3().setZ(cameraUp.z)
+            }
+        } else if (axis == "z"){
+            if (Math.abs(cameraUp.x) > Math.abs(cameraUp.y)){
+                up = new THREE.Vector3().setX(cameraUp.x)
+            } else {
+                up = new THREE.Vector3().setY(cameraUp.y)
+            }
+        }
+        up = up.normalize()
+        right = new THREE.Vector3().crossVectors(normal, up)
+        return {up:up, right:right}
+    }
+
+    function normalizeScalar(a){
+        return a / Math.abs(a)
+    }
+
+    function getCubeRight(normal, cameraRight){
 
     }
 
