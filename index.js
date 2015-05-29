@@ -307,11 +307,11 @@ window.onload = function(){
     }
 
     function rolloverInto(camera){
-        if (normal) rollOverMesh.position.add(getCubeOrientation(camera).into.multiplyScalar(CUBE_SIZE))
+        rollOverMesh.position.add(getCubeOrientation(camera).into.multiplyScalar(CUBE_SIZE))
     }
 
     function rolloverAway(camera){
-        if (normal) rollOverMesh.position.add(getCubeOrientation(camera).into.multiplyScalar(-CUBE_SIZE))
+        rollOverMesh.position.add(getCubeOrientation(camera).into.multiplyScalar(-CUBE_SIZE))
     }
 
     function rolloverUp(camera){
