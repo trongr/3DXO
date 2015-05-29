@@ -8,6 +8,16 @@ var H = (function(){
         else console.log(new Date() + " " + msg)
     }
 
+    H.swapObjKeyValues = function(obj){
+        var new_obj = {};
+        for (var prop in obj) {
+            if(obj.hasOwnProperty(prop)) {
+                new_obj[obj[prop]] = prop;
+            }
+        }
+        return new_obj;
+    }
+
     return H
 }())
 
@@ -84,10 +94,12 @@ window.onload = function(){
         document.addEventListener( 'mousemove', controls.update.bind( controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
     }
 
+    // mk
     function initRollOver(scene){
 		var rollOverGeo = new THREE.BoxGeometry( CUBE_SIZE, CUBE_SIZE, CUBE_SIZE );
 		var rollOverMaterial = new THREE.MeshBasicMaterial( { color:PLAYER_COLORS[0], opacity: 0.5, transparent: true } );
 		rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
+        moveToPoint(rollOverMesh, new THREE.Vector3(0, 0, 100))
 		scene.add( rollOverMesh );
     }
 
@@ -151,7 +163,11 @@ window.onload = function(){
 		info.style.top = '10px';
         info.style.right = "10px";
 		info.style.textAlign = 'right';
-		info.innerHTML = '3DXO<br><strong>click</strong>: add box<strong><br>shift + click</strong>: remove box';
+		info.innerHTML = '3DXO<br>'
+            + "<strong>mouse</strong>: navigate<br>"
+            + "<strong>QWEASD</strong>: move box<br>"
+            + '<strong>click</strong>: add box<br>'
+            + '<strong>shift + click</strong>: remove box'
 		container.appendChild( info );
     }
 
@@ -204,12 +220,12 @@ window.onload = function(){
 
 	function onDocumentKeyDown( event ) {
 		switch( event.keyCode ) {
-        case 65: rolloverLeft(normal, camera); break; // A
-        case 68: rolloverRight(normal, camera); break; // D
-        case 81: rolloverAway(normal, camera); break; // Q
-        case 83: rolloverDown(normal, camera); break; // S
-        case 87: rolloverUp(normal, camera); break; // W
-        case 69: rolloverInto(normal, camera); break; // E
+        case 65: rolloverLeft(camera); break; // A
+        case 68: rolloverRight(camera); break; // D
+        case 81: rolloverAway(camera); break; // Q
+        case 83: rolloverDown(camera); break; // S
+        case 87: rolloverUp(camera); break; // W
+        case 69: rolloverInto(camera); break; // E
 		case 16: isShiftDown = true; break;
 		}
         render()
@@ -290,65 +306,66 @@ window.onload = function(){
         line.geometry.verticesNeedUpdate = true
     }
 
-    function rolloverInto(normal, camera){
-        if (normal) rollOverMesh.position.add(getCubeOrientation(normal, camera).into.multiplyScalar(CUBE_SIZE))
-        console.log(JSON.stringify({normal:normal, camLookAt:getCamLookAt(camera)}, 0, 2))
+    function rolloverInto(camera){
+        if (normal) rollOverMesh.position.add(getCubeOrientation(camera).into.multiplyScalar(CUBE_SIZE))
     }
 
-    function rolloverAway(normal, camera){
-        if (normal) rollOverMesh.position.add(getCubeOrientation(normal, camera).into.multiplyScalar(-CUBE_SIZE))
-        console.log(JSON.stringify({normal:normal, camLookAt:getCamLookAt(camera)}, 0, 2))
+    function rolloverAway(camera){
+        if (normal) rollOverMesh.position.add(getCubeOrientation(camera).into.multiplyScalar(-CUBE_SIZE))
     }
 
-    function rolloverUp(normal, camera){
-        rollOverMesh.position.add(getCubeOrientation(normal, camera).up.multiplyScalar(CUBE_SIZE))
+    function rolloverUp(camera){
+        rollOverMesh.position.add(getCubeOrientation(camera).up.multiplyScalar(CUBE_SIZE))
     }
 
-    function rolloverDown(normal, camera){
-        rollOverMesh.position.add(getCubeOrientation(normal, camera).up.multiplyScalar(-CUBE_SIZE))
+    function rolloverDown(camera){
+        rollOverMesh.position.add(getCubeOrientation(camera).up.multiplyScalar(-CUBE_SIZE))
     }
 
-    function rolloverRight(normal, camera){
-        rollOverMesh.position.add(getCubeOrientation(normal, camera).right.multiplyScalar(CUBE_SIZE))
+    function rolloverRight(camera){
+        rollOverMesh.position.add(getCubeOrientation(camera).right.multiplyScalar(CUBE_SIZE))
     }
 
-    function rolloverLeft(normal, camera){
-        rollOverMesh.position.add(getCubeOrientation(normal, camera).right.multiplyScalar(-CUBE_SIZE))
+    function rolloverLeft(camera){
+        rollOverMesh.position.add(getCubeOrientation(camera).right.multiplyScalar(-CUBE_SIZE))
     }
 
-    // up is whichever component is bigger of camera.up aside from normal axis
-    // right is the cross product of normal and up
-    function getCubeOrientation(normal, camera){
-        var up = null
+    // into is biggest component of camLookAt
+    // up is biggest component of camUp
+    // right is cross product of into and up
+    function getCubeOrientation(camera){
+        var camUp = camera.up
+        var camLookAt = getCamLookAt(camera)
+
+        var camUpMaxComponent = getComponentWithMaxMagnitude(camUp)
+        var camLookAtMaxComponent = getComponentWithMaxMagnitude(camLookAt)
+
+        var into = new THREE.Vector3()
+        var up = new THREE.Vector3()
         var right = null
-        var into = null
-        var axis = null
-        if (Math.abs(normal.x) == 1) axis = "x"
-        if (Math.abs(normal.y) == 1) axis = "y"
-        if (Math.abs(normal.z) == 1) axis = "z"
-        if (axis == "x"){
-            if (Math.abs(camera.up.y) > Math.abs(camera.up.z)){
-                up = new THREE.Vector3().setY(camera.up.y)
-            } else {
-                up = new THREE.Vector3().setZ(camera.up.z)
-            }
-        } else if (axis == "y"){
-            if (Math.abs(camera.up.x) > Math.abs(camera.up.z)){
-                up = new THREE.Vector3().setX(camera.up.x)
-            } else {
-                up = new THREE.Vector3().setZ(camera.up.z)
-            }
-        } else if (axis == "z"){
-            if (Math.abs(camera.up.x) > Math.abs(camera.up.y)){
-                up = new THREE.Vector3().setX(camera.up.x)
-            } else {
-                up = new THREE.Vector3().setY(camera.up.y)
-            }
-        }
-        up = up.normalize()
-        right = new THREE.Vector3().crossVectors(normal, up)
-        into = multiplyVectorsByComponents(normal, getCamLookAt(camera)).normalize()
-        return {up:up, right:right, into:into}
+
+        into.setComponent(camLookAtMaxComponent, camLookAt.getComponent(camLookAtMaxComponent))
+        up.setComponent(camUpMaxComponent, camUp.getComponent(camUpMaxComponent))
+        right = new THREE.Vector3().crossVectors(into, up)
+
+        return {into:into.normalize(), up:up.normalize(), right:right.normalize()}
+    }
+
+    function getComponentWithMaxMagnitude(v){
+        var valuesSorted = [
+            Math.abs(v.x),
+            Math.abs(v.y),
+            Math.abs(v.z),
+        ].sort(function(a, b){
+            return a - b
+        })
+
+        var valueAxes = {}
+        valueAxes[Math.abs(v.x)] = 0 // "x"
+        valueAxes[Math.abs(v.y)] = 1 // "y"
+        valueAxes[Math.abs(v.z)] = 2 // "z"
+
+        return valueAxes[valuesSorted[2]]
     }
 
     function getCamLookAt(camera){
@@ -361,10 +378,6 @@ window.onload = function(){
 
     function normalizeScalar(a){
         return a / Math.abs(a)
-    }
-
-    function getCubeRight(normal, cameraRight){
-
     }
 
     function moveToPoint(obj, point){
