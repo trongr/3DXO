@@ -8,12 +8,6 @@ var K = (function(){
     K.CUBE_SIZE = 50
     K.CUBE_GEO = new THREE.BoxGeometry( K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE )
 
-    K.PLAYER_MATERIALS = [
-         new THREE.MeshLambertMaterial({color:0x3392FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
-         // new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/crate.jpg')}),
-         new THREE.MeshLambertMaterial({color:0x74FF33, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
-    ]
-
     return K
 }())
 
@@ -172,30 +166,78 @@ var Select = (function(){
 var Rollover = (function(){
     var Rollover = {}
 
-    // mk
     var _MATERIAL = new THREE.MeshLambertMaterial({color:0xff0000, shading:THREE.FlatShading, opacity:0.5, transparent:true})
     var _rollover
     var _scene
+    var _objects
+    var _render
 
-    // mk
-    Rollover.init = function(scene){
+    Rollover.init = function(scene, objects, render){
         _scene = scene
+        _objects = objects
+        _render = render
         _rollover = new THREE.Mesh(new THREE.BoxGeometry(K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE), _MATERIAL);
         _scene.add(_rollover)
+        Rollover.moveTo(new THREE.Vector3(0, 0, 100))
+        document.addEventListener( 'mousemove', onDocumentMouseMove, false );
     }
 
     Rollover.getMesh = function(){
         return _rollover
     }
 
-    // mk
-    Rollover.setColor = function(playerIndex){
-        if (playerIndex == null) Rollover.getMesh().material.color.setRGB(1, 0, 0)
-        else Rollover.getMesh().material.color = K.PLAYER_MATERIALS[playerIndex].clone().color
+    Rollover.setColor = function(color){
+        if (color == null) Rollover.getMesh().material.color.setRGB(1, 0, 0)
+        else Rollover.getMesh().material.color = color
         // gotta clone otw changing rollover color later will change player cube colors
     }
 
+    Rollover.moveTo = function(point){
+        _rollover.position
+            .copy(point)
+            .divideScalar( K.CUBE_SIZE ).floor()
+            .multiplyScalar( K.CUBE_SIZE )
+            .addScalar( K.CUBE_SIZE / 2 );
+    }
+
+    function onDocumentMouseMove( event ) {
+        event.preventDefault();
+        var intersect = Select.getIntersect(event.clientX, event.clientY, _objects)
+        if (intersect) {
+            _normal = intersect.face.normal
+            Rollover.moveTo(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
+            Rollover.setColor(Player.getCurrentPlayerMaterial().clone().color)
+        } else {
+            Rollover.setColor(null)
+        }
+        _render();
+    }
+
     return Rollover
+}())
+
+var Player = (function(){
+    var Player = {}
+
+    Player.currentPlayerIndex = 0; // 1, 2, 3, 4, etc.
+
+    Player.PLAYER_MATERIALS = [
+         new THREE.MeshLambertMaterial({color:0x3392FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
+         // new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/crate.jpg')}),
+         new THREE.MeshLambertMaterial({color:0x74FF33, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
+    ]
+
+    Player.updateTurn = function(incr){
+        msg.info("Player " + Player.currentPlayerIndex)
+        var playerCount = Player.PLAYER_MATERIALS.length
+        Player.currentPlayerIndex = (Player.currentPlayerIndex + incr + playerCount) % playerCount
+    }
+
+    Player.getCurrentPlayerMaterial = function(){
+        return Player.PLAYER_MATERIALS[Player.currentPlayerIndex]
+    }
+
+    return Player
 }())
 
 window.onload = function(){
@@ -210,8 +252,6 @@ window.onload = function(){
 
     var _objects = [];
 
-    var _playerIndex = 0; // 1, 2, 3, 4, etc.
-
     init();
     animate();
 
@@ -223,8 +263,7 @@ window.onload = function(){
 
         _scene = new THREE.Scene();
 
-        Rollover.init(_scene)
-        moveToPoint(Rollover.getMesh(), new THREE.Vector3(0, 0, 100))
+        Rollover.init(_scene, _objects, render)
 
         initStarterCubes(_scene, _objects)
 
@@ -309,7 +348,6 @@ window.onload = function(){
     }
 
     function initListeners(){
-        document.addEventListener( 'mousemove', onDocumentMouseMove, false );
         document.addEventListener( 'mousedown', onDocumentMouseDown, false );
         document.addEventListener( 'keydown', onDocumentKeyDown, false );
         document.addEventListener( 'keyup', onDocumentKeyUp, false );
@@ -339,19 +377,6 @@ window.onload = function(){
         container.appendChild( _stats.domElement );
     }
 
-    function onDocumentMouseMove( event ) {
-        event.preventDefault();
-        var intersect = Select.getIntersect(event.clientX, event.clientY, _objects)
-        if (intersect) {
-            _normal = intersect.face.normal
-            moveToPoint(Rollover.getMesh(), new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
-            Rollover.setColor(_playerIndex)
-        } else {
-            Rollover.setColor(null)
-        }
-        render();
-    }
-
     function onDocumentMouseDown( event ) {
         event.preventDefault();
         if (event.which == 1){ // left mouse button
@@ -360,11 +385,11 @@ window.onload = function(){
                 if ( _isShiftDown ) {
                     _scene.remove( intersect.object );
                     _objects.splice( _objects.indexOf( intersect.object ), 1 );
-                    updateTurn(-1)
+                    Player.updateTurn(-1)
                 } else {
                     placeCube(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
                 }
-                Rollover.setColor(_playerIndex)
+                Rollover.setColor(Player.getCurrentPlayerMaterial().clone().color)
                 render();
             }
         } else if (event.which == 2){ // middle mouse
@@ -424,11 +449,6 @@ window.onload = function(){
         return voxel
     }
 
-    function updateTurn(incr){
-        msg.info("Player " + _playerIndex)
-        _playerIndex = (_playerIndex + incr + K.PLAYER_MATERIALS.length) % K.PLAYER_MATERIALS.length
-    }
-
     // change the positions of the vertices instead of the lines or you'll get unexpected results
     function displaceLine(line, displacement){
         line.geometry.vertices[0].add(displacement)
@@ -436,19 +456,11 @@ window.onload = function(){
         line.geometry.verticesNeedUpdate = true
     }
 
-    function moveToPoint(obj, point){
-        obj.position
-            .copy(point)
-            .divideScalar( K.CUBE_SIZE ).floor()
-            .multiplyScalar( K.CUBE_SIZE )
-            .addScalar( K.CUBE_SIZE / 2 );
-    }
-
     function placeCube(point){
-        var voxel = createBox(point, K.PLAYER_MATERIALS[_playerIndex])
+        var voxel = createBox(point, Player.getCurrentPlayerMaterial())
         _scene.add( voxel );
         _objects.push( voxel );
-        updateTurn(1)
+        Player.updateTurn(1)
     }
 
 }
