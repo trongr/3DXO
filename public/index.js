@@ -8,6 +8,12 @@ var K = (function(){
     K.CUBE_SIZE = 50
     K.CUBE_GEO = new THREE.BoxGeometry( K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE )
 
+    K.PLAYER_MATERIALS = [
+         new THREE.MeshLambertMaterial({color:0x3392FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
+         // new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/crate.jpg')}),
+         new THREE.MeshLambertMaterial({color:0x74FF33, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
+    ]
+
     return K
 }())
 
@@ -163,6 +169,35 @@ var Select = (function(){
     return Select
 }())
 
+var Rollover = (function(){
+    var Rollover = {}
+
+    // mk
+    var _MATERIAL = new THREE.MeshLambertMaterial({color:0xff0000, shading:THREE.FlatShading, opacity:0.5, transparent:true})
+    var _rollover
+    var _scene
+
+    // mk
+    Rollover.init = function(scene){
+        _scene = scene
+        _rollover = new THREE.Mesh(new THREE.BoxGeometry(K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE), _MATERIAL);
+        _scene.add(_rollover)
+    }
+
+    Rollover.getMesh = function(){
+        return _rollover
+    }
+
+    // mk
+    Rollover.setColor = function(playerIndex){
+        if (playerIndex == null) Rollover.getMesh().material.color.setRGB(1, 0, 0)
+        else Rollover.getMesh().material.color = K.PLAYER_MATERIALS[playerIndex].clone().color
+        // gotta clone otw changing rollover color later will change player cube colors
+    }
+
+    return Rollover
+}())
+
 window.onload = function(){
     if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
@@ -171,18 +206,11 @@ window.onload = function(){
 
     var _isShiftDown = false;
 
-    var _rollover;
     var _normal;
 
     var _objects = [];
 
-    // mk
     var _playerIndex = 0; // 1, 2, 3, 4, etc.
-    var PLAYER_MATERIALS = [
-         new THREE.MeshLambertMaterial({color:0x3392FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
-         // new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/crate.jpg')}),
-         new THREE.MeshLambertMaterial({color:0x74FF33, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
-    ]
 
     init();
     animate();
@@ -194,7 +222,10 @@ window.onload = function(){
         initInfo(container)
 
         _scene = new THREE.Scene();
-        _rollover = initRollOver(_scene)
+
+        Rollover.init(_scene)
+        moveToPoint(Rollover.getMesh(), new THREE.Vector3(0, 0, 100))
+
         initStarterCubes(_scene, _objects)
 
         initLights(_scene)
@@ -202,7 +233,7 @@ window.onload = function(){
         initListeners()
 
         Select.init(_camera)
-        // KeyNav.init(_rollover, _camera, render) // toggle
+        // KeyNav.init(Rollover.getMesh(), _camera, render) // toggle
 
         initRenderer(container)
     }
@@ -230,15 +261,6 @@ window.onload = function(){
         document.addEventListener( 'mousemove', _controls.update.bind( _controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
 
         return camera
-    }
-
-    function initRollOver(scene){
-        var rollOverGeo = new THREE.BoxGeometry( K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE );
-        var rollOverMaterial = new THREE.MeshBasicMaterial( { color:PLAYER_MATERIALS[0].color, opacity: 0.5, transparent: true } );
-        var rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
-        moveToPoint(rollOverMesh, new THREE.Vector3(0, 0, 100))
-        scene.add( rollOverMesh )
-        return rollOverMesh
     }
 
     function initStarterCubes(scene, objects){
@@ -322,10 +344,10 @@ window.onload = function(){
         var intersect = Select.getIntersect(event.clientX, event.clientY, _objects)
         if (intersect) {
             _normal = intersect.face.normal
-            moveToPoint(_rollover, new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
-            changeRolloverColor(_playerIndex)
+            moveToPoint(Rollover.getMesh(), new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
+            Rollover.setColor(_playerIndex)
         } else {
-            changeRolloverColor(null)
+            Rollover.setColor(null)
         }
         render();
     }
@@ -342,7 +364,7 @@ window.onload = function(){
                 } else {
                     placeCube(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
                 }
-                changeRolloverColor(_playerIndex)
+                Rollover.setColor(_playerIndex)
                 render();
             }
         } else if (event.which == 2){ // middle mouse
@@ -354,7 +376,7 @@ window.onload = function(){
 
     function onDocumentKeyDown( event ) {
         switch( event.keyCode ) {
-        case 32: placeCube(_rollover.position); break; // space
+        case 32: placeCube(Rollover.getMesh().position); break; // space
         case 16: _isShiftDown = true; break;
         }
         render()
@@ -404,13 +426,7 @@ window.onload = function(){
 
     function updateTurn(incr){
         msg.info("Player " + _playerIndex)
-        _playerIndex = (_playerIndex + incr + PLAYER_MATERIALS.length) % PLAYER_MATERIALS.length
-    }
-
-    function changeRolloverColor(playerIndex){
-        if (playerIndex == null) _rollover.material.color.setRGB(1, 0, 0)
-        else _rollover.material.color = PLAYER_MATERIALS[playerIndex].clone().color
-        // gotta clone otw changing rollover color later will change player cube colors
+        _playerIndex = (_playerIndex + incr + K.PLAYER_MATERIALS.length) % K.PLAYER_MATERIALS.length
     }
 
     // change the positions of the vertices instead of the lines or you'll get unexpected results
@@ -429,7 +445,7 @@ window.onload = function(){
     }
 
     function placeCube(point){
-        var voxel = createBox(point, PLAYER_MATERIALS[_playerIndex])
+        var voxel = createBox(point, K.PLAYER_MATERIALS[_playerIndex])
         _scene.add( voxel );
         _objects.push( voxel );
         updateTurn(1)
