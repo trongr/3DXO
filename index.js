@@ -21,6 +21,56 @@ var H = (function(){
     return H
 }())
 
+var Orientation = (function(){
+    var O = {}
+
+    // get up right and into axes relative to camera orientation
+    //
+    // into is biggest component of camLookAt
+    // up is biggest component of camUp
+    // right is cross product of into and up
+    O.getAxesRelativeToCamera = function(camera){
+        var camUp = camera.up
+        var camLookAt = O.getCamLookAt(camera)
+
+        var camUpMaxComponent = O.getComponentWithMaxMagnitude(camUp)
+        var camLookAtMaxComponent = O.getComponentWithMaxMagnitude(camLookAt)
+
+        var into = new THREE.Vector3()
+        var up = new THREE.Vector3()
+        var right = null
+
+        into.setComponent(camLookAtMaxComponent, camLookAt.getComponent(camLookAtMaxComponent))
+        up.setComponent(camUpMaxComponent, camUp.getComponent(camUpMaxComponent))
+        right = new THREE.Vector3().crossVectors(into, up)
+
+        return {into:into.normalize(), up:up.normalize(), right:right.normalize()}
+    }
+
+    O.getComponentWithMaxMagnitude = function(v){
+        var valuesSorted = [
+            Math.abs(v.x),
+            Math.abs(v.y),
+            Math.abs(v.z),
+        ].sort(function(a, b){
+            return a - b
+        })
+
+        var valueAxes = {}
+        valueAxes[Math.abs(v.x)] = 0 // "x"
+        valueAxes[Math.abs(v.y)] = 1 // "y"
+        valueAxes[Math.abs(v.z)] = 2 // "z"
+
+        return valueAxes[valuesSorted[2]]
+    }
+
+    O.getCamLookAt = function(camera){
+        return new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+    }
+
+    return O
+}())
+
 window.onload = function(){
 	if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
@@ -307,73 +357,27 @@ window.onload = function(){
     }
 
     function rolloverInto(camera){
-        rollOverMesh.position.add(getCubeOrientation(camera).into.multiplyScalar(CUBE_SIZE))
+        rollOverMesh.position.add(Orientation.getAxesRelativeToCamera(camera).into.multiplyScalar(CUBE_SIZE))
     }
 
     function rolloverAway(camera){
-        rollOverMesh.position.add(getCubeOrientation(camera).into.multiplyScalar(-CUBE_SIZE))
+        rollOverMesh.position.add(Orientation.getAxesRelativeToCamera(camera).into.multiplyScalar(-CUBE_SIZE))
     }
 
     function rolloverUp(camera){
-        rollOverMesh.position.add(getCubeOrientation(camera).up.multiplyScalar(CUBE_SIZE))
+        rollOverMesh.position.add(Orientation.getAxesRelativeToCamera(camera).up.multiplyScalar(CUBE_SIZE))
     }
 
     function rolloverDown(camera){
-        rollOverMesh.position.add(getCubeOrientation(camera).up.multiplyScalar(-CUBE_SIZE))
+        rollOverMesh.position.add(Orientation.getAxesRelativeToCamera(camera).up.multiplyScalar(-CUBE_SIZE))
     }
 
     function rolloverRight(camera){
-        rollOverMesh.position.add(getCubeOrientation(camera).right.multiplyScalar(CUBE_SIZE))
+        rollOverMesh.position.add(Orientation.getAxesRelativeToCamera(camera).right.multiplyScalar(CUBE_SIZE))
     }
 
     function rolloverLeft(camera){
-        rollOverMesh.position.add(getCubeOrientation(camera).right.multiplyScalar(-CUBE_SIZE))
-    }
-
-    // into is biggest component of camLookAt
-    // up is biggest component of camUp
-    // right is cross product of into and up
-    function getCubeOrientation(camera){
-        var camUp = camera.up
-        var camLookAt = getCamLookAt(camera)
-
-        var camUpMaxComponent = getComponentWithMaxMagnitude(camUp)
-        var camLookAtMaxComponent = getComponentWithMaxMagnitude(camLookAt)
-
-        var into = new THREE.Vector3()
-        var up = new THREE.Vector3()
-        var right = null
-
-        into.setComponent(camLookAtMaxComponent, camLookAt.getComponent(camLookAtMaxComponent))
-        up.setComponent(camUpMaxComponent, camUp.getComponent(camUpMaxComponent))
-        right = new THREE.Vector3().crossVectors(into, up)
-
-        return {into:into.normalize(), up:up.normalize(), right:right.normalize()}
-    }
-
-    function getComponentWithMaxMagnitude(v){
-        var valuesSorted = [
-            Math.abs(v.x),
-            Math.abs(v.y),
-            Math.abs(v.z),
-        ].sort(function(a, b){
-            return a - b
-        })
-
-        var valueAxes = {}
-        valueAxes[Math.abs(v.x)] = 0 // "x"
-        valueAxes[Math.abs(v.y)] = 1 // "y"
-        valueAxes[Math.abs(v.z)] = 2 // "z"
-
-        return valueAxes[valuesSorted[2]]
-    }
-
-    function getCamLookAt(camera){
-        return new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
-    }
-
-    function multiplyVectorsByComponents(v1, v2){
-        return new THREE.Vector3(v1.x * v2.x, v1.y * v2.y, v1.z * v2.z)
+        rollOverMesh.position.add(Orientation.getAxesRelativeToCamera(camera).right.multiplyScalar(-CUBE_SIZE))
     }
 
     function normalizeScalar(a){
