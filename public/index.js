@@ -147,6 +147,7 @@ var Select = (function(){
     var _mouse
     var _camera
     var _objects
+    var _selected
 
     Select.init = function(camera, objects){
         _isSelecting = false
@@ -173,8 +174,10 @@ var Select = (function(){
         // REF. adding cube
         // placeCube(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
         if (_isSelecting){
-
+            Obj.move(_selected, new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
+            Piece.highlight(_selected)
         } else {
+            _selected = intersect.object
             Piece.highlight(intersect.object)
         }
         _isSelecting = !_isSelecting
@@ -198,7 +201,7 @@ var Rollover = (function(){
         _render = render
         _rollover = new THREE.Mesh(new THREE.BoxGeometry(K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE), _MATERIAL);
         _scene.add(_rollover)
-        // Rollover.moveTo(new THREE.Vector3(0, 0, 200))
+        // Obj.move(_rollover, new THREE.Vector3(0, 0, 200))
         // document.addEventListener( 'mousemove', onDocumentMouseMove, false );
     }
 
@@ -211,19 +214,11 @@ var Rollover = (function(){
         else _rollover.material.color = color
     }
 
-    Rollover.moveTo = function(point){
-        _rollover.position
-            .copy(point)
-            .divideScalar( K.CUBE_SIZE ).floor()
-            .multiplyScalar( K.CUBE_SIZE )
-            .addScalar( K.CUBE_SIZE / 2 );
-    }
-
     function onDocumentMouseMove( event ) {
         event.preventDefault();
         var intersect = Select.getIntersect(event.clientX, event.clientY, _objects)
         if (intersect) {
-            Rollover.moveTo(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
+            Obj.move(Rollover.getMesh(), new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
             Rollover.setColor(Player.getCurrentPlayerMaterial().clone().color)
             // gotta clone otw changing rollover color later will change player cube colors
         } else {
@@ -263,10 +258,24 @@ var Piece = (function(){
     var Piece = {}
 
     Piece.highlight = function(piece){
-        Rollover.moveTo(piece.position)
+        Obj.move(Rollover.getMesh(), piece.position)
     }
 
     return Piece
+}())
+
+var Obj = (function(){
+    var Obj = {}
+
+    Obj.move = function(piece, point){
+        piece.position
+            .copy(point)
+            .divideScalar( K.CUBE_SIZE ).floor()
+            .multiplyScalar( K.CUBE_SIZE )
+            .addScalar( K.CUBE_SIZE / 2 );
+    }
+
+    return Obj
 }())
 
 window.onload = function(){
@@ -392,7 +401,7 @@ window.onload = function(){
         info.innerHTML = '3DXO<br>'
             + "<strong>mouse</strong>: navigate<br>"
             // + "<strong>QWEASD</strong>: move box<br>"
-            + '<strong>click</strong>: add box<br>'
+            + '<strong>click</strong>: move box<br>'
         container.appendChild( info );
     }
 
