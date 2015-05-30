@@ -175,10 +175,10 @@ var Select = (function(){
         // placeCube(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
         if (_isSelecting){
             Obj.move(_selected, new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
-            Piece.highlight(_selected)
+            Obj.highlight(_selected, true)
         } else {
             _selected = intersect.object
-            Piece.highlight(intersect.object)
+            Obj.highlight(intersect.object, true)
         }
         _isSelecting = !_isSelecting
     }
@@ -257,10 +257,6 @@ var Player = (function(){
 var Piece = (function(){
     var Piece = {}
 
-    Piece.highlight = function(piece){
-        Obj.move(Rollover.getMesh(), piece.position)
-    }
-
     return Piece
 }())
 
@@ -273,6 +269,11 @@ var Obj = (function(){
             .divideScalar( K.CUBE_SIZE ).floor()
             .multiplyScalar( K.CUBE_SIZE )
             .addScalar( K.CUBE_SIZE / 2 );
+    }
+
+    Obj.highlight = function(obj, isHigh){
+        if (isHigh) Obj.move(Rollover.getMesh(), obj.position)
+        else Obj.move(Rollover.getMesh(), new THREE.Vector3(0, 0, 0)) // just move the rollover out of sight
     }
 
     return Obj
@@ -338,12 +339,16 @@ window.onload = function(){
     }
 
     function initStarterCubes(scene, objects){
-        var wallMat = new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5});
+        var wallMats = [
+            new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
+            new THREE.MeshPhongMaterial({color:0xB5B5B5, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
+        ]
         var starterCubeSize = 4; // 8 by 8 by 8
         for ( var x = -K.CUBE_SIZE * starterCubeSize; x < K.CUBE_SIZE * starterCubeSize; x += K.CUBE_SIZE ) {
             for (var y = -K.CUBE_SIZE * starterCubeSize; y < K.CUBE_SIZE * starterCubeSize; y += K.CUBE_SIZE){
                 for (var z = -K.CUBE_SIZE * starterCubeSize; z < K.CUBE_SIZE * starterCubeSize; z += K.CUBE_SIZE){
-                    var starterBox = createBox(new THREE.Vector3(x, y, z), wallMat)
+                    var index = ((x + y + z) / K.CUBE_SIZE % 2 + 2) % 2 // alternating odd and even cell
+                    var starterBox = createBox(new THREE.Vector3(x, y, z), wallMats[index])
                     scene.add(starterBox)
                     objects.push(starterBox)
                 }
