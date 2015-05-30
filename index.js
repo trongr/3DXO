@@ -148,10 +148,11 @@ window.onload = function(){
 
     var objects = [];
 
+    // mk
     var playerIndex = 0; // 1, 2, 3, 4, etc.
-    var PLAYER_COLORS = [
-        0x3392FF,
-        0x74FF33,
+    var PLAYER_MATERIALS = [
+         new THREE.MeshLambertMaterial({color:0x3392FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
+         new THREE.MeshLambertMaterial({color:0x74FF33, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
     ]
 
     init();
@@ -205,7 +206,7 @@ window.onload = function(){
 
     function initRollOver(scene){
         var rollOverGeo = new THREE.BoxGeometry( K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE );
-        var rollOverMaterial = new THREE.MeshBasicMaterial( { color:PLAYER_COLORS[0], opacity: 0.5, transparent: true } );
+        var rollOverMaterial = new THREE.MeshBasicMaterial( { color:PLAYER_MATERIALS[0].color, opacity: 0.5, transparent: true } );
         var rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
         moveToPoint(rollOverMesh, new THREE.Vector3(0, 0, 100))
         scene.add( rollOverMesh )
@@ -373,24 +374,15 @@ window.onload = function(){
         return voxel
     }
 
-    function getPlayerMaterial(playerIndex){
-        return new THREE.MeshLambertMaterial({
-            color:PLAYER_COLORS[playerIndex],
-            shading:THREE.FlatShading,
-            opacity:1,
-            transparent:false,
-            side:THREE.DoubleSide
-        })
-    }
-
     function updateTurn(incr){
         msg.info("Player " + playerIndex)
-        playerIndex = (playerIndex + incr + PLAYER_COLORS.length) % PLAYER_COLORS.length
+        playerIndex = (playerIndex + incr + PLAYER_MATERIALS.length) % PLAYER_MATERIALS.length
     }
 
     function changeRolloverColor(playerIndex){
         if (playerIndex == null) rollover.material.color.setRGB(1, 0, 0)
-        else rollover.material.color = getPlayerMaterial(playerIndex).color
+        else rollover.material.color = PLAYER_MATERIALS[playerIndex].clone().color
+        // gotta clone otw changing rollover color later will change player cube colors
     }
 
     function getIntersect(clientX, clientY){
@@ -419,7 +411,7 @@ window.onload = function(){
     }
 
     function placeCube(point){
-        var voxel = createBox(point, getPlayerMaterial(playerIndex))
+        var voxel = createBox(point, PLAYER_MATERIALS[playerIndex])
         scene.add( voxel );
         objects.push( voxel );
         updateTurn(1)
