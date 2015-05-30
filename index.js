@@ -252,11 +252,7 @@ window.onload = function(){
 					objects.splice( objects.indexOf( intersect.object ), 1 );
                     updateTurn(-1)
 			    } else {
-                    var newPosition = new THREE.Vector3().copy(intersect.point).add(intersect.face.normal)
-                    var voxel = createBox(newPosition, getPlayerMaterial(playerIndex))
-				    scene.add( voxel );
-				    objects.push( voxel );
-                    updateTurn(1)
+                    placeCube(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
 			    }
                 changeRolloverColor(playerIndex)
 			    render();
@@ -270,6 +266,7 @@ window.onload = function(){
 
 	function onDocumentKeyDown( event ) {
 		switch( event.keyCode ) {
+        case 32: placeCube(rollOverMesh.position); break; // space
         case 65: rolloverLeft(camera); break; // A
         case 68: rolloverRight(camera); break; // D
         case 81: rolloverAway(camera); break; // Q
@@ -390,6 +387,14 @@ window.onload = function(){
 		    .divideScalar( CUBE_SIZE ).floor()
             .multiplyScalar( CUBE_SIZE )
             .addScalar( CUBE_SIZE / 2 );
+    }
+
+    // mk
+    function placeCube(point){
+        var voxel = createBox(point, getPlayerMaterial(playerIndex))
+		scene.add( voxel );
+		objects.push( voxel );
+        updateTurn(1)
     }
 
 }
