@@ -85,10 +85,14 @@ var Orientation = (function(){
 var KeyNav = (function(){
     var KeyNav = {}
 
+    var _mesh
+    var _camera
+    var _render
+
     KeyNav.init = function(mesh, camera, render){
-        KeyNav.mesh = mesh
-        KeyNav.camera = camera
-        KeyNav.render = render
+        _mesh = mesh
+        _camera = camera
+        _render = render
         KeyNav.initListeners()
     }
 
@@ -98,14 +102,14 @@ var KeyNav = (function(){
 
     function onDocumentKeyDown( event ) {
         switch( event.keyCode ) {
-        case 65: moveLeft(KeyNav.mesh, KeyNav.camera); break; // A
-        case 68: moveRight(KeyNav.mesh, KeyNav.camera); break; // D
-        case 81: moveAway(KeyNav.mesh, KeyNav.camera); break; // Q
-        case 83: moveDown(KeyNav.mesh, KeyNav.camera); break; // S
-        case 87: moveUp(KeyNav.mesh, KeyNav.camera); break; // W
-        case 69: moveInto(KeyNav.mesh, KeyNav.camera); break; // E
+        case 65: moveLeft(_mesh, _camera); break; // A
+        case 68: moveRight(_mesh, _camera); break; // D
+        case 81: moveAway(_mesh, _camera); break; // Q
+        case 83: moveDown(_mesh, _camera); break; // S
+        case 87: moveUp(_mesh, _camera); break; // W
+        case 69: moveInto(_mesh, _camera); break; // E
         }
-        KeyNav.render()
+        _render()
     }
 
     function moveInto(mesh, camera){
@@ -135,21 +139,45 @@ var KeyNav = (function(){
     return KeyNav
 }())
 
+var Select = (function(){
+    var Select = {}
+
+    var _isSelecting
+    var _raycaster
+    var _mouse
+    var _camera
+
+    Select.init = function(camera){
+        _isSelecting = false
+        _raycaster = new THREE.Raycaster();
+        _mouse = new THREE.Vector2();
+        _camera = camera
+    }
+
+    Select.getIntersect = function(clientX, clientY, objects){
+        _mouse.set( ( clientX / window.innerWidth ) * 2 - 1, - ( clientY / window.innerHeight ) * 2 + 1 );
+        _raycaster.setFromCamera(_mouse, _camera);
+        return _raycaster.intersectObjects(objects)[0];
+    }
+
+    return Select
+}())
+
 window.onload = function(){
     if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
-    var stats;
-    var camera, controls, scene, renderer;
+    var _stats;
+    var _camera, _controls, _scene, _renderer;
 
-    var mouse, raycaster, isShiftDown = false;
+    var _isShiftDown = false;
 
-    var rollover;
-    var normal;
+    var _rollover;
+    var _normal;
 
-    var objects = [];
+    var _objects = [];
 
     // mk
-    var playerIndex = 0; // 1, 2, 3, 4, etc.
+    var _playerIndex = 0; // 1, 2, 3, 4, etc.
     var PLAYER_MATERIALS = [
          new THREE.MeshLambertMaterial({color:0x3392FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
          // new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/crate.jpg')}),
@@ -160,22 +188,21 @@ window.onload = function(){
     animate();
 
     function init() {
-        raycaster = new THREE.Raycaster();
-        mouse = new THREE.Vector2();
 
         var container = initContainer()
         initStats(container)
         initInfo(container)
 
-        scene = new THREE.Scene();
-        rollover = initRollOver(scene)
-        initStarterCubes(scene, objects)
+        _scene = new THREE.Scene();
+        _rollover = initRollOver(_scene)
+        initStarterCubes(_scene, _objects)
 
-        initLights(scene)
-        camera = initCamera()
+        initLights(_scene)
+        _camera = initCamera()
         initListeners()
 
-        KeyNav.init(rollover, camera, render)
+        Select.init(_camera)
+        // KeyNav.init(_rollover, _camera, render) // toggle
 
         initRenderer(container)
     }
@@ -190,17 +217,17 @@ window.onload = function(){
         var camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, K.BOARD_SIZE * 10 );
         camera.position.z = 1000; // for some reason you need this or track ball controls won't work properly
 
-        controls = new THREE.TrackballControls( camera );
-        controls.rotateSpeed = 2.5;
-        controls.zoomSpeed = 1.5;
-        controls.panSpeed = 1.0;
-        controls.noZoom = false;
-        controls.noPan = false;
-        controls.staticMoving = true;
-        controls.dynamicDampingFactor = 0.3;
-        controls.keys = [ 65, 83, 68 ];
-        controls.addEventListener( 'change', render );
-        document.addEventListener( 'mousemove', controls.update.bind( controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
+        _controls = new THREE.TrackballControls( camera );
+        _controls.rotateSpeed = 2.5;
+        _controls.zoomSpeed = 1.5;
+        _controls.panSpeed = 1.0;
+        _controls.noZoom = false;
+        _controls.noPan = false;
+        _controls.staticMoving = true;
+        _controls.dynamicDampingFactor = 0.3;
+        _controls.keys = [ 65, 83, 68 ];
+        _controls.addEventListener( 'change', render );
+        document.addEventListener( 'mousemove', _controls.update.bind( _controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
 
         return camera
     }
@@ -236,25 +263,25 @@ window.onload = function(){
     }
 
     function initRenderer(container){
-        renderer = new THREE.WebGLRenderer( { antialias:false, alpha:true } );
-        renderer.setClearColor(0x02002B, 1);
-        renderer.setPixelRatio( window.devicePixelRatio );
-        renderer.setSize( window.innerWidth, window.innerHeight );
+        _renderer = new THREE.WebGLRenderer( { antialias:false, alpha:true } );
+        _renderer.setClearColor(0x02002B, 1);
+        _renderer.setPixelRatio( window.devicePixelRatio );
+        _renderer.setSize( window.innerWidth, window.innerHeight );
 
-        renderer.shadowMapEnabled = true;
-        renderer.shadowMapSoft = true;
+        _renderer.shadowMapEnabled = true;
+        _renderer.shadowMapSoft = true;
 
-        renderer.shadowCameraNear = 3;
-        renderer.shadowCameraFar = camera.far;
-        renderer.shadowCameraFov = 45;
+        _renderer.shadowCameraNear = 3;
+        _renderer.shadowCameraFar = _camera.far;
+        _renderer.shadowCameraFov = 45;
 
-        renderer.shadowMapType = THREE.PCFSoftShadowMap;
-        renderer.shadowMapBias = 0.0039;
-        renderer.shadowMapDarkness = 0.5;
-        renderer.shadowMapWidth = 1024;
-        renderer.shadowMapHeight = 1024;
+        _renderer.shadowMapType = THREE.PCFSoftShadowMap;
+        _renderer.shadowMapBias = 0.0039;
+        _renderer.shadowMapDarkness = 0.5;
+        _renderer.shadowMapWidth = 1024;
+        _renderer.shadowMapHeight = 1024;
 
-        container.appendChild( renderer.domElement );
+        container.appendChild( _renderer.domElement );
 
         render();
     }
@@ -283,20 +310,20 @@ window.onload = function(){
     }
 
     function initStats(container){
-        stats = new Stats();
-        stats.domElement.style.position = 'absolute';
-        stats.domElement.style.top = '0px';
-        stats.domElement.style.zIndex = 100;
-        container.appendChild( stats.domElement );
+        _stats = new Stats();
+        _stats.domElement.style.position = 'absolute';
+        _stats.domElement.style.top = '0px';
+        _stats.domElement.style.zIndex = 100;
+        container.appendChild( _stats.domElement );
     }
 
     function onDocumentMouseMove( event ) {
         event.preventDefault();
-        var intersect = getIntersect(event.clientX, event.clientY)
+        var intersect = Select.getIntersect(event.clientX, event.clientY, _objects)
         if (intersect) {
-            normal = intersect.face.normal
-            moveToPoint(rollover, new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
-            changeRolloverColor(playerIndex)
+            _normal = intersect.face.normal
+            moveToPoint(_rollover, new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
+            changeRolloverColor(_playerIndex)
         } else {
             changeRolloverColor(null)
         }
@@ -306,16 +333,16 @@ window.onload = function(){
     function onDocumentMouseDown( event ) {
         event.preventDefault();
         if (event.which == 1){ // left mouse button
-            var intersect = getIntersect(event.clientX, event.clientY)
+            var intersect = Select.getIntersect(event.clientX, event.clientY, _objects)
             if (intersect) {
-                if ( isShiftDown ) {
-                    scene.remove( intersect.object );
-                    objects.splice( objects.indexOf( intersect.object ), 1 );
+                if ( _isShiftDown ) {
+                    _scene.remove( intersect.object );
+                    _objects.splice( _objects.indexOf( intersect.object ), 1 );
                     updateTurn(-1)
                 } else {
                     placeCube(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
                 }
-                changeRolloverColor(playerIndex)
+                changeRolloverColor(_playerIndex)
                 render();
             }
         } else if (event.which == 2){ // middle mouse
@@ -327,34 +354,34 @@ window.onload = function(){
 
     function onDocumentKeyDown( event ) {
         switch( event.keyCode ) {
-        case 32: placeCube(rollover.position); break; // space
-        case 16: isShiftDown = true; break;
+        case 32: placeCube(_rollover.position); break; // space
+        case 16: _isShiftDown = true; break;
         }
         render()
     }
 
     function onDocumentKeyUp( event ) {
         switch ( event.keyCode ) {
-        case 16: isShiftDown = false; break;
+        case 16: _isShiftDown = false; break;
         }
     }
 
     function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize( window.innerWidth, window.innerHeight );
-        controls.handleResize();
+        _camera.aspect = window.innerWidth / window.innerHeight;
+        _camera.updateProjectionMatrix();
+        _renderer.setSize( window.innerWidth, window.innerHeight );
+        _controls.handleResize();
         render();
     }
 
     function animate() {
         requestAnimationFrame( animate );
-        controls.update(); // use this too cause zooming's weird without it
+        _controls.update(); // use this too cause zooming's weird without it
     }
 
     function render() {
-        renderer.render( scene, camera );
-        stats.update();
+        _renderer.render( _scene, _camera );
+        _stats.update();
     }
 
     function createDirectionalLight(x, y, z){
@@ -376,20 +403,14 @@ window.onload = function(){
     }
 
     function updateTurn(incr){
-        msg.info("Player " + playerIndex)
-        playerIndex = (playerIndex + incr + PLAYER_MATERIALS.length) % PLAYER_MATERIALS.length
+        msg.info("Player " + _playerIndex)
+        _playerIndex = (_playerIndex + incr + PLAYER_MATERIALS.length) % PLAYER_MATERIALS.length
     }
 
     function changeRolloverColor(playerIndex){
-        if (playerIndex == null) rollover.material.color.setRGB(1, 0, 0)
-        else rollover.material.color = PLAYER_MATERIALS[playerIndex].clone().color
+        if (playerIndex == null) _rollover.material.color.setRGB(1, 0, 0)
+        else _rollover.material.color = PLAYER_MATERIALS[playerIndex].clone().color
         // gotta clone otw changing rollover color later will change player cube colors
-    }
-
-    function getIntersect(clientX, clientY){
-        mouse.set( ( clientX / window.innerWidth ) * 2 - 1, - ( clientY / window.innerHeight ) * 2 + 1 );
-        raycaster.setFromCamera( mouse, camera );
-        return raycaster.intersectObjects( objects )[0];
     }
 
     // change the positions of the vertices instead of the lines or you'll get unexpected results
@@ -397,10 +418,6 @@ window.onload = function(){
         line.geometry.vertices[0].add(displacement)
         line.geometry.vertices[1].add(displacement)
         line.geometry.verticesNeedUpdate = true
-    }
-
-    function normalizeScalar(a){
-        return a / Math.abs(a)
     }
 
     function moveToPoint(obj, point){
@@ -412,9 +429,9 @@ window.onload = function(){
     }
 
     function placeCube(point){
-        var voxel = createBox(point, PLAYER_MATERIALS[playerIndex])
-        scene.add( voxel );
-        objects.push( voxel );
+        var voxel = createBox(point, PLAYER_MATERIALS[_playerIndex])
+        _scene.add( voxel );
+        _objects.push( voxel );
         updateTurn(1)
     }
 
