@@ -129,7 +129,7 @@ window.onload = function(){
 
     function initCamera(){
 		camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, BOARD_SIZE * 10 );
-		camera.position.z = 600; // for some reason you need this or track ball controls won't work properly
+		camera.position.z = 1000; // for some reason you need this or track ball controls won't work properly
 
 		controls = new THREE.TrackballControls( camera );
 		controls.rotateSpeed = 2.5;
@@ -155,7 +155,7 @@ window.onload = function(){
 
     function initStarterCubes(scene, objects){
         var wallMat = new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5});
-        var starterCubeSize = 2; // 4 by 4 by 4
+        var starterCubeSize = 4; // 8 by 8 by 8
         for ( var x = -CUBE_SIZE * starterCubeSize; x < CUBE_SIZE * starterCubeSize; x += CUBE_SIZE ) {
             for (var y = -CUBE_SIZE * starterCubeSize; y < CUBE_SIZE * starterCubeSize; y += CUBE_SIZE){
                 for (var z = -CUBE_SIZE * starterCubeSize; z < CUBE_SIZE * starterCubeSize; z += CUBE_SIZE){
