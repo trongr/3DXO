@@ -178,7 +178,7 @@ var Rollover = (function(){
         _render = render
         _rollover = new THREE.Mesh(new THREE.BoxGeometry(K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE), _MATERIAL);
         _scene.add(_rollover)
-        Rollover.moveTo(new THREE.Vector3(0, 0, 100))
+        Rollover.moveTo(new THREE.Vector3(0, 0, 200))
         document.addEventListener( 'mousemove', onDocumentMouseMove, false );
     }
 
@@ -187,9 +187,8 @@ var Rollover = (function(){
     }
 
     Rollover.setColor = function(color){
-        if (color == null) Rollover.getMesh().material.color.setRGB(1, 0, 0)
-        else Rollover.getMesh().material.color = color
-        // gotta clone otw changing rollover color later will change player cube colors
+        if (color == null) _rollover.material.color.setRGB(1, 0, 0)
+        else _rollover.material.color = color
     }
 
     Rollover.moveTo = function(point){
@@ -204,9 +203,9 @@ var Rollover = (function(){
         event.preventDefault();
         var intersect = Select.getIntersect(event.clientX, event.clientY, _objects)
         if (intersect) {
-            _normal = intersect.face.normal
             Rollover.moveTo(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
             Rollover.setColor(Player.getCurrentPlayerMaterial().clone().color)
+            // gotta clone otw changing rollover color later will change player cube colors
         } else {
             Rollover.setColor(null)
         }
@@ -248,8 +247,6 @@ window.onload = function(){
 
     var _isShiftDown = false;
 
-    var _normal;
-
     var _objects = [];
 
     init();
@@ -263,8 +260,8 @@ window.onload = function(){
 
         _scene = new THREE.Scene();
 
-        Rollover.init(_scene, _objects, render)
-
+        // mk
+        // Rollover.init(_scene, _objects, render)
         initStarterCubes(_scene, _objects)
 
         initLights(_scene)
@@ -314,6 +311,8 @@ window.onload = function(){
                 }
             }
         }
+        // BUG. if you comment out this line shadows get all weird
+        scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial()))
     }
 
     function initLights(scene){
@@ -389,7 +388,7 @@ window.onload = function(){
                 } else {
                     placeCube(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
                 }
-                Rollover.setColor(Player.getCurrentPlayerMaterial().clone().color)
+                // Rollover.setColor(Player.getCurrentPlayerMaterial().clone().color)
                 render();
             }
         } else if (event.which == 2){ // middle mouse
@@ -401,7 +400,7 @@ window.onload = function(){
 
     function onDocumentKeyDown( event ) {
         switch( event.keyCode ) {
-        case 32: placeCube(Rollover.getMesh().position); break; // space
+        // case 32: placeCube(Rollover.getMesh().position); break; // space
         case 16: _isShiftDown = true; break;
         }
         render()
