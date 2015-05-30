@@ -151,8 +151,8 @@ window.onload = function(){
     // mk
     var playerIndex = 0; // 1, 2, 3, 4, etc.
     var PLAYER_MATERIALS = [
-         // new THREE.MeshLambertMaterial({color:0x3392FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
-         new THREE.MeshPhongMaterial({map:THREE.ImageUtils.loadTexture('images/crate.jpg')}),
+         new THREE.MeshLambertMaterial({color:0x3392FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
+         // new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/crate.jpg')}),
          new THREE.MeshLambertMaterial({color:0x74FF33, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
     ]
 
