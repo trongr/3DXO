@@ -146,12 +146,14 @@ var Select = (function(){
     var _raycaster
     var _mouse
     var _camera
+    var _objects
 
-    Select.init = function(camera){
+    Select.init = function(camera, objects){
         _isSelecting = false
         _raycaster = new THREE.Raycaster();
         _mouse = new THREE.Vector2();
         _camera = camera
+        _objects = objects
     }
 
     Select.getIntersect = function(clientX, clientY, objects){
@@ -160,13 +162,31 @@ var Select = (function(){
         return _raycaster.intersectObjects(objects)[0];
     }
 
+    // mk
+    Select.select = function(clientX, clientY){
+        var intersect = Select.getIntersect(clientX, clientY, _objects)
+        if (!intersect) return
+        // mk
+        // REF. removing cube
+        // _scene.remove( intersect.object );
+        // _objects.splice( _objects.indexOf( intersect.object ), 1 );
+        // REF. adding cube
+        // placeCube(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
+        if (_isSelecting){
+
+        } else {
+            Piece.highlight(intersect.object)
+        }
+        _isSelecting = !_isSelecting
+    }
+
     return Select
 }())
 
 var Rollover = (function(){
     var Rollover = {}
 
-    var _MATERIAL = new THREE.MeshLambertMaterial({color:0xff0000, shading:THREE.FlatShading, opacity:0.5, transparent:true})
+    var _MATERIAL = new THREE.MeshLambertMaterial({color:0xff0000, shading:THREE.FlatShading, opacity:0.2, transparent:true})
     var _rollover
     var _scene
     var _objects
@@ -178,8 +198,8 @@ var Rollover = (function(){
         _render = render
         _rollover = new THREE.Mesh(new THREE.BoxGeometry(K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE), _MATERIAL);
         _scene.add(_rollover)
-        Rollover.moveTo(new THREE.Vector3(0, 0, 200))
-        document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+        // Rollover.moveTo(new THREE.Vector3(0, 0, 200))
+        // document.addEventListener( 'mousemove', onDocumentMouseMove, false );
     }
 
     Rollover.getMesh = function(){
@@ -239,6 +259,16 @@ var Player = (function(){
     return Player
 }())
 
+var Piece = (function(){
+    var Piece = {}
+
+    Piece.highlight = function(piece){
+        Rollover.moveTo(piece.position)
+    }
+
+    return Piece
+}())
+
 window.onload = function(){
     if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
@@ -260,15 +290,14 @@ window.onload = function(){
 
         _scene = new THREE.Scene();
 
-        // mk
-        // Rollover.init(_scene, _objects, render)
+        Rollover.init(_scene, _objects, render)
         initStarterCubes(_scene, _objects)
 
         initLights(_scene)
         _camera = initCamera()
         initListeners()
 
-        Select.init(_camera)
+        Select.init(_camera, _objects)
         // KeyNav.init(Rollover.getMesh(), _camera, render) // toggle
 
         initRenderer(container)
@@ -362,9 +391,8 @@ window.onload = function(){
         info.style.textAlign = 'right';
         info.innerHTML = '3DXO<br>'
             + "<strong>mouse</strong>: navigate<br>"
-            + "<strong>QWEASD</strong>: move box<br>"
+            // + "<strong>QWEASD</strong>: move box<br>"
             + '<strong>click</strong>: add box<br>'
-            + '<strong>shift + click</strong>: remove box'
         container.appendChild( info );
     }
 
@@ -379,18 +407,8 @@ window.onload = function(){
     function onDocumentMouseDown( event ) {
         event.preventDefault();
         if (event.which == 1){ // left mouse button
-            var intersect = Select.getIntersect(event.clientX, event.clientY, _objects)
-            if (intersect) {
-                if ( _isShiftDown ) {
-                    _scene.remove( intersect.object );
-                    _objects.splice( _objects.indexOf( intersect.object ), 1 );
-                    Player.updateTurn(-1)
-                } else {
-                    placeCube(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
-                }
-                // Rollover.setColor(Player.getCurrentPlayerMaterial().clone().color)
-                render();
-            }
+            Select.select(event.clientX, event.clientY)
+            render()
         } else if (event.which == 2){ // middle mouse
             // using middle
         } else if (event.which == 3){ // right mouse
@@ -440,12 +458,12 @@ window.onload = function(){
     }
 
     function createBox(position, material){
-        var voxel = new THREE.Mesh( K.CUBE_GEO, material );
-        voxel.position.copy(position);
-        voxel.position.divideScalar( K.CUBE_SIZE ).floor().multiplyScalar( K.CUBE_SIZE ).addScalar( K.CUBE_SIZE / 2 );
-        voxel.castShadow = true;
-        voxel.receiveShadow = true;
-        return voxel
+        var piece = new THREE.Mesh(K.CUBE_GEO, material.clone());
+        piece.position.copy(position);
+        piece.position.divideScalar( K.CUBE_SIZE ).floor().multiplyScalar( K.CUBE_SIZE ).addScalar( K.CUBE_SIZE / 2 );
+        piece.castShadow = true;
+        piece.receiveShadow = true;
+        return piece
     }
 
     // change the positions of the vertices instead of the lines or you'll get unexpected results
@@ -456,9 +474,9 @@ window.onload = function(){
     }
 
     function placeCube(point){
-        var voxel = createBox(point, Player.getCurrentPlayerMaterial())
-        _scene.add( voxel );
-        _objects.push( voxel );
+        var piece = createBox(point, Player.getCurrentPlayerMaterial())
+        _scene.add( piece );
+        _objects.push( piece );
         Player.updateTurn(1)
     }
 
