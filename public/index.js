@@ -4,8 +4,10 @@ var K = (function(){
 
     var K = {}
 
-    K.BOARD_SIZE = 1000
-    K.CUBE_SIZE = 50
+    K.INIT_CAM_POS = 15
+    K.INIT_LIGHT_POS = 10
+    K.BOARD_SIZE = 100
+    K.CUBE_SIZE = 1
     K.CUBE_GEO = new THREE.BoxGeometry( K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE )
 
     return K
@@ -173,7 +175,11 @@ var Select = (function(){
         // REF. adding cube
         // placeCube(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
         if (_isSelecting){
-            Obj.move(_selected, new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
+            Obj.move(_selected, new THREE.Vector3()
+                     .copy(intersect.point)
+                     .add(new THREE.Vector3()
+                          .copy(intersect.face.normal)
+                          .multiplyScalar(0.5)))
             Obj.highlight(_selected, true)
         } else {
             _selected = intersect.object
@@ -194,13 +200,14 @@ var Rollover = (function(){
     var _objects
     var _render
 
+    // mk
     Rollover.init = function(scene, objects, render){
         _scene = scene
         _objects = objects
         _render = render
         _rollover = new THREE.Mesh(new THREE.BoxGeometry(K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE), _MATERIAL);
         _scene.add(_rollover)
-        // Obj.move(_rollover, new THREE.Vector3(0, 0, 200))
+        // Obj.move(_rollover, new THREE.Vector3(0, 0, 0))
         // document.addEventListener( 'mousemove', onDocumentMouseMove, false );
     }
 
@@ -349,7 +356,8 @@ window.onload = function(){
 
         _scene = new THREE.Scene();
 
-        Rollover.init(_scene, _objects, render)
+        // mk
+        Rollover.init(_scene, _objects, render) // toggle
         World.init(_scene, _objects)
 
         initLights(_scene)
@@ -357,7 +365,7 @@ window.onload = function(){
         initListeners()
 
         Select.init(_camera, _objects)
-        // KeyNav.init(Rollover.getMesh(), _camera, render) // toggle
+        KeyNav.init(Rollover.getMesh(), _camera, render) // toggle
 
         initRenderer(container)
     }
@@ -370,7 +378,7 @@ window.onload = function(){
 
     function initCamera(){
         var camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, K.BOARD_SIZE * 10 );
-        camera.position.z = 1000; // for some reason you need this or track ball controls won't work properly
+        camera.position.z = K.INIT_CAM_POS; // for some reason you need this or track ball controls won't work properly
 
         _controls = new THREE.TrackballControls( camera );
         _controls.rotateSpeed = 2.5;
@@ -390,8 +398,8 @@ window.onload = function(){
     function initLights(scene){
         var ambientLight = new THREE.AmbientLight(0xB080D1);
         scene.add(ambientLight);
-        scene.add(createDirectionalLight(500, 1000, 1500));
-        scene.add(createDirectionalLight(-500, -1000, -1500));
+        scene.add(createDirectionalLight(K.INIT_LIGHT_POS, 2 * K.INIT_LIGHT_POS, 3 * K.INIT_LIGHT_POS));
+        scene.add(createDirectionalLight(-K.INIT_LIGHT_POS, -2 * K.INIT_LIGHT_POS, -3 * K.INIT_LIGHT_POS));
     }
 
     function initRenderer(container){
@@ -494,7 +502,7 @@ window.onload = function(){
     function createDirectionalLight(x, y, z){
         var directionalLight = new THREE.DirectionalLight(0xFFFB87);
         directionalLight.position.set(x, y, z);
-        directionalLight.intensity = 1;
+        directionalLight.intensity = 0.75;
         directionalLight.castShadow = true;
         directionalLight.shadowDarkness = 0.2
         return directionalLight
