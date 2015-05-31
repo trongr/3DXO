@@ -187,7 +187,8 @@ var Select = (function(){
                 Obj.highlight(intersect.object, true)
             } else {
                 Obj.highlight(_selected, false)
-                return // so we don't change _isSelecting
+                _isSelecting = false
+                return
             }
         }
         _isSelecting = !_isSelecting
