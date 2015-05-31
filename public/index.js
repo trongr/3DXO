@@ -168,7 +168,6 @@ var Select = (function(){
     Select.select = function(clientX, clientY){
         var intersect = Select.getIntersect(clientX, clientY, _objects)
         if (!intersect) return
-        // mk
         // REF. removing cube
         // _scene.remove( intersect.object );
         // _objects.splice( _objects.indexOf( intersect.object ), 1 );
@@ -181,9 +180,15 @@ var Select = (function(){
                           .copy(intersect.face.normal)
                           .multiplyScalar(0.5))) // normal's unit length so gotta scale by half to fit inside the box
             Obj.highlight(_selected, true)
-        } else {
-            _selected = intersect.object
-            Obj.highlight(intersect.object, true)
+            Player.updateCurPlayer(1)
+        } else { // start selecting
+            if (Player.objBelongsToPlayer(intersect.object, Player.getCurPlayer())){
+                _selected = intersect.object
+                Obj.highlight(intersect.object, true)
+            } else {
+                Obj.highlight(_selected, false)
+                return // so we don't change _isSelecting
+            }
         }
         _isSelecting = !_isSelecting
     }
@@ -200,7 +205,6 @@ var Rollover = (function(){
     var _objects
     var _render
 
-    // mk
     Rollover.init = function(scene, objects, render){
         _scene = scene
         _objects = objects
@@ -232,27 +236,31 @@ var Rollover = (function(){
     return Rollover
 }())
 
-var Turn = (function(){
-    var Turn = {}
+var Player = (function(){
+    var Player = {}
 
-    var TOTAL_TEAMS = 0
-    var _turn = 0 // index of the team to make the next move
+    var TOTAL_PLAYERS = 0
+    var _curPlayer = 0 // index of the player to make the next move
 
-    Turn.init = function(totalTeams){
-        TOTAL_TEAMS = totalTeams
+    Player.init = function(totalPlayers){
+        TOTAL_PLAYERS = totalPlayers
     }
 
     // set incr = -1 for undoos
-    Turn.updateTurn = function(incr){
-        _turn = (_turn + incr + TOTAL_TEAMS) % TOTAL_TEAMS
-        msg.info("Turn: " + _turn)
+    Player.updateCurPlayer = function(incr){
+        _curPlayer = (_curPlayer + incr + TOTAL_PLAYERS) % TOTAL_PLAYERS
+        msg.info("Player: " + _curPlayer)
     }
 
-    Turn.getTurn = function(){
-        return _turn
+    Player.getCurPlayer = function(){
+        return _curPlayer
     }
 
-    return Turn
+    Player.objBelongsToPlayer = function(obj, player){
+        return obj.game.player == player
+    }
+
+    return Player
 }())
 
 var Obj = (function(){
@@ -261,14 +269,21 @@ var Obj = (function(){
     Obj.TYPE = {
         pawn: {
             material: new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/crate.jpg')}),
-        }
+        },
+        // mk
+        ground0: {
+            material: new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
+        },
+        ground1: {
+            material: new THREE.MeshPhongMaterial({color:0xB5B5B5, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
+        },
     }
 
-    // mk
-    Obj.make = function(team, type, x, y, z){
+    Obj.make = function(player, type, x, y, z){
         var obj = Obj.makeBox(new THREE.Vector3(x, y, z), Obj.TYPE[type].material)
         obj.game = {
-            team: team,
+            // team: team, // todo
+            player: player,
             type: type,
         }
         return obj
@@ -283,6 +298,7 @@ var Obj = (function(){
     }
 
     Obj.highlight = function(obj, isHigh){
+        if (!obj) return
         if (isHigh) Obj.move(Rollover.getMesh(), obj.position)
         else Obj.move(Rollover.getMesh(), new THREE.Vector3(0, 0, 0)) // just move the rollover out of sight
     }
@@ -304,7 +320,6 @@ var World = (function(){
 
     var _scene, _objects;
 
-    // mk
     World.init = function(scene, objects){
         _scene = scene
         _objects = objects
@@ -312,17 +327,14 @@ var World = (function(){
         World.initGamePieces(_scene, _objects)
     }
 
+    // mk
     World.initGround = function(scene, objects){
-        var groundMats = [
-            new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
-            new THREE.MeshPhongMaterial({color:0xB5B5B5, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
-        ]
         var groundBlockSize = 4; // 8 by 8 by 8
         for ( var x = -K.CUBE_SIZE * groundBlockSize; x < K.CUBE_SIZE * groundBlockSize; x += K.CUBE_SIZE ) {
             for (var y = -K.CUBE_SIZE * groundBlockSize; y < K.CUBE_SIZE * groundBlockSize; y += K.CUBE_SIZE){
                 for (var z = -K.CUBE_SIZE * groundBlockSize; z < K.CUBE_SIZE * groundBlockSize; z += K.CUBE_SIZE){
                     var index = ((x + y + z) / K.CUBE_SIZE % 2 + 2) % 2 // alternating odd and even cell
-                    var groundBox = Obj.makeBox(new THREE.Vector3(x, y, z), groundMats[index])
+                    var groundBox = Obj.make("god", "ground" + index, x, y, z)
                     scene.add(groundBox)
                     objects.push(groundBox)
                 }
@@ -332,20 +344,19 @@ var World = (function(){
         // scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial()))
     }
 
-    // mk
     World.initGamePieces = function(scene, objects){
-        var TOTAL_TEAMS = 2
-        var team1 = [
+        var TOTAL_PLAYERS = 2
+        var player1 = [
             Obj.make(0, "pawn", 0, 0, 4),
             Obj.make(0, "pawn", 1, 0, 4),
         ]
-        var team2 = [
+        var player2 = [
             Obj.make(1, "pawn", 1, 1, 4),
             Obj.make(1, "pawn", 1, 2, 4),
         ]
-        World.loadGamePieces(team1)
-        World.loadGamePieces(team2)
-        Turn.init(TOTAL_TEAMS)
+        World.loadGamePieces(player1)
+        World.loadGamePieces(player2)
+        Player.init(TOTAL_PLAYERS)
     }
 
     World.loadGamePieces = function(objs){
@@ -535,14 +546,6 @@ window.onload = function(){
         line.geometry.vertices[0].add(displacement)
         line.geometry.vertices[1].add(displacement)
         line.geometry.verticesNeedUpdate = true
-    }
-
-    // mk
-    function placeCube(point){
-        var obj = createBox(point, Turn.getCurrentTurnMaterial())
-        _scene.add( obj );
-        _objects.push( obj );
-        Turn.updateTurn(1)
     }
 
 }
