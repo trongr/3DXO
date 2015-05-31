@@ -260,17 +260,27 @@ var Player = (function(){
     return Player
 }())
 
-var Piece = (function(){
-    var Piece = {}
-
-    return Piece
-}())
-
 var Obj = (function(){
     var Obj = {}
 
-    Obj.move = function(piece, point){
-        piece.position
+    Obj.TYPE = {
+        pawn: {
+            material: new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/crate.jpg')}),
+        }
+    }
+
+    // mk
+    Obj.make = function(team, type, x, y, z){
+        var obj = Obj.makeBox(new THREE.Vector3(x, y, z), Obj.TYPE[type].material)
+        obj.game = {
+            team: team,
+            type: type,
+        }
+        return obj
+    }
+
+    Obj.move = function(obj, point){
+        obj.position
             .copy(point)
             .divideScalar( K.CUBE_SIZE ).floor()
             .multiplyScalar( K.CUBE_SIZE )
@@ -304,7 +314,7 @@ var World = (function(){
         _scene = scene
         _objects = objects
         World.initGround(_scene, _objects)
-        World.initPieces(_scene, _objects)
+        World.initGamePieces(_scene, _objects)
     }
 
     World.initGround = function(scene, objects){
@@ -328,8 +338,25 @@ var World = (function(){
     }
 
     // mk
-    World.initPieces = function(scene, objects){
+    World.initGamePieces = function(scene, objects){
+        var army1 = [
+            Obj.make(0, "pawn", 0, 0, 4),
+            Obj.make(0, "pawn", 1, 0, 4),
+        ]
+        var army2 = [
+            Obj.make(1, "pawn", 1, 1, 4),
+            Obj.make(1, "pawn", 1, 2, 4),
+        ]
+        World.loadGamePieces(army1)
+        World.loadGamePieces(army2)
+    }
 
+    World.loadGamePieces = function(objs){
+        for (var i = 0; i < objs.length; i++){
+            _scene.add(objs[i])
+            _objects.push(objs[i])
+            console.log(JSON.stringify(objs[i].game, 0, 2))
+        }
     }
 
     return World
@@ -356,7 +383,6 @@ window.onload = function(){
 
         _scene = new THREE.Scene();
 
-        // mk
         Rollover.init(_scene, _objects, render) // toggle
         World.init(_scene, _objects)
 
@@ -517,9 +543,9 @@ window.onload = function(){
 
     // mk
     function placeCube(point){
-        var piece = createBox(point, Player.getCurrentPlayerMaterial())
-        _scene.add( piece );
-        _objects.push( piece );
+        var obj = createBox(point, Player.getCurrentPlayerMaterial())
+        _scene.add( obj );
+        _objects.push( obj );
         Player.updateTurn(1)
     }
 
