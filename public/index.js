@@ -179,7 +179,7 @@ var Select = (function(){
                      .copy(intersect.point)
                      .add(new THREE.Vector3()
                           .copy(intersect.face.normal)
-                          .multiplyScalar(0.5)))
+                          .multiplyScalar(0.5))) // normal's unit length so gotta scale by half to fit inside the box
             Obj.highlight(_selected, true)
         } else {
             _selected = intersect.object
@@ -225,10 +225,6 @@ var Rollover = (function(){
         var intersect = Select.getIntersect(event.clientX, event.clientY, _objects)
         if (intersect) {
             Obj.move(Rollover.getMesh(), new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
-            Rollover.setColor(Player.getCurrentPlayerMaterial().clone().color)
-            // gotta clone otw changing rollover color later will change player cube colors
-        } else {
-            Rollover.setColor(null)
         }
         _render();
     }
@@ -236,28 +232,27 @@ var Rollover = (function(){
     return Rollover
 }())
 
-var Player = (function(){
-    var Player = {}
+var Turn = (function(){
+    var Turn = {}
 
-    Player.currentPlayerIndex = 0; // 1, 2, 3, 4, etc.
+    var TOTAL_TEAMS = 0
+    var _turn = 0 // index of the team to make the next move
 
-    Player.PLAYER_MATERIALS = [
-         new THREE.MeshLambertMaterial({color:0x3392FF, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
-         // new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/crate.jpg')}),
-         new THREE.MeshLambertMaterial({color:0x74FF33, shading:THREE.FlatShading, opacity:1, transparent:false, side:THREE.DoubleSide}),
-    ]
-
-    Player.updateTurn = function(incr){
-        msg.info("Player " + Player.currentPlayerIndex)
-        var playerCount = Player.PLAYER_MATERIALS.length
-        Player.currentPlayerIndex = (Player.currentPlayerIndex + incr + playerCount) % playerCount
+    Turn.init = function(totalTeams){
+        TOTAL_TEAMS = totalTeams
     }
 
-    Player.getCurrentPlayerMaterial = function(){
-        return Player.PLAYER_MATERIALS[Player.currentPlayerIndex]
+    // set incr = -1 for undoos
+    Turn.updateTurn = function(incr){
+        _turn = (_turn + incr + TOTAL_TEAMS) % TOTAL_TEAMS
+        msg.info("Turn: " + _turn)
     }
 
-    return Player
+    Turn.getTurn = function(){
+        return _turn
+    }
+
+    return Turn
 }())
 
 var Obj = (function(){
@@ -333,29 +328,30 @@ var World = (function(){
                 }
             }
         }
-        // BUG. if you comment out this line shadows get all weird
-        scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial()))
+        // BUG. if you add nothing else other than the ground you get some weird shadow effect
+        // scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial()))
     }
 
     // mk
     World.initGamePieces = function(scene, objects){
-        var army1 = [
+        var TOTAL_TEAMS = 2
+        var team1 = [
             Obj.make(0, "pawn", 0, 0, 4),
             Obj.make(0, "pawn", 1, 0, 4),
         ]
-        var army2 = [
+        var team2 = [
             Obj.make(1, "pawn", 1, 1, 4),
             Obj.make(1, "pawn", 1, 2, 4),
         ]
-        World.loadGamePieces(army1)
-        World.loadGamePieces(army2)
+        World.loadGamePieces(team1)
+        World.loadGamePieces(team2)
+        Turn.init(TOTAL_TEAMS)
     }
 
     World.loadGamePieces = function(objs){
         for (var i = 0; i < objs.length; i++){
             _scene.add(objs[i])
             _objects.push(objs[i])
-            console.log(JSON.stringify(objs[i].game, 0, 2))
         }
     }
 
@@ -543,10 +539,10 @@ window.onload = function(){
 
     // mk
     function placeCube(point){
-        var obj = createBox(point, Player.getCurrentPlayerMaterial())
+        var obj = createBox(point, Turn.getCurrentTurnMaterial())
         _scene.add( obj );
         _objects.push( obj );
-        Player.updateTurn(1)
+        Turn.updateTurn(1)
     }
 
 }
