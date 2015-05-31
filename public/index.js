@@ -163,7 +163,6 @@ var Select = (function(){
         return _raycaster.intersectObjects(objects)[0];
     }
 
-    // mk
     Select.select = function(clientX, clientY){
         var intersect = Select.getIntersect(clientX, clientY, _objects)
         if (!intersect) return
@@ -276,7 +275,57 @@ var Obj = (function(){
         else Obj.move(Rollover.getMesh(), new THREE.Vector3(0, 0, 0)) // just move the rollover out of sight
     }
 
+    Obj.makeBox = function(position, material){
+        var box = new THREE.Mesh(K.CUBE_GEO, material.clone());
+        box.position.copy(position);
+        box.position.divideScalar( K.CUBE_SIZE ).floor().multiplyScalar( K.CUBE_SIZE ).addScalar( K.CUBE_SIZE / 2 );
+        box.castShadow = true;
+        box.receiveShadow = true;
+        return box
+    }
+
     return Obj
+}())
+
+var World = (function(){
+    var World = {}
+
+    var _scene, _objects;
+
+    // mk
+    World.init = function(scene, objects){
+        _scene = scene
+        _objects = objects
+        World.initGround(_scene, _objects)
+        World.initPieces(_scene, _objects)
+    }
+
+    World.initGround = function(scene, objects){
+        var groundMats = [
+            new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
+            new THREE.MeshPhongMaterial({color:0xB5B5B5, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
+        ]
+        var groundBlockSize = 4; // 8 by 8 by 8
+        for ( var x = -K.CUBE_SIZE * groundBlockSize; x < K.CUBE_SIZE * groundBlockSize; x += K.CUBE_SIZE ) {
+            for (var y = -K.CUBE_SIZE * groundBlockSize; y < K.CUBE_SIZE * groundBlockSize; y += K.CUBE_SIZE){
+                for (var z = -K.CUBE_SIZE * groundBlockSize; z < K.CUBE_SIZE * groundBlockSize; z += K.CUBE_SIZE){
+                    var index = ((x + y + z) / K.CUBE_SIZE % 2 + 2) % 2 // alternating odd and even cell
+                    var groundBox = Obj.makeBox(new THREE.Vector3(x, y, z), groundMats[index])
+                    scene.add(groundBox)
+                    objects.push(groundBox)
+                }
+            }
+        }
+        // BUG. if you comment out this line shadows get all weird
+        scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial()))
+    }
+
+    // mk
+    World.initPieces = function(scene, objects){
+
+    }
+
+    return World
 }())
 
 window.onload = function(){
@@ -301,7 +350,7 @@ window.onload = function(){
         _scene = new THREE.Scene();
 
         Rollover.init(_scene, _objects, render)
-        initStarterCubes(_scene, _objects)
+        World.init(_scene, _objects)
 
         initLights(_scene)
         _camera = initCamera()
@@ -336,26 +385,6 @@ window.onload = function(){
         document.addEventListener( 'mousemove', _controls.update.bind( _controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
 
         return camera
-    }
-
-    function initStarterCubes(scene, objects){
-        var wallMats = [
-            new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
-            new THREE.MeshPhongMaterial({color:0xB5B5B5, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
-        ]
-        var starterCubeSize = 4; // 8 by 8 by 8
-        for ( var x = -K.CUBE_SIZE * starterCubeSize; x < K.CUBE_SIZE * starterCubeSize; x += K.CUBE_SIZE ) {
-            for (var y = -K.CUBE_SIZE * starterCubeSize; y < K.CUBE_SIZE * starterCubeSize; y += K.CUBE_SIZE){
-                for (var z = -K.CUBE_SIZE * starterCubeSize; z < K.CUBE_SIZE * starterCubeSize; z += K.CUBE_SIZE){
-                    var index = ((x + y + z) / K.CUBE_SIZE % 2 + 2) % 2 // alternating odd and even cell
-                    var starterBox = createBox(new THREE.Vector3(x, y, z), wallMats[index])
-                    scene.add(starterBox)
-                    objects.push(starterBox)
-                }
-            }
-        }
-        // BUG. if you comment out this line shadows get all weird
-        scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial()))
     }
 
     function initLights(scene){
@@ -471,15 +500,6 @@ window.onload = function(){
         return directionalLight
     }
 
-    function createBox(position, material){
-        var piece = new THREE.Mesh(K.CUBE_GEO, material.clone());
-        piece.position.copy(position);
-        piece.position.divideScalar( K.CUBE_SIZE ).floor().multiplyScalar( K.CUBE_SIZE ).addScalar( K.CUBE_SIZE / 2 );
-        piece.castShadow = true;
-        piece.receiveShadow = true;
-        return piece
-    }
-
     // change the positions of the vertices instead of the lines or you'll get unexpected results
     function displaceLine(line, displacement){
         line.geometry.vertices[0].add(displacement)
@@ -487,6 +507,7 @@ window.onload = function(){
         line.geometry.verticesNeedUpdate = true
     }
 
+    // mk
     function placeCube(point){
         var piece = createBox(point, Player.getCurrentPlayerMaterial())
         _scene.add( piece );
