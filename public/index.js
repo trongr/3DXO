@@ -267,11 +267,14 @@ var Player = (function(){
 var Obj = (function(){
     var Obj = {}
 
+    // mk
     Obj.TYPE = {
         pawn: {
-            material: new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/crate.jpg')}),
+            material: [
+                new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/small/bpawn0.png')}),
+                new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/small/wpawn0.png')}),
+            ],
         },
-        // mk
         ground0: {
             material: new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
         },
@@ -281,7 +284,9 @@ var Obj = (function(){
     }
 
     Obj.make = function(player, type, x, y, z){
-        var obj = Obj.makeBox(new THREE.Vector3(x, y, z), Obj.TYPE[type].material)
+        if (player != null) var mat = Obj.TYPE[type].material[player] // diff textures for diff players
+        else var mat = Obj.TYPE[type].material // non player materials are unique
+        var obj = Obj.makeBox(new THREE.Vector3(x, y, z), mat)
         obj.game = {
             // team: team, // todo
             player: player,
@@ -328,14 +333,13 @@ var World = (function(){
         World.initGamePieces(_scene, _objects)
     }
 
-    // mk
     World.initGround = function(scene, objects){
         var groundBlockSize = 4; // 8 by 8 by 8
         for ( var x = -K.CUBE_SIZE * groundBlockSize; x < K.CUBE_SIZE * groundBlockSize; x += K.CUBE_SIZE ) {
             for (var y = -K.CUBE_SIZE * groundBlockSize; y < K.CUBE_SIZE * groundBlockSize; y += K.CUBE_SIZE){
                 for (var z = -K.CUBE_SIZE * groundBlockSize; z < K.CUBE_SIZE * groundBlockSize; z += K.CUBE_SIZE){
                     var index = ((x + y + z) / K.CUBE_SIZE % 2 + 2) % 2 // alternating odd and even cell
-                    var groundBox = Obj.make("god", "ground" + index, x, y, z)
+                    var groundBox = Obj.make(null, "ground" + index, x, y, z)
                     scene.add(groundBox)
                     objects.push(groundBox)
                 }
