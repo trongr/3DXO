@@ -267,12 +267,13 @@ var Player = (function(){
 var Obj = (function(){
     var Obj = {}
 
-    // mk
+    var TEXTURES_ROOT = "/static/images/small/"
+
     Obj.TYPE = {
-        pawn: {
+        pawn: { // mk
             material: [
-                new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/small/bpawn0.png')}),
-                new THREE.MeshLambertMaterial({map:THREE.ImageUtils.loadTexture('/static/images/small/wpawn0.png')}),
+                new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn")),
+                new THREE.MeshFaceMaterial(loadFaceTextures("p1pawn")),
             ],
         },
         ground0: {
@@ -283,9 +284,24 @@ var Obj = (function(){
         },
     }
 
+    function loadFaceTextures(textureName){
+        var materials = []
+        for (var i = 0; i < 6; i++){
+            materials.push(new THREE.MeshLambertMaterial({
+                map:THREE.ImageUtils.loadTexture(TEXTURES_ROOT + textureName + i + ".png")
+            }))
+        }
+        return materials
+    }
+
+    // mk
+    Obj.getMaterial = function(player, type){
+        if (player != null) return Obj.TYPE[type].material[player]
+        else return Obj.TYPE[type].material // non player materials are unique
+    }
+
     Obj.make = function(player, type, x, y, z){
-        if (player != null) var mat = Obj.TYPE[type].material[player] // diff textures for diff players
-        else var mat = Obj.TYPE[type].material // non player materials are unique
+        var mat = Obj.getMaterial(player, type)
         var obj = Obj.makeBox(new THREE.Vector3(x, y, z), mat)
         obj.game = {
             // team: team, // todo
@@ -310,7 +326,7 @@ var Obj = (function(){
     }
 
     Obj.makeBox = function(position, material){
-        var box = new THREE.Mesh(K.CUBE_GEO, material.clone());
+        var box = new THREE.Mesh(K.CUBE_GEO, material);
         box.position.copy(position);
         box.position.divideScalar( K.CUBE_SIZE ).floor().multiplyScalar( K.CUBE_SIZE ).addScalar( K.CUBE_SIZE / 2 );
         box.castShadow = true;
@@ -329,8 +345,12 @@ var World = (function(){
     World.init = function(scene, objects){
         _scene = scene
         _objects = objects
-        World.initGround(_scene, _objects)
         World.initGamePieces(_scene, _objects)
+        World.initGround(_scene, _objects) // if you load the ground
+                                           // before the game pieces,
+                                           // the pieces' faces will
+                                           // all have the same
+                                           // texture. what the heck
     }
 
     World.initGround = function(scene, objects){
