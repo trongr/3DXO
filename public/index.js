@@ -1,6 +1,4 @@
 // todo. rollover's clipping with cube texture
-var _objects = [];
-
 // TODO center board on keypress
 
 var K = (function(){
@@ -272,6 +270,7 @@ var Obj = (function(){
 
     var TEXTURES_ROOT = "/static/images/small/"
     var _raycaster = new THREE.Raycaster()
+    var _objects
 
     Obj.TYPE = {
         pawn: {
@@ -296,6 +295,10 @@ var Obj = (function(){
             }))
         }
         return materials
+    }
+
+    Obj.init = function(objects){
+        _objects = objects
     }
 
     Obj.getMaterial = function(player, type){
@@ -456,8 +459,7 @@ window.onload = function(){
 
     var _isShiftDown = false;
 
-    // mk.
-    // var _objects = [];
+    var _objects = [];
 
     init();
     animate();
@@ -476,6 +478,7 @@ window.onload = function(){
 
         Rollover.init(_scene, _objects, render) // toggle
         World.init(_scene, _objects)
+        Obj.init(_objects) // mk TODO might need to init this before world
 
         Select.init(_camera, _objects)
         KeyNav.init(Rollover.getMesh(), _camera, render) // toggle
@@ -605,6 +608,7 @@ window.onload = function(){
     function animate() {
         requestAnimationFrame( animate );
         _controls.update(); // use this too cause zooming's weird without it
+        // render() // don't render on every frame unless you're really animating stuff
     }
 
     function render() {
@@ -619,13 +623,6 @@ window.onload = function(){
         directionalLight.castShadow = true;
         directionalLight.shadowDarkness = 0.2
         return directionalLight
-    }
-
-    // change the positions of the vertices instead of the lines or you'll get unexpected results
-    function displaceLine(line, displacement){
-        line.geometry.vertices[0].add(displacement)
-        line.geometry.vertices[1].add(displacement)
-        line.geometry.verticesNeedUpdate = true
     }
 
 }
