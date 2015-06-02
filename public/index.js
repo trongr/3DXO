@@ -1,3 +1,7 @@
+// todo. rollover's clipping with cube texture
+
+var _objects = [];
+
 // TODO center board on keypress
 
 var K = (function(){
@@ -268,9 +272,10 @@ var Obj = (function(){
     var Obj = {}
 
     var TEXTURES_ROOT = "/static/images/small/"
+    var _raycaster = new THREE.Raycaster()
 
     Obj.TYPE = {
-        pawn: { // mk
+        pawn: {
             material: [
                 new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn")),
                 new THREE.MeshFaceMaterial(loadFaceTextures("p1pawn")),
@@ -294,7 +299,6 @@ var Obj = (function(){
         return materials
     }
 
-    // mk
     Obj.getMaterial = function(player, type){
         if (player != null) return Obj.TYPE[type].material[player]
         else return Obj.TYPE[type].material // non player materials are unique
@@ -308,6 +312,12 @@ var Obj = (function(){
             player: player,
             type: type,
         }
+        // mk. right now game pieces are initialized before ground
+        // blocks so you can't find the ground. TODO. load ground then
+        // game pieces into objects, then finally add them to the
+        // scene in the other order (to work around the texture bug)
+        //
+        // Obj.standUpRight(obj)
         return obj
     }
 
@@ -317,6 +327,7 @@ var Obj = (function(){
             .divideScalar( K.CUBE_SIZE ).floor()
             .multiplyScalar( K.CUBE_SIZE )
             .addScalar( K.CUBE_SIZE / 2 );
+        Obj.standUpRight(obj)
     }
 
     Obj.highlight = function(obj, isHigh){
@@ -332,6 +343,48 @@ var Obj = (function(){
         box.castShadow = true;
         box.receiveShadow = true;
         return box
+    }
+
+    Obj.standUpRight = function(obj){
+        if (Obj.isPlayerObj(obj)){
+            var ground = Obj.findGround(obj) // find the ground so you know where up is
+            var up = new THREE.Vector3()
+                .copy(ground.point)
+                .add(ground.face.normal)
+            obj.lookAt(up)
+        } // else it's the ground and we don't need to stand it up right
+    }
+
+    // todo. if there are more than two "grounds" e.g. at a wall, this
+    // will pick the first ground it finds, which might not look
+    // good. in that case the block should keep its current up
+    // orientation
+    Obj.findGround = function(obj){
+        var origin = obj.position
+        for (var i = 0; i < 3; i++){ // 3 axes
+            for (var j = 1; j <= 2; j++){ // forward and backward
+                var direction = new THREE.Vector3()
+                direction.setComponent(i, Math.pow(-1, j))
+                _raycaster.set(origin, direction)
+                var intersect = _raycaster.intersectObjects(_objects, true)[0];
+                if (intersect && Obj.isGround(intersect.object)) return intersect
+            }
+        }
+        msg.error("ERROR. Blocks can't tell which direction is up")
+    }
+
+    // todo. better classing
+    Obj.isGround = function(obj){
+        return !Obj.isPlayerObj(obj)
+    }
+
+    // todo. better classing
+    Obj.isPlayerObj = function(obj){
+        try {
+            return (obj.game.player != null)
+        } catch (e){
+            return false
+        }
     }
 
     return Obj
@@ -366,6 +419,7 @@ var World = (function(){
             }
         }
         // BUG. if you add nothing else other than the ground you get some weird shadow effect
+        // EDIT. not sure if it happens any more
         // scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial()))
     }
 
@@ -398,11 +452,13 @@ window.onload = function(){
     if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
     var _stats;
-    var _camera, _controls, _scene, _renderer;
+    var _camera
+    var _controls, _scene, _renderer;
 
     var _isShiftDown = false;
 
-    var _objects = [];
+    // mk.
+    // var _objects = [];
 
     init();
     animate();
