@@ -1,5 +1,4 @@
 // todo. rollover's clipping with cube texture
-
 var _objects = [];
 
 // TODO center board on keypress
@@ -471,12 +470,12 @@ window.onload = function(){
 
         _scene = new THREE.Scene();
 
-        Rollover.init(_scene, _objects, render) // toggle
-        World.init(_scene, _objects)
-
         initLights(_scene)
         _camera = initCamera()
         initListeners()
+
+        Rollover.init(_scene, _objects, render) // toggle
+        World.init(_scene, _objects)
 
         Select.init(_camera, _objects)
         KeyNav.init(Rollover.getMesh(), _camera, render) // toggle
