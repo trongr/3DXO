@@ -266,14 +266,10 @@ var Obj = (function(){
     var TEXTURES_ROOT = "/static/images/small/"
     var _raycaster = new THREE.Raycaster()
     var _objects = []
+    var _render = null // so you can call render when done loading objects
 
     Obj.TYPE = {
-        pawn: {
-            material: [
-                new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn", 0xff4545)),
-                new THREE.MeshFaceMaterial(loadFaceTextures("p1pawn", 0x0060ff)),
-            ],
-        },
+        pawn: null, // load in Obj.init
         ground0: {
             material: new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
         },
@@ -289,14 +285,21 @@ var Obj = (function(){
         } // use colors for non image faces
         materials[4] = new THREE.MeshLambertMaterial({
             map:THREE.ImageUtils.loadTexture(TEXTURES_ROOT + textureName + "4.png", {}, function(){
-                // todo. render when textures load or you'll get black cubes
+                _render()
             })
         })
         return materials
     }
 
-    Obj.init = function(){
+    Obj.init = function(render){
         _objects = []
+        _render = render
+        Obj.TYPE.pawn = {
+            material: [
+                new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn", 0xff4545)),
+                new THREE.MeshFaceMaterial(loadFaceTextures("p1pawn", 0x0060ff)),
+            ],
+        }
         // if you load the ground before the game pieces, the pieces'
         // faces will all have the same texture. what the heck
         //
@@ -484,7 +487,7 @@ window.onload = function(){
         initStats(container)
         initInfo(container)
 
-        Obj.init()
+        Obj.init(render)
         Scene.init()
 
         initLights()
