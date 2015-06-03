@@ -149,29 +149,27 @@ var Select = (function(){
     var _raycaster
     var _mouse
     var _camera
-    var _objects
     var _selected
 
-    Select.init = function(camera, objects){
+    Select.init = function(camera){
         _isSelecting = false
         _raycaster = new THREE.Raycaster();
         _mouse = new THREE.Vector2();
         _camera = camera
-        _objects = objects
     }
 
-    Select.getIntersect = function(clientX, clientY, objects){
+    Select.getIntersect = function(clientX, clientY){
         _mouse.set( ( clientX / window.innerWidth ) * 2 - 1, - ( clientY / window.innerHeight ) * 2 + 1 );
         _raycaster.setFromCamera(_mouse, _camera);
-        return _raycaster.intersectObjects(objects)[0];
+        return _raycaster.intersectObjects(Obj.getObjects())[0];
     }
 
     Select.select = function(clientX, clientY){
-        var intersect = Select.getIntersect(clientX, clientY, _objects)
+        var intersect = Select.getIntersect(clientX, clientY)
         if (!intersect) return
         // REF. removing cube
-        // _scene.remove( intersect.object );
-        // _objects.splice( _objects.indexOf( intersect.object ), 1 );
+        // Scene.getScene().remove( intersect.object );
+        // Obj.getObjects().splice( Obj.getObjects().indexOf( intersect.object ), 1 );
         // REF. adding cube
         // placeCube(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
         if (_isSelecting){
@@ -203,17 +201,13 @@ var Rollover = (function(){
 
     var _MATERIAL = new THREE.MeshLambertMaterial({color:0xffffff, shading:THREE.FlatShading, opacity:0.3, transparent:true})
     var _rollover
-    var _scene
-    var _objects
     var _render
 
-    Rollover.init = function(scene, objects, render){
-        _scene = scene
-        _objects = objects
+    Rollover.init = function(render){
         _render = render
         // 0.01 extra to prevent highlight from clipping with cube surface
         _rollover = new THREE.Mesh(new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01), _MATERIAL);
-        _scene.add(_rollover)
+        Scene.addObj(_rollover)
         // Obj.move(_rollover, new THREE.Vector3(0, 0, 0))
         // document.addEventListener( 'mousemove', onDocumentMouseMove, false );
     }
@@ -229,7 +223,7 @@ var Rollover = (function(){
 
     function onDocumentMouseMove( event ) {
         event.preventDefault();
-        var intersect = Select.getIntersect(event.clientX, event.clientY, _objects)
+        var intersect = Select.getIntersect(event.clientX, event.clientY)
         if (intersect) {
             Obj.move(Rollover.getMesh(), new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
         }
@@ -271,7 +265,7 @@ var Obj = (function(){
 
     var TEXTURES_ROOT = "/static/images/small/"
     var _raycaster = new THREE.Raycaster()
-    var _objects
+    var _objects = []
 
     Obj.TYPE = {
         pawn: {
@@ -298,8 +292,8 @@ var Obj = (function(){
         return materials
     }
 
-    Obj.init = function(objects){
-        _objects = objects
+    Obj.init = function(){
+        _objects = []
     }
 
     Obj.getMaterial = function(player, type){
@@ -390,43 +384,45 @@ var Obj = (function(){
         }
     }
 
+    Obj.getObjects = function(){
+        return _objects
+    }
+
+    Obj.addObj = function(obj){
+        _objects.push(obj)
+    }
+
     return Obj
 }())
 
 var World = (function(){
     var World = {}
 
-    var _scene, _objects;
-
-    World.init = function(scene, objects){
-        _scene = scene
-        _objects = objects
-        World.initGamePieces(_scene, _objects)
-        World.initGround(_scene, _objects) // if you load the ground
-                                           // before the game pieces,
-                                           // the pieces' faces will
-                                           // all have the same
-                                           // texture. what the heck
+    World.init = function(){
+        // if you load the ground before the game pieces, the pieces'
+        // faces will all have the same texture. what the heck
+        World.initGamePieces()
+        World.initGround()
     }
 
-    World.initGround = function(scene, objects){
+    World.initGround = function(){
         var groundBlockSize = 4; // 8 by 8 by 8
         for ( var x = -K.CUBE_SIZE * groundBlockSize; x < K.CUBE_SIZE * groundBlockSize; x += K.CUBE_SIZE ) {
             for (var y = -K.CUBE_SIZE * groundBlockSize; y < K.CUBE_SIZE * groundBlockSize; y += K.CUBE_SIZE){
                 for (var z = -K.CUBE_SIZE * groundBlockSize; z < K.CUBE_SIZE * groundBlockSize; z += K.CUBE_SIZE){
                     var index = ((x + y + z) / K.CUBE_SIZE % 2 + 2) % 2 // alternating odd and even cell
                     var groundBox = Obj.make(null, "ground" + index, x, y, z)
-                    scene.add(groundBox)
-                    objects.push(groundBox)
+                    Scene.addObj(groundBox)
+                    Obj.addObj(groundBox)
                 }
             }
         }
         // BUG. if you add nothing else other than the ground you get some weird shadow effect
         // EDIT. not sure if it happens any more
-        // scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial()))
+        // Scene.addObj(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial()))
     }
 
-    World.initGamePieces = function(scene, objects){
+    World.initGamePieces = function(){
         var TOTAL_PLAYERS = 2
         var player1 = [
             Obj.make(0, "pawn", 0, 0, 4),
@@ -443,45 +439,64 @@ var World = (function(){
 
     World.loadGamePieces = function(objs){
         for (var i = 0; i < objs.length; i++){
-            _scene.add(objs[i])
-            _objects.push(objs[i])
+            Scene.addObj(objs[i])
+            Obj.addObj(objs[i])
         }
     }
 
     return World
 }())
 
+var Scene = (function(){
+    var Scene = {}
+
+    var _scene = null
+
+    Scene.init = function(){
+        _scene = new THREE.Scene();
+    }
+
+    Scene.getScene = function(){
+        return _scene
+    }
+
+    Scene.addObj = function(obj){
+        _scene.add(obj)
+    }
+
+    return Scene
+}())
+
+// mk.
 window.onload = function(){
     if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
     var _stats;
     var _camera
-    var _controls, _scene, _renderer;
+    var _controls, _renderer;
 
     var _isShiftDown = false;
-
-    var _objects = [];
 
     init();
     animate();
 
     function init() {
-
         var container = initContainer()
         initStats(container)
         initInfo(container)
 
-        _scene = new THREE.Scene();
+        // mk.
+        Obj.init()
+        Scene.init()
 
-        initLights(_scene)
+        initLights()
         _camera = initCamera()
         initListeners()
 
-        Rollover.init(_scene, _objects, render) // toggle
-        World.init(_scene, _objects)
-        Obj.init(_objects) // mk TODO might need to init this before world
+        Rollover.init(render) // toggle
+        World.init()
 
-        Select.init(_camera, _objects)
+        Select.init(_camera)
         KeyNav.init(Rollover.getMesh(), _camera, render) // toggle
 
         initRenderer(container)
@@ -512,11 +527,11 @@ window.onload = function(){
         return camera
     }
 
-    function initLights(scene){
+    function initLights(){
         var ambientLight = new THREE.AmbientLight(0xB080D1);
-        scene.add(ambientLight);
-        scene.add(createDirectionalLight(K.INIT_LIGHT_POS, 2 * K.INIT_LIGHT_POS, 3 * K.INIT_LIGHT_POS));
-        scene.add(createDirectionalLight(-K.INIT_LIGHT_POS, -2 * K.INIT_LIGHT_POS, -3 * K.INIT_LIGHT_POS));
+        Scene.addObj(ambientLight);
+        Scene.addObj(createDirectionalLight(K.INIT_LIGHT_POS, 2 * K.INIT_LIGHT_POS, 3 * K.INIT_LIGHT_POS));
+        Scene.addObj(createDirectionalLight(-K.INIT_LIGHT_POS, -2 * K.INIT_LIGHT_POS, -3 * K.INIT_LIGHT_POS));
     }
 
     function initRenderer(container){
@@ -613,7 +628,7 @@ window.onload = function(){
     }
 
     function render() {
-        _renderer.render( _scene, _camera );
+        _renderer.render( Scene.getScene(), _camera );
         _stats.update();
     }
 
