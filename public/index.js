@@ -300,30 +300,30 @@ var Obj = (function(){
                 new THREE.MeshFaceMaterial(loadFaceTextures("p1pawn", 0x0060ff)),
             ],
         }
-        // if you load the ground before the game pieces, the pieces'
+        // if you load the map before the game pieces, the pieces'
         // faces will all have the same texture. what the heck
         //
-        // todo. you're loading game pieces first and then the ground,
-        // which is bad because without the ground the pieces can't
+        // todo. you're loading game pieces first and then the map,
+        // which is bad because without the map the pieces can't
         // tell which direction is up. for now it's OK, but will
         // become a problem once you start loading pieces on different
         // faces of the cube. in that case, once you've loaded the
-        // game pieces, then the ground, do another pass through the
+        // game pieces, then the map, do another pass through the
         // pieces and stand them up right.
         Obj.initGamePieces()
-        Obj.initGround()
+        Obj.initMap()
     }
 
-    Obj.initGround = function(){
-        var groundBlockSize = 4; // 8 by 8 by 8
-        for ( var x = -K.CUBE_SIZE * groundBlockSize; x < K.CUBE_SIZE * groundBlockSize; x += K.CUBE_SIZE ) {
-            for (var y = -K.CUBE_SIZE * groundBlockSize; y < K.CUBE_SIZE * groundBlockSize; y += K.CUBE_SIZE){
-                for (var z = -K.CUBE_SIZE * groundBlockSize; z < K.CUBE_SIZE * groundBlockSize; z += K.CUBE_SIZE){
-                    var index = ((x + y + z) / K.CUBE_SIZE % 2 + 2) % 2 // alternating odd and even cell
-                    var groundBox = Obj.make(null, "ground" + index, x, y, z)
-                    Obj.addObj(groundBox)
-                }
-            }
+    Obj.initMap = function(){
+        Map.init() // keep map block positions separately in Map
+        var map = Map.getMap()
+        for (var i = 0; i < map.length; i++){
+            var x = map[i].x
+            var y = map[i].y
+            var z = map[i].z
+            var index = ((x + y + z) % 2 + 2) % 2 // alternating odd and even cell
+            var mapBlock = Obj.make(null, "ground" + index, x, y, z)
+            Obj.addObj(mapBlock) // but also add the actual blocks to the world
         }
     }
 
@@ -467,6 +467,46 @@ var Scene = (function(){
     }
 
     return Scene
+}())
+
+var Map = (function(){
+    var Map = {}
+
+    var _map = []
+
+    // mk.
+    Map.init = function(){
+        var mapSize = 4; // 8 by 8 by 8
+        for (var x = -mapSize; x < mapSize; x++) {
+            for (var y = -mapSize; y < mapSize; y++){
+                for (var z = -mapSize; z < mapSize; z++){
+                    Map.add({x:x, y:y, z:z})
+                }
+            }
+        }
+    }
+
+    // obj = {x:asdf, y:asdf, z:asdf}
+    Map.add = function(obj){
+        _map.push(obj)
+    }
+
+    Map.getMap = function(){
+        return _map
+    }
+
+    return Map
+}())
+
+var Move = (function(){
+    var Move = {}
+
+    // objType == pawn|knight|etc.
+    Move.findAvailableMoves = function(objType, from){
+
+    }
+
+    return Move
 }())
 
 // mk.
