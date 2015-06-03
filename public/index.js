@@ -270,8 +270,8 @@ var Obj = (function(){
     Obj.TYPE = {
         pawn: {
             material: [
-                new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn")),
-                new THREE.MeshFaceMaterial(loadFaceTextures("p1pawn")),
+                new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn", 0xff4545)),
+                new THREE.MeshFaceMaterial(loadFaceTextures("p1pawn", 0x0060ff)),
             ],
         },
         ground0: {
@@ -282,13 +282,16 @@ var Obj = (function(){
         },
     }
 
-    function loadFaceTextures(textureName){
+    function loadFaceTextures(textureName, otherFacesColor){
         var materials = []
         for (var i = 0; i < 6; i++){
-            materials.push(new THREE.MeshLambertMaterial({
-                map:THREE.ImageUtils.loadTexture(TEXTURES_ROOT + textureName + i + ".png")
-            }))
-        }
+            materials.push(new THREE.MeshPhongMaterial({color:otherFacesColor, shading:THREE.FlatShading, side:THREE.DoubleSide}))
+        } // use colors for non image faces
+        materials[4] = new THREE.MeshLambertMaterial({
+            map:THREE.ImageUtils.loadTexture(TEXTURES_ROOT + textureName + "4.png", {}, function(){
+                // todo. render when textures load or you'll get black cubes
+            })
+        })
         return materials
     }
 
