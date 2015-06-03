@@ -1,4 +1,4 @@
-// todo. rollover's clipping with cube texture
+
 // TODO center board on keypress
 
 var K = (function(){
@@ -201,7 +201,7 @@ var Select = (function(){
 var Rollover = (function(){
     var Rollover = {}
 
-    var _MATERIAL = new THREE.MeshLambertMaterial({color:0xff0000, shading:THREE.FlatShading, opacity:0.2, transparent:true})
+    var _MATERIAL = new THREE.MeshLambertMaterial({color:0xffffff, shading:THREE.FlatShading, opacity:0.3, transparent:true})
     var _rollover
     var _scene
     var _objects
@@ -211,7 +211,8 @@ var Rollover = (function(){
         _scene = scene
         _objects = objects
         _render = render
-        _rollover = new THREE.Mesh(new THREE.BoxGeometry(K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE), _MATERIAL);
+        // 0.01 extra to prevent highlight from clipping with cube surface
+        _rollover = new THREE.Mesh(new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01), _MATERIAL);
         _scene.add(_rollover)
         // Obj.move(_rollover, new THREE.Vector3(0, 0, 0))
         // document.addEventListener( 'mousemove', onDocumentMouseMove, false );
