@@ -278,7 +278,7 @@ var Obj = (function(){
             material: new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
         },
         ground1: {
-            material: new THREE.MeshPhongMaterial({color:0xB5B5B5, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
+            material: new THREE.MeshPhongMaterial({color:0xb78e5d, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
         },
     }
 
@@ -292,13 +292,20 @@ var Obj = (function(){
         return materials
     }
 
-    // mk.
     Obj.init = function(){
         _objects = []
         // if you load the ground before the game pieces, the pieces'
         // faces will all have the same texture. what the heck
-        Obj.initGround()
+        //
+        // todo. you're loading game pieces first and then the ground,
+        // which is bad because without the ground the pieces can't
+        // tell which direction is up. for now it's OK, but will
+        // become a problem once you start loading pieces on different
+        // faces of the cube. in that case, once you've loaded the
+        // game pieces, then the ground, do another pass through the
+        // pieces and stand them up right.
         Obj.initGamePieces()
+        Obj.initGround()
     }
 
     Obj.initGround = function(){
@@ -348,12 +355,6 @@ var Obj = (function(){
             player: player,
             type: type,
         }
-        // mk. right now game pieces are initialized before ground
-        // blocks so you can't find the ground. TODO. load ground then
-        // game pieces into objects, then finally add them to the
-        // scene in the other order (to work around the texture bug)
-        //
-        // Obj.standUpRight(obj)
         return obj
     }
 
