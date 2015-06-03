@@ -292,8 +292,47 @@ var Obj = (function(){
         return materials
     }
 
+    // mk.
     Obj.init = function(){
         _objects = []
+        // if you load the ground before the game pieces, the pieces'
+        // faces will all have the same texture. what the heck
+        Obj.initGround()
+        Obj.initGamePieces()
+    }
+
+    Obj.initGround = function(){
+        var groundBlockSize = 4; // 8 by 8 by 8
+        for ( var x = -K.CUBE_SIZE * groundBlockSize; x < K.CUBE_SIZE * groundBlockSize; x += K.CUBE_SIZE ) {
+            for (var y = -K.CUBE_SIZE * groundBlockSize; y < K.CUBE_SIZE * groundBlockSize; y += K.CUBE_SIZE){
+                for (var z = -K.CUBE_SIZE * groundBlockSize; z < K.CUBE_SIZE * groundBlockSize; z += K.CUBE_SIZE){
+                    var index = ((x + y + z) / K.CUBE_SIZE % 2 + 2) % 2 // alternating odd and even cell
+                    var groundBox = Obj.make(null, "ground" + index, x, y, z)
+                    Obj.addObj(groundBox)
+                }
+            }
+        }
+    }
+
+    Obj.initGamePieces = function(){
+        var TOTAL_PLAYERS = 2
+        var player1 = [
+            Obj.make(0, "pawn", 0, 0, 4),
+            Obj.make(0, "pawn", 1, 0, 4),
+        ]
+        var player2 = [
+            Obj.make(1, "pawn", 1, 1, 4),
+            Obj.make(1, "pawn", 1, 2, 4),
+        ]
+        Obj.loadGamePieces(player1)
+        Obj.loadGamePieces(player2)
+        Player.init(TOTAL_PLAYERS)
+    }
+
+    Obj.loadGamePieces = function(objs){
+        for (var i = 0; i < objs.length; i++){
+            Obj.addObj(objs[i])
+        }
     }
 
     Obj.getMaterial = function(player, type){
@@ -392,59 +431,11 @@ var Obj = (function(){
         _objects.push(obj)
     }
 
+    Obj.getObj = function(index){
+        return _objects[index]
+    }
+
     return Obj
-}())
-
-var World = (function(){
-    var World = {}
-
-    World.init = function(){
-        // if you load the ground before the game pieces, the pieces'
-        // faces will all have the same texture. what the heck
-        World.initGamePieces()
-        World.initGround()
-    }
-
-    World.initGround = function(){
-        var groundBlockSize = 4; // 8 by 8 by 8
-        for ( var x = -K.CUBE_SIZE * groundBlockSize; x < K.CUBE_SIZE * groundBlockSize; x += K.CUBE_SIZE ) {
-            for (var y = -K.CUBE_SIZE * groundBlockSize; y < K.CUBE_SIZE * groundBlockSize; y += K.CUBE_SIZE){
-                for (var z = -K.CUBE_SIZE * groundBlockSize; z < K.CUBE_SIZE * groundBlockSize; z += K.CUBE_SIZE){
-                    var index = ((x + y + z) / K.CUBE_SIZE % 2 + 2) % 2 // alternating odd and even cell
-                    var groundBox = Obj.make(null, "ground" + index, x, y, z)
-                    Scene.addObj(groundBox)
-                    Obj.addObj(groundBox)
-                }
-            }
-        }
-        // BUG. if you add nothing else other than the ground you get some weird shadow effect
-        // EDIT. not sure if it happens any more
-        // Scene.addObj(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial()))
-    }
-
-    World.initGamePieces = function(){
-        var TOTAL_PLAYERS = 2
-        var player1 = [
-            Obj.make(0, "pawn", 0, 0, 4),
-            Obj.make(0, "pawn", 1, 0, 4),
-        ]
-        var player2 = [
-            Obj.make(1, "pawn", 1, 1, 4),
-            Obj.make(1, "pawn", 1, 2, 4),
-        ]
-        World.loadGamePieces(player1)
-        World.loadGamePieces(player2)
-        Player.init(TOTAL_PLAYERS)
-    }
-
-    World.loadGamePieces = function(objs){
-        for (var i = 0; i < objs.length; i++){
-            Scene.addObj(objs[i])
-            Obj.addObj(objs[i])
-        }
-    }
-
-    return World
 }())
 
 var Scene = (function(){
@@ -454,6 +445,10 @@ var Scene = (function(){
 
     Scene.init = function(){
         _scene = new THREE.Scene();
+        var length = Obj.getObjects().length
+        for (var i = 0; i < length; i++){
+            Scene.addObj(Obj.getObj(i))
+        }
     }
 
     Scene.getScene = function(){
@@ -485,7 +480,6 @@ window.onload = function(){
         initStats(container)
         initInfo(container)
 
-        // mk.
         Obj.init()
         Scene.init()
 
@@ -494,7 +488,6 @@ window.onload = function(){
         initListeners()
 
         Rollover.init(render) // toggle
-        World.init()
 
         Select.init(_camera)
         KeyNav.init(Rollover.getMesh(), _camera, render) // toggle
