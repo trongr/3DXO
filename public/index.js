@@ -182,7 +182,6 @@ var Select = (function(){
             if (Player.objBelongsToPlayer(intersect.object, Player.getCurPlayer())){
                 _selected = intersect.object
                 Obj.highlight(intersect.object, true)
-                // mk.
                 Move.highlightAvailableMoves(intersect.object)
             } else {
                 Obj.highlight(_selected, false)
@@ -200,13 +199,13 @@ var Rollover = (function(){
     var Rollover = {}
 
     var _MATERIAL = new THREE.MeshLambertMaterial({color:0xffffff, shading:THREE.FlatShading, opacity:0.3, transparent:true})
+    var _GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01) // 0.01 extra to prevent highlight from clipping with cube surface
     var _rollover
     var _render
 
     Rollover.init = function(render){
         _render = render
-        // 0.01 extra to prevent highlight from clipping with cube surface
-        _rollover = new THREE.Mesh(new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01), _MATERIAL);
+        _rollover = new THREE.Mesh(_GEOMETRY, _MATERIAL);
         Scene.addObj(_rollover)
         // Obj.move(_rollover, new THREE.Vector3(0, 0, 0))
         // document.addEventListener( 'mousemove', onDocumentMouseMove, false );
@@ -216,6 +215,7 @@ var Rollover = (function(){
         return _rollover
     }
 
+    // ref.
     Rollover.setColor = function(color){
         if (color == null) _rollover.material.color.setRGB(1, 0, 0)
         else _rollover.material.color = color
@@ -231,6 +231,44 @@ var Rollover = (function(){
     }
 
     return Rollover
+}())
+
+// todo. make Rollover part of Highlight
+var Highlight = (function(){
+    var Highlight = {}
+
+    var _MATERIAL = new THREE.MeshLambertMaterial({color:0xffffff, shading:THREE.FlatShading, opacity:0.3, transparent:true})
+    var _GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01)
+    var _highlightPool = [] // mk. TODO. instead of destroying the pool and creating a new pool, keep it around
+
+    Highlight.init = function(){
+
+    }
+
+    // mk.
+    Highlight.highlightCells = function(positions){
+        Highlight.destroyPool()
+        for (var i = 0; i < positions.length; i++){
+            Highlight.makeHighlight(positions[i])
+        }
+    }
+
+    Highlight.makeHighlight = function(position){
+        var highlight = new THREE.Mesh(_GEOMETRY, _MATERIAL);
+        Scene.addObj(highlight)
+        Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z))
+        _highlightPool.push(highlight)
+    }
+
+    Highlight.destroyPool = function(){
+        for (var i = 0; i < _highlightPool.length; i++){
+            var mesh = _highlightPool[i]
+            Scene.removeMesh(mesh)
+        }
+        _highlightPool = []
+    }
+
+    return Highlight
 }())
 
 var Player = (function(){
@@ -467,6 +505,10 @@ var Scene = (function(){
         _scene.add(obj)
     }
 
+    Scene.removeMesh = function(mesh){
+        _scene.remove(mesh)
+    }
+
     return Scene
 }())
 
@@ -539,7 +581,7 @@ var Move = (function(){
     // mk.
     Move.highlightAvailableMoves = function(obj){
         var moves = Move.findAvailableMoves(obj)
-        console.log(JSON.stringify(moves, 0, 2))
+        Highlight.highlightCells(moves)
     }
 
     Move.findAvailableMoves = function(obj){
@@ -556,6 +598,7 @@ var Move = (function(){
         return moves
     }
 
+    // mk.
     Move.findMovesInDirection = {
         pawn: function(obj, from, direction, range, moves){
             if (range == 0) return moves
