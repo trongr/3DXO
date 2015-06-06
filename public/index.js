@@ -170,8 +170,6 @@ var Select = (function(){
         // REF. removing cube
         // Scene.getScene().remove( intersect.object );
         // Obj.getObjects().splice( Obj.getObjects().indexOf( intersect.object ), 1 );
-        // REF. adding cube
-        // placeCube(new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
         if (_isSelecting){
             Obj.move(_selected, new THREE.Vector3()
                      .copy(intersect.point)
@@ -184,6 +182,8 @@ var Select = (function(){
             if (Player.objBelongsToPlayer(intersect.object, Player.getCurPlayer())){
                 _selected = intersect.object
                 Obj.highlight(intersect.object, true)
+                // mk.
+                Move.highlightAvailableMoves(intersect.object)
             } else {
                 Obj.highlight(_selected, false)
                 _isSelecting = false
@@ -413,7 +413,8 @@ var Obj = (function(){
                 if (intersect && Obj.isGround(intersect.object)) return intersect
             }
         }
-        msg.error("ERROR. Blocks can't tell which direction is up")
+        // msg.error("ERROR. Can't tell which way is up")
+        return null
     }
 
     // todo. better classing
@@ -474,7 +475,6 @@ var Map = (function(){
 
     var _map = []
 
-    // mk.
     Map.init = function(){
         var mapSize = 4; // 8 by 8 by 8
         for (var x = -mapSize; x < mapSize; x++) {
@@ -501,15 +501,87 @@ var Map = (function(){
 var Move = (function(){
     var Move = {}
 
-    // objType == pawn|knight|etc.
-    Move.findAvailableMoves = function(objType, from){
+    Move.range = {
+        pawn: 2,
+        rook: 8,
+        knight: 1,
+    }
 
+    Move.directions = [
+        [ 1,  0,  0],
+        [ 0,  1,  0],
+        [ 0,  0,  1],
+        [ 1,  1,  0],
+        [ 1,  0,  1],
+        [ 0,  1,  1],
+        [ 1,  1,  1],
+        [-1,  0,  0],
+        [ 0, -1,  0],
+        [ 0,  0, -1],
+        [-1,  1,  0],
+        [ 1, -1,  0],
+        [-1, -1,  0],
+        [-1,  0,  1],
+        [ 1,  0, -1],
+        [-1,  0, -1],
+        [ 0, -1,  1],
+        [ 0,  1, -1],
+        [ 0, -1, -1],
+        [-1,  1,  1],
+        [ 1, -1,  1],
+        [ 1,  1, -1],
+        [-1, -1,  1],
+        [-1,  1, -1],
+        [ 1, -1, -1],
+        [-1, -1, -1],
+    ]
+
+    // mk.
+    Move.highlightAvailableMoves = function(obj){
+        var moves = Move.findAvailableMoves(obj)
+        console.log(JSON.stringify(moves, 0, 2))
+    }
+
+    Move.findAvailableMoves = function(obj){
+        var range = Move.getRange(obj.game.type)
+        var moves = []
+        for (var i = 0; i < Move.directions.length; i++){
+            var _dirMoves = Move.findMovesInDirection[obj.game.type](obj, [
+                Math.floor(obj.position.x),
+                Math.floor(obj.position.y),
+                Math.floor(obj.position.z),
+            ], Move.directions[i], range, [])
+            moves.push.apply(moves, _dirMoves)
+        }
+        return moves
+    }
+
+    Move.findMovesInDirection = {
+        pawn: function(obj, from, direction, range, moves){
+            if (range == 0) return moves
+            var x = from[0] + direction[0]
+            var y = from[1] + direction[1]
+            var z = from[2] + direction[2]
+            moves.push({x:x, y:y, z:z})
+            return Move.findMovesInDirection[obj.game.type](obj, [
+                x, y, z
+            ], direction, --range, moves)
+        },
+        rook: function(obj, from, direction, range, moves){
+
+        },
+        knight: function(obj, from, direction, range, moves){
+
+        }
+    }
+
+    Move.getRange = function(objType){
+        return Move.range[objType]
     }
 
     return Move
 }())
 
-// mk.
 window.onload = function(){
     if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
