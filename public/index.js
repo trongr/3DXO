@@ -431,6 +431,7 @@ var Obj = (function(){
         return box
     }
 
+    // todo. blacklist ground blocks instead of whitelisting other stuff
     Obj.standUpRight = function(obj, force){
         if (Obj.isPlayerObj(obj) || force){
             var ground = Obj.findGround(obj.position) // find the ground so you know where up is
