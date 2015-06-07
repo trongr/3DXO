@@ -728,7 +728,8 @@ window.onload = function(){
         _controls.dynamicDampingFactor = 0.3;
         _controls.keys = [ 65, 83, 68 ];
         _controls.addEventListener( 'change', render );
-        document.addEventListener( 'mousemove', _controls.update.bind( _controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
+        // todo. adding this makes moving with the mouse really slow
+        // document.addEventListener( 'mousemove', _controls.update.bind( _controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
 
         return camera
     }
