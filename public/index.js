@@ -199,14 +199,14 @@ var Select = (function(){
 var Rollover = (function(){
     var Rollover = {}
 
-    var _MATERIAL = new THREE.MeshLambertMaterial({color:0xffffff, shading:THREE.FlatShading, opacity:0.3, transparent:true})
-    var _GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01) // 0.01 extra to prevent highlight from clipping with cube surface
+    var ROLLOVER_MATERIAL = new THREE.MeshLambertMaterial({color:0xffffff, shading:THREE.FlatShading, opacity:0.3, transparent:true})
+    var ROLLOVER_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01) // 0.01 extra to prevent highlight from clipping with cube surface
     var _rollover
     var _render
 
     Rollover.init = function(render){
         _render = render
-        _rollover = new THREE.Mesh(_GEOMETRY, _MATERIAL);
+        _rollover = new THREE.Mesh(ROLLOVER_GEOMETRY, ROLLOVER_MATERIAL);
         Scene.addObj(_rollover)
         // Obj.move(_rollover, new THREE.Vector3(0, 0, 0))
         // document.addEventListener( 'mousemove', onDocumentMouseMove, false );
@@ -238,8 +238,8 @@ var Rollover = (function(){
 var Highlight = (function(){
     var Highlight = {}
 
-    var _MATERIAL = new THREE.MeshLambertMaterial({color:0x00ff00, shading:THREE.FlatShading, opacity:0.3, transparent:true})
-    var _GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, 0.01)
+    var HIGHLIGHT_MATERIAL = new THREE.MeshLambertMaterial({color:0x00ff00, shading:THREE.FlatShading, opacity:0.3, transparent:true})
+    var HIGHLIGHT_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, 0.01)
     var _highlights = []
 
     Highlight.init = function(){
@@ -258,7 +258,7 @@ var Highlight = (function(){
     }
 
     Highlight.makeHighlight = function(){
-        var highlight = new THREE.Mesh(_GEOMETRY, _MATERIAL);
+        var highlight = new THREE.Mesh(HIGHLIGHT_GEOMETRY, HIGHLIGHT_MATERIAL);
         Scene.addObj(highlight)
         _highlights.push(highlight)
         return highlight
@@ -565,7 +565,7 @@ var Map = (function(){
 var Move = (function(){
     var Move = {}
 
-    var _CAN_MOVE = {
+    var CAN_MOVE = {
         YES: 0,
         BY_CAPTURE: 1,
         NO: -1,
@@ -632,9 +632,9 @@ var Move = (function(){
             var y = from[1] + direction[1]
             var z = from[2] + direction[2]
             var canMove = Move.canMove(obj, x, y, z)
-            if (canMove == _CAN_MOVE.NO){
+            if (canMove == CAN_MOVE.NO){
                 return moves
-            } else if (canMove == _CAN_MOVE.BY_CAPTURE){
+            } else if (canMove == CAN_MOVE.BY_CAPTURE){
                 moves.push({x:x, y:y, z:z})
                 return moves
             } else {
@@ -655,17 +655,17 @@ var Move = (function(){
     Move.canMove = function(obj, x, y, z){
         var ground = Obj.findGround({x:x, y:y, z:z})
         if (!ground){
-            return _CAN_MOVE.NO // blocks can't fly!
+            return CAN_MOVE.NO // blocks can't fly!
         }
         var box = Obj.findObjAtPosition(x, y, z)
         if (!box){
-            return _CAN_MOVE.YES // empty cell
+            return CAN_MOVE.YES // empty cell
         } else if (box.game.player == null){
-            return _CAN_MOVE.NO // wall / ground
+            return CAN_MOVE.NO // wall / ground
         } else if (box.game.player == obj.game.player){
-            return _CAN_MOVE.NO // blocked by friendly
+            return CAN_MOVE.NO // blocked by friendly
         } else if (box){
-            return _CAN_MOVE.BY_CAPTURE // blocked by enemy
+            return CAN_MOVE.BY_CAPTURE // blocked by enemy
         }
     }
 
