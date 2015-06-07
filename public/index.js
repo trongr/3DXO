@@ -239,7 +239,7 @@ var Highlight = (function(){
     var Highlight = {}
 
     var _MATERIAL = new THREE.MeshLambertMaterial({color:0x00ff00, shading:THREE.FlatShading, opacity:0.3, transparent:true})
-    var _GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01)
+    var _GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, 0.01)
     var _highlights = []
 
     Highlight.init = function(){
@@ -252,6 +252,8 @@ var Highlight = (function(){
             var highlight = _highlights[i] || Highlight.makeHighlight(position)
             highlight.visible = true
             Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z))
+            Obj.standUpRight(highlight, true) // force==true to force up right for nonplayer blocks
+            highlight.position.copy(Obj.findGround(position).point) // can't use Obj.move() cause it realigns fraction to integer positions
         }
     }
 
@@ -429,8 +431,8 @@ var Obj = (function(){
         return box
     }
 
-    Obj.standUpRight = function(obj){
-        if (Obj.isPlayerObj(obj)){
+    Obj.standUpRight = function(obj, force){
+        if (Obj.isPlayerObj(obj) || force){
             var ground = Obj.findGround(obj.position) // find the ground so you know where up is
             var up = new THREE.Vector3()
                 .copy(ground.point)
