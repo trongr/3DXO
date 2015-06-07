@@ -18,8 +18,8 @@ var H = (function(){
     var H = {}
 
     H.log = function(msg, obj){
-        if (obj) console.log(new Date() + " " + msg + " " + JSON.stringify(obj, 0, 2))
-        else console.log(new Date() + " " + msg)
+        if (obj) console.log(new Date().getTime() + " " + msg + " " + JSON.stringify(obj, 0, 2))
+        else console.log(new Date().getTime() + " " + msg)
     }
 
     H.swapObjKeyValues = function(obj){
@@ -177,6 +177,7 @@ var Select = (function(){
                           .copy(intersect.face.normal)
                           .multiplyScalar(0.5))) // normal's unit length so gotta scale by half to fit inside the box
             Obj.highlight(_selected, true)
+            Highlight.destroyPool()
             Player.updateCurPlayer(1)
         } else { // start selecting
             if (Player.objBelongsToPlayer(intersect.object, Player.getCurPlayer())){
@@ -245,7 +246,6 @@ var Highlight = (function(){
 
     }
 
-    // mk.
     Highlight.highlightCells = function(positions){
         Highlight.destroyPool()
         for (var i = 0; i < positions.length; i++){
@@ -302,7 +302,9 @@ var Obj = (function(){
     var Obj = {}
 
     var TEXTURES_ROOT = "/static/images/small/"
-    var _raycaster = new THREE.Raycaster()
+    // dummy origin and direction, near==0, far==1 because we only
+    // want to find the ground adjacent to an obj
+    var _groundRaycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(), 0, 1)
     var _objects = []
     var _render = null // so you can call render when done loading objects
 
@@ -391,6 +393,7 @@ var Obj = (function(){
         else return Obj.TYPE[type].material // non player materials are unique
     }
 
+    // todo. better classing. right now ground blocks have type null
     Obj.make = function(player, type, x, y, z){
         var mat = Obj.getMaterial(player, type)
         var obj = Obj.makeBox(new THREE.Vector3(x, y, z), mat)
@@ -408,6 +411,9 @@ var Obj = (function(){
             .divideScalar( K.CUBE_SIZE ).floor()
             .multiplyScalar( K.CUBE_SIZE )
             .addScalar( K.CUBE_SIZE / 2 );
+        // if we don't call _render the raycaster won't know that the
+        // object has moved, which leads to inconsistent intersections
+        _render()
         Obj.standUpRight(obj)
     }
 
@@ -428,7 +434,7 @@ var Obj = (function(){
 
     Obj.standUpRight = function(obj){
         if (Obj.isPlayerObj(obj)){
-            var ground = Obj.findGround(obj) // find the ground so you know where up is
+            var ground = Obj.findGround(obj.position) // find the ground so you know where up is
             var up = new THREE.Vector3()
                 .copy(ground.point)
                 .add(ground.face.normal)
@@ -440,15 +446,20 @@ var Obj = (function(){
     // will pick the first ground it finds, which might not look
     // good. in that case the block should keep its current up
     // orientation
-    Obj.findGround = function(obj){
-        var origin = obj.position
+    Obj.findGround = function(position){
+        var origin = new THREE.Vector3(Math.floor(position.x) + 0.5, // +0.5 so ray caster goes through cube face center
+                                       Math.floor(position.y) + 0.5,
+                                       Math.floor(position.z) + 0.5)
         for (var i = 0; i < 3; i++){ // 3 axes
             for (var j = 1; j <= 2; j++){ // forward and backward
                 var direction = new THREE.Vector3()
                 direction.setComponent(i, Math.pow(-1, j))
-                _raycaster.set(origin, direction)
-                var intersect = _raycaster.intersectObjects(_objects, true)[0];
-                if (intersect && Obj.isGround(intersect.object)) return intersect
+                _groundRaycaster.set(origin, direction)
+                var intersects = _groundRaycaster.intersectObjects(_objects, false)
+                for (var k = 0; k < intersects.length; k++){
+                    var intersect = intersects[k]
+                    if (intersect && Obj.isGround(intersect.object)) return intersect
+                }
             }
         }
         // msg.error("ERROR. Can't tell which way is up")
@@ -458,6 +469,19 @@ var Obj = (function(){
     // todo. better classing
     Obj.isGround = function(obj){
         return !Obj.isPlayerObj(obj)
+    }
+
+    // mk.
+    // todo. store things in a db for faster obj location
+    Obj.findObjAtPosition = function(x, y, z){
+        for (var i = 0; i < _objects.length; i++){
+            var obj = _objects[i]
+            var X = Math.floor(obj.position.x)
+            var Y = Math.floor(obj.position.y)
+            var Z = Math.floor(obj.position.z)
+            if (X == x && Y == y && Z == z) return obj
+        }
+        return null
     }
 
     // todo. better classing
@@ -543,6 +567,12 @@ var Map = (function(){
 var Move = (function(){
     var Move = {}
 
+    var _CAN_MOVE = {
+        YES: 0,
+        BY_CAPTURE: 1,
+        NO: -1,
+    }
+
     Move.range = {
         pawn: 2,
         rook: 8,
@@ -578,10 +608,12 @@ var Move = (function(){
         [-1, -1, -1],
     ]
 
-    // mk.
     Move.highlightAvailableMoves = function(obj){
+        H.log("find available moves")
         var moves = Move.findAvailableMoves(obj)
+        H.log("highlight cells")
         Highlight.highlightCells(moves)
+        H.log("DONE. highlight cells")
     }
 
     Move.findAvailableMoves = function(obj){
@@ -605,16 +637,41 @@ var Move = (function(){
             var x = from[0] + direction[0]
             var y = from[1] + direction[1]
             var z = from[2] + direction[2]
-            moves.push({x:x, y:y, z:z})
-            return Move.findMovesInDirection[obj.game.type](obj, [
-                x, y, z
-            ], direction, --range, moves)
+            var canMove = Move.canMove(obj, x, y, z)
+            if (canMove == _CAN_MOVE.NO){
+                return moves
+            } else if (canMove == _CAN_MOVE.BY_CAPTURE){
+                moves.push({x:x, y:y, z:z})
+                return moves
+            } else {
+                moves.push({x:x, y:y, z:z})
+                return Move.findMovesInDirection[obj.game.type](obj, [
+                    x, y, z
+                ], direction, --range, moves)
+            }
         },
         rook: function(obj, from, direction, range, moves){
 
         },
         knight: function(obj, from, direction, range, moves){
 
+        }
+    }
+
+    Move.canMove = function(obj, x, y, z){
+        var ground = Obj.findGround({x:x, y:y, z:z})
+        if (!ground){
+            return _CAN_MOVE.NO // blocks can't fly!
+        }
+        var box = Obj.findObjAtPosition(x, y, z)
+        if (!box){
+            return _CAN_MOVE.YES // empty cell
+        } else if (box.game.player == null){
+            return _CAN_MOVE.NO // wall / ground
+        } else if (box.game.player == obj.game.player){
+            return _CAN_MOVE.NO // blocked by friendly
+        } else if (box){
+            return _CAN_MOVE.BY_CAPTURE // blocked by enemy
         }
     }
 
@@ -782,7 +839,7 @@ window.onload = function(){
         // render() // don't render on every frame unless you're really animating stuff
     }
 
-    function render() {
+    function render(){
         _renderer.render( Scene.getScene(), _camera );
         _stats.update();
     }
