@@ -177,7 +177,7 @@ var Select = (function(){
                           .copy(intersect.face.normal)
                           .multiplyScalar(0.5))) // normal's unit length so gotta scale by half to fit inside the box
             Obj.highlight(_selected, true)
-            Highlight.destroyPool()
+            Highlight.hideHighlights()
             Player.updateCurPlayer(1)
         } else { // start selecting
             if (Player.objBelongsToPlayer(intersect.object, Player.getCurPlayer())){
@@ -238,34 +238,34 @@ var Rollover = (function(){
 var Highlight = (function(){
     var Highlight = {}
 
-    var _MATERIAL = new THREE.MeshLambertMaterial({color:0xffffff, shading:THREE.FlatShading, opacity:0.3, transparent:true})
+    var _MATERIAL = new THREE.MeshLambertMaterial({color:0x00ff00, shading:THREE.FlatShading, opacity:0.3, transparent:true})
     var _GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01)
-    var _highlightPool = [] // mk. TODO. instead of destroying the pool and creating a new pool, keep it around
+    var _highlights = []
 
     Highlight.init = function(){
 
     }
 
     Highlight.highlightCells = function(positions){
-        Highlight.destroyPool()
         for (var i = 0; i < positions.length; i++){
-            Highlight.makeHighlight(positions[i])
+            var position = positions[i]
+            var highlight = _highlights[i] || Highlight.makeHighlight(position)
+            highlight.visible = true
+            Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z))
         }
     }
 
-    Highlight.makeHighlight = function(position){
+    Highlight.makeHighlight = function(){
         var highlight = new THREE.Mesh(_GEOMETRY, _MATERIAL);
         Scene.addObj(highlight)
-        Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z))
-        _highlightPool.push(highlight)
+        _highlights.push(highlight)
+        return highlight
     }
 
-    Highlight.destroyPool = function(){
-        for (var i = 0; i < _highlightPool.length; i++){
-            var mesh = _highlightPool[i]
-            Scene.removeMesh(mesh)
+    Highlight.hideHighlights = function(){
+        for (var i = 0; i < _highlights.length; i++){
+            _highlights[i].visible = false
         }
-        _highlightPool = []
     }
 
     return Highlight
@@ -411,9 +411,6 @@ var Obj = (function(){
             .divideScalar( K.CUBE_SIZE ).floor()
             .multiplyScalar( K.CUBE_SIZE )
             .addScalar( K.CUBE_SIZE / 2 );
-        // if we don't call _render the raycaster won't know that the
-        // object has moved, which leads to inconsistent intersections
-        _render()
         Obj.standUpRight(obj)
     }
 
@@ -462,7 +459,6 @@ var Obj = (function(){
                 }
             }
         }
-        // msg.error("ERROR. Can't tell which way is up")
         return null
     }
 
@@ -471,7 +467,6 @@ var Obj = (function(){
         return !Obj.isPlayerObj(obj)
     }
 
-    // mk.
     // todo. store things in a db for faster obj location
     Obj.findObjAtPosition = function(x, y, z){
         for (var i = 0; i < _objects.length; i++){
@@ -609,11 +604,8 @@ var Move = (function(){
     ]
 
     Move.highlightAvailableMoves = function(obj){
-        H.log("find available moves")
         var moves = Move.findAvailableMoves(obj)
-        H.log("highlight cells")
         Highlight.highlightCells(moves)
-        H.log("DONE. highlight cells")
     }
 
     Move.findAvailableMoves = function(obj){
@@ -630,7 +622,6 @@ var Move = (function(){
         return moves
     }
 
-    // mk.
     Move.findMovesInDirection = {
         pawn: function(obj, from, direction, range, moves){
             if (range == 0) return moves
