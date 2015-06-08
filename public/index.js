@@ -253,7 +253,7 @@ var Highlight = (function(){
             highlight.visible = true
             Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z))
             Obj.standUpRight(highlight, true) // force==true to force up right for nonplayer blocks
-            highlight.position.copy(Obj.findGround(position).point) // can't use Obj.move() cause it realigns fraction to integer positions
+            highlight.position.copy(Obj.findGround(position.x, position.y, position.z).point) // can't use Obj.move() cause it realigns fraction to integer positions
         }
     }
 
@@ -434,7 +434,7 @@ var Obj = (function(){
     // todo. blacklist ground blocks instead of whitelisting other stuff
     Obj.standUpRight = function(obj, force){
         if (Obj.isPlayerObj(obj) || force){
-            var ground = Obj.findGround(obj.position) // find the ground so you know where up is
+            var ground = Obj.findGround(obj.position.x, obj.position.y, obj.position.z) // find the ground so you know where up is
             var up = new THREE.Vector3()
                 .copy(ground.point)
                 .add(ground.face.normal)
@@ -442,14 +442,15 @@ var Obj = (function(){
         } // else it's the ground and we don't need to stand it up right
     }
 
+    // mk.
     // todo. if there are more than two "grounds" e.g. at a wall, this
     // will pick the first ground it finds, which might not look
     // good. in that case the block should keep its current up
     // orientation
-    Obj.findGround = function(position){
-        var origin = new THREE.Vector3(Math.floor(position.x) + 0.5, // +0.5 so ray caster goes through cube face center
-                                       Math.floor(position.y) + 0.5,
-                                       Math.floor(position.z) + 0.5)
+    Obj.findGround = function(x, y, z){
+        var origin = new THREE.Vector3(Math.floor(x) + 0.5, // +0.5 so ray caster goes through cube face center
+                                       Math.floor(y) + 0.5,
+                                       Math.floor(z) + 0.5)
         for (var i = 0; i < 3; i++){ // 3 axes
             for (var j = 1; j <= 2; j++){ // forward and backward
                 var direction = new THREE.Vector3()
@@ -565,46 +566,54 @@ var Map = (function(){
 var Move = (function(){
     var Move = {}
 
-    var CAN_MOVE = {
-        YES: 0,
-        BY_CAPTURE: 1,
-        NO: -1,
-    }
-
     Move.range = {
         pawn: 2,
         rook: 8,
         knight: 1,
     }
 
-    Move.directions = [
-        [ 1,  0,  0],
-        [ 0,  1,  0],
-        [ 0,  0,  1],
-        [ 1,  1,  0],
-        [ 1,  0,  1],
-        [ 0,  1,  1],
-        [ 1,  1,  1],
-        [-1,  0,  0],
-        [ 0, -1,  0],
-        [ 0,  0, -1],
-        [-1,  1,  0],
-        [ 1, -1,  0],
-        [-1, -1,  0],
-        [-1,  0,  1],
-        [ 1,  0, -1],
-        [-1,  0, -1],
-        [ 0, -1,  1],
-        [ 0,  1, -1],
-        [ 0, -1, -1],
-        [-1,  1,  1],
-        [ 1, -1,  1],
-        [ 1,  1, -1],
-        [-1, -1,  1],
-        [-1,  1, -1],
-        [ 1, -1, -1],
-        [-1, -1, -1],
-    ]
+    Move.directions = {
+        ioo: [ 1,  0,  0],
+        oio: [ 0,  1,  0],
+        ooi: [ 0,  0,  1],
+        iio: [ 1,  1,  0],
+        ioi: [ 1,  0,  1],
+        oii: [ 0,  1,  1],
+        iii: [ 1,  1,  1],
+        noo: [-1,  0,  0],
+        ono: [ 0, -1,  0],
+        oon: [ 0,  0, -1],
+        nio: [-1,  1,  0],
+        ino: [ 1, -1,  0],
+        nno: [-1, -1,  0],
+        noi: [-1,  0,  1],
+        ion: [ 1,  0, -1],
+        non: [-1,  0, -1],
+        oni: [ 0, -1,  1],
+        oin: [ 0,  1, -1],
+        onn: [ 0, -1, -1],
+        nii: [-1,  1,  1],
+        ini: [ 1, -1,  1],
+        iin: [ 1,  1, -1],
+        nni: [-1, -1,  1],
+        nin: [-1,  1, -1],
+        inn: [ 1, -1, -1],
+        nnn: [-1, -1, -1],
+    }
+
+    Move.rules = {
+        moves: {
+            pawn: ["ioo", "oio", "ooi", "noo", "ono", "oon"], // moving along axes
+            rook: ["ioo", "oio", "ooi", "noo", "ono", "oon"],
+        },
+        kills: {
+            pawn: ["iio", "ioi", "oii", "iii", "nio", "ino", // diagonal kills
+                   "nno", "noi", "ion", "non", "oni", "oin",
+                   "onn", "nii", "ini", "iin", "nni", "nin",
+                   "inn", "nnn"],
+            rook: ["ioo", "oio", "ooi", "noo", "ono", "oon"],
+        }
+    }
 
     Move.highlightAvailableMoves = function(obj){
         var moves = Move.findAvailableMoves(obj)
@@ -613,36 +622,39 @@ var Move = (function(){
 
     Move.findAvailableMoves = function(obj){
         var range = Move.getRange(obj.game.type)
+        var moveRules = Move.rules.moves[obj.game.type]
+        var killRules = Move.rules.kills[obj.game.type]
         var moves = []
-        for (var i = 0; i < Move.directions.length; i++){
+        for (var i = 0; i < moveRules.length; i++){
             var _dirMoves = Move.findMovesInDirection[obj.game.type](obj, [
                 Math.floor(obj.position.x),
                 Math.floor(obj.position.y),
                 Math.floor(obj.position.z),
-            ], Move.directions[i], range, [])
+            ], Move.directions[moveRules[i]], range, [])
             moves.push.apply(moves, _dirMoves)
         }
         return moves
     }
 
-    Move.findMovesInDirection = {
+    // mk.
+    Move.findMovesInDirection = { // recursively find available moves
         pawn: function(obj, from, direction, range, moves){
-            if (range == 0) return moves
+            if (range == 0) return moves // out of range
+
             var x = from[0] + direction[0]
             var y = from[1] + direction[1]
             var z = from[2] + direction[2]
-            var canMove = Move.canMove(obj, x, y, z)
-            if (canMove == CAN_MOVE.NO){
-                return moves
-            } else if (canMove == CAN_MOVE.BY_CAPTURE){
-                moves.push({x:x, y:y, z:z})
-                return moves
-            } else {
-                moves.push({x:x, y:y, z:z})
-                return Move.findMovesInDirection[obj.game.type](obj, [
-                    x, y, z
-                ], direction, --range, moves)
-            }
+
+            var validMove = Move.validateMove(obj, x, y, z)
+            if (!validMove) return moves // can't move here
+
+            moves.push(validMove.xyz)
+
+            if (!validMove.more) return moves // can't move past this point
+
+            return Move.findMovesInDirection[obj.game.type](obj, [
+                x, y, z
+            ], direction, --range, moves) // keep going
         },
         rook: function(obj, from, direction, range, moves){
 
@@ -652,20 +664,35 @@ var Move = (function(){
         }
     }
 
-    Move.canMove = function(obj, x, y, z){
-        var ground = Obj.findGround({x:x, y:y, z:z})
+    Move.validateMove = function(obj, x, y, z){
+        var ground = Obj.findGround(x, y, z)
         if (!ground){
-            return CAN_MOVE.NO // blocks can't fly!
+            var xyz = Move.changePlanes(obj, x, y, z)
+            if (xyz) return {xyz:xyz, more:false} // todo. more:false so pieces can only land on the edge of a new plane
+            else return null // blocks can't fly!
         }
         var box = Obj.findObjAtPosition(x, y, z)
-        if (!box){
-            return CAN_MOVE.YES // empty cell
-        } else if (box.game.player == null){
-            return CAN_MOVE.NO // wall / ground
-        } else if (box.game.player == obj.game.player){
-            return CAN_MOVE.NO // blocked by friendly
-        } else if (box){
-            return CAN_MOVE.BY_CAPTURE // blocked by enemy
+        if (!box){ // empty cell
+            return {xyz:{x:x, y:y, z:z}, more:true}
+        } else if (box.game.player == null){ // wall / ground
+            return null
+        } else if (box.game.player == obj.game.player){ // blocked by friendly
+            return null
+        } else if (box){ // blocked by enemy
+            return {xyz:{x:x, y:y, z:z}, more:false}
+        }
+    }
+
+    Move.changePlanes = function(obj, x, y, z){
+        var curGround = Obj.findGround(obj.position.x, obj.position.y, obj.position.z)
+        var down = new THREE.Vector3(x, y, z).sub(new THREE.Vector3().copy(curGround.face.normal))
+        var newGround = Obj.findGround(down.x, down.y, down.z)
+        if (!newGround){ // too far above new plane ground level
+            return null
+        } else if (curGround.face.normal != newGround.face.normal){
+            return {x:down.x, y:down.y, z:down.z}
+        } else { // if the normals are the same then we haven't changed planes
+            return null
         }
     }
 
