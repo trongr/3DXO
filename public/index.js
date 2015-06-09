@@ -442,7 +442,6 @@ var Obj = (function(){
         } // else it's the ground and we don't need to stand it up right
     }
 
-    // mk.
     // todo. if there are more than two "grounds" e.g. at a wall, this
     // will pick the first ground it finds, which might not look
     // good. in that case the block should keep its current up
@@ -615,9 +614,44 @@ var Move = (function(){
         }
     }
 
+    // mk.
     Move.highlightAvailableMoves = function(obj){
-        var moves = Move.findAvailableMoves(obj)
-        Highlight.highlightCells(moves)
+        Highlight.highlightCells(Move.findAvailableMoves(obj))
+        Highlight.highlightCells(Move.findAvailableKills(obj))
+    }
+
+    // mk.
+    Move.findAvailableKills = function(obj){
+        var range = Move.getRange(obj.game.type)
+        var killRules = Move.rules.kills[obj.game.type]
+        var moves = []
+        for (var i = 0; i < killRules.length; i++){
+            var _dirMoves = Move.findKillsInDirection(obj, [
+                Math.floor(obj.position.x),
+                Math.floor(obj.position.y),
+                Math.floor(obj.position.z),
+            ], Move.directions[killRules[i]], range)
+            moves.push.apply(moves, _dirMoves)
+        }
+        return moves
+    }
+
+    // recursively find available kill moves
+    // return empty list if there's no kill in this direction
+    Move.findKillsInDirection = function(obj, from, direction, range){
+        if (range == 0) return [] // out of range
+
+        var x = from[0] + direction[0]
+        var y = from[1] + direction[1]
+        var z = from[2] + direction[2]
+
+        var validMove = Move.validateMove(obj, x, y, z, true) // kill move true
+        if (!validMove) return [] // can't move here
+        else if (validMove.kill) return [validMove.xyz] // each direction returns a single kill move
+        else if (!validMove.more) return [] // can't move past this point
+        else return Move.findKillsInDirection(obj, [
+            x, y, z
+        ], direction, --range) // keep going
     }
 
     Move.findAvailableMoves = function(obj){
@@ -643,35 +677,39 @@ var Move = (function(){
         var y = from[1] + direction[1]
         var z = from[2] + direction[2]
 
-        var validMove = Move.validateMove(obj, x, y, z)
+        var validMove = Move.validateMove(obj, x, y, z, false)
         if (!validMove) return moves // can't move here
 
         moves.push(validMove.xyz)
-
         if (!validMove.more) return moves // can't move past this point
-
-        return Move.findMovesInDirection(obj, [
+        else return Move.findMovesInDirection(obj, [
             x, y, z
         ], direction, --range, moves) // keep going
     }
 
-    Move.validateMove = function(obj, x, y, z){
+    // mk.
+    Move.validateMove = function(obj, x, y, z, isKill){
         var ground = Obj.findGround(x, y, z)
+        var changingPlanes = false
         if (!ground){
             var xyz = Move.changePlanes(obj, x, y, z)
-            if (xyz) return {xyz:xyz, more:false} // todo. more:false so pieces can only land on the edge of a new plane
-            else return null // blocks can't fly!
+            if (!xyz) return null // blocks can't fly
+            changingPlanes = true
+            x = xyz.x // else if xyz: proceed as normal
+            y = xyz.y
+            z = xyz.z
         }
         var box = Obj.findObjAtPosition(x, y, z)
         if (!box){ // empty cell
-            return {xyz:{x:x, y:y, z:z}, more:true}
+            return {xyz:{x:x, y:y, z:z}, more:!changingPlanes} // more moves if not changingPlanes
         } else if (box.game.player == null){ // wall / ground
             return null
         } else if (box.game.player == obj.game.player){ // blocked by friendly
             return null
-        } else if (box){ // blocked by enemy
-            return null // let the kill move validator take care of this case
-            // return {xyz:{x:x, y:y, z:z}, more:false} // mk. ref
+        } else if (box && isKill){ // blocked by enemy
+            return {xyz:{x:x, y:y, z:z}, more:false, kill:true}
+        } else { // also blocked by enemy but not a kill move
+            return null
         }
     }
 
