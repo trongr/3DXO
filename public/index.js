@@ -630,15 +630,16 @@ var Move = (function(){
                 Math.floor(obj.position.x),
                 Math.floor(obj.position.y),
                 Math.floor(obj.position.z),
-            ], Move.directions[killRules[i]], range)
+            ], Move.directions[killRules[i]], range, [])
             moves.push.apply(moves, _dirMoves)
         }
         return moves
     }
 
     // recursively find available kill moves
-    // return empty list if there's no kill in this direction
-    Move.findKillsInDirection = function(obj, from, direction, range){
+    // return the whole move list if there is a final kill
+    // otw return an empty list
+    Move.findKillsInDirection = function(obj, from, direction, range, moves){
         if (range == 0) return [] // out of range
 
         var x = from[0] + direction[0]
@@ -647,11 +648,13 @@ var Move = (function(){
 
         var validMove = Move.validateMove(obj, x, y, z, true) // kill move true
         if (!validMove) return [] // can't move here
-        else if (validMove.kill) return [validMove.xyz] // each direction returns a single kill move
+
+        moves.push(validMove.xyz)
+        if (validMove.kill) return moves
         else if (!validMove.more) return [] // can't move past this point
         else return Move.findKillsInDirection(obj, [
             x, y, z
-        ], direction, --range) // keep going
+        ], direction, --range, moves) // keep going
     }
 
     Move.findAvailableMoves = function(obj){
