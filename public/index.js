@@ -623,10 +623,9 @@ var Move = (function(){
     Move.findAvailableMoves = function(obj){
         var range = Move.getRange(obj.game.type)
         var moveRules = Move.rules.moves[obj.game.type]
-        var killRules = Move.rules.kills[obj.game.type]
         var moves = []
         for (var i = 0; i < moveRules.length; i++){
-            var _dirMoves = Move.findMovesInDirection[obj.game.type](obj, [
+            var _dirMoves = Move.findMovesInDirection(obj, [
                 Math.floor(obj.position.x),
                 Math.floor(obj.position.y),
                 Math.floor(obj.position.z),
@@ -636,32 +635,24 @@ var Move = (function(){
         return moves
     }
 
-    // mk.
-    Move.findMovesInDirection = { // recursively find available moves
-        pawn: function(obj, from, direction, range, moves){
-            if (range == 0) return moves // out of range
+    // recursively find available moves
+    Move.findMovesInDirection = function(obj, from, direction, range, moves){
+        if (range == 0) return moves // out of range
 
-            var x = from[0] + direction[0]
-            var y = from[1] + direction[1]
-            var z = from[2] + direction[2]
+        var x = from[0] + direction[0]
+        var y = from[1] + direction[1]
+        var z = from[2] + direction[2]
 
-            var validMove = Move.validateMove(obj, x, y, z)
-            if (!validMove) return moves // can't move here
+        var validMove = Move.validateMove(obj, x, y, z)
+        if (!validMove) return moves // can't move here
 
-            moves.push(validMove.xyz)
+        moves.push(validMove.xyz)
 
-            if (!validMove.more) return moves // can't move past this point
+        if (!validMove.more) return moves // can't move past this point
 
-            return Move.findMovesInDirection[obj.game.type](obj, [
-                x, y, z
-            ], direction, --range, moves) // keep going
-        },
-        rook: function(obj, from, direction, range, moves){
-
-        },
-        knight: function(obj, from, direction, range, moves){
-
-        }
+        return Move.findMovesInDirection(obj, [
+            x, y, z
+        ], direction, --range, moves) // keep going
     }
 
     Move.validateMove = function(obj, x, y, z){
@@ -679,7 +670,8 @@ var Move = (function(){
         } else if (box.game.player == obj.game.player){ // blocked by friendly
             return null
         } else if (box){ // blocked by enemy
-            return {xyz:{x:x, y:y, z:z}, more:false}
+            return null // let the kill move validator take care of this case
+            // return {xyz:{x:x, y:y, z:z}, more:false} // mk. ref
         }
     }
 
