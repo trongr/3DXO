@@ -32,6 +32,15 @@ var H = (function(){
         return new_obj;
     }
 
+    // mk.
+    H.length = function(obj) {
+        var size = 0, key;
+        for (key in obj) {
+            if (obj.hasOwnProperty(key)) size++;
+        }
+        return size;
+    };
+
     return H
 }())
 
@@ -177,7 +186,8 @@ var Select = (function(){
                           .copy(intersect.face.normal)
                           .multiplyScalar(0.5))) // normal's unit length so gotta scale by half to fit inside the box
             Obj.highlight(_selected, true)
-            Highlight.hideHighlights()
+            // mk.
+            Highlight.hideAllHighlights()
             Player.updateCurPlayer(1)
         } else { // start selecting
             if (Player.objBelongsToPlayer(intersect.object, Player.getCurPlayer())){
@@ -238,18 +248,31 @@ var Rollover = (function(){
 var Highlight = (function(){
     var Highlight = {}
 
-    var HIGHLIGHT_MATERIAL = new THREE.MeshLambertMaterial({color:0x00ff00, shading:THREE.FlatShading, opacity:0.3, transparent:true})
+    var HIGHLIGHT_MATERIALS = {
+        red: new THREE.MeshLambertMaterial({color:0xff0000, shading:THREE.FlatShading, opacity:0.3, transparent:true}),
+        green: new THREE.MeshLambertMaterial({color:0x00ff00, shading:THREE.FlatShading, opacity:0.3, transparent:true}),
+    }
     var HIGHLIGHT_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, 0.01)
-    var _highlights = []
+
+    Highlight.COLORS = {
+        red: "red",
+        green: "green",
+    }
+
+    var _highlights = {
+        red: [],
+        green: [],
+    }
 
     Highlight.init = function(){
 
     }
 
-    Highlight.highlightCells = function(positions){
+    // mk.
+    Highlight.highlightCells = function(positions, color){
         for (var i = 0; i < positions.length; i++){
             var position = positions[i]
-            var highlight = _highlights[i] || Highlight.makeHighlight(position)
+            var highlight = _highlights[color][i] || Highlight.makeHighlight(color)
             highlight.visible = true
             Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z))
             Obj.standUpRight(highlight, true) // force==true to force up right for nonplayer blocks
@@ -257,16 +280,27 @@ var Highlight = (function(){
         }
     }
 
-    Highlight.makeHighlight = function(){
-        var highlight = new THREE.Mesh(HIGHLIGHT_GEOMETRY, HIGHLIGHT_MATERIAL);
+    // mk.
+    Highlight.makeHighlight = function(color){
+        var highlight = new THREE.Mesh(HIGHLIGHT_GEOMETRY, HIGHLIGHT_MATERIALS[color]);
         Scene.addObj(highlight)
-        _highlights.push(highlight)
+        _highlights[color].push(highlight)
         return highlight
     }
 
-    Highlight.hideHighlights = function(){
-        for (var i = 0; i < _highlights.length; i++){
-            _highlights[i].visible = false
+    // mk.
+    Highlight.hideHighlights = function(color){
+        for (var i = 0; i < _highlights[color].length; i++){
+            _highlights[color][i].visible = false
+        }
+    }
+
+    // mk.
+    Highlight.hideAllHighlights = function(){
+        for (var color in Highlight.COLORS) {
+            if (Highlight.COLORS.hasOwnProperty(color)){
+                Highlight.hideHighlights(color)
+            }
         }
     }
 
@@ -616,11 +650,10 @@ var Move = (function(){
 
     // mk.
     Move.highlightAvailableMoves = function(obj){
-        Highlight.highlightCells(Move.findAvailableMoves(obj))
-        Highlight.highlightCells(Move.findAvailableKills(obj))
+        Highlight.highlightCells(Move.findAvailableMoves(obj), Highlight.COLORS.green)
+        Highlight.highlightCells(Move.findAvailableKills(obj), Highlight.COLORS.red)
     }
 
-    // mk.
     Move.findAvailableKills = function(obj){
         var range = Move.getRange(obj.game.type)
         var killRules = Move.rules.kills[obj.game.type]
@@ -690,7 +723,6 @@ var Move = (function(){
         ], direction, --range, moves) // keep going
     }
 
-    // mk.
     Move.validateMove = function(obj, x, y, z, isKill){
         var ground = Obj.findGround(x, y, z)
         var changingPlanes = false
