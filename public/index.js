@@ -32,7 +32,6 @@ var H = (function(){
         return new_obj;
     }
 
-    // mk.
     H.length = function(obj) {
         var size = 0, key;
         for (key in obj) {
@@ -42,6 +41,40 @@ var H = (function(){
     };
 
     return H
+}())
+
+var Sock = (function(){
+    var Sock = {}
+
+    var _sock = null
+
+    Sock.init = function(){
+        // mach
+        _sock = new SockJS('http://localhost:8080/chat');
+
+        _sock.onopen = function() {
+            msg.info("opening socket")
+        };
+
+        _sock.onmessage = function(e) {
+            msg.info("received message " + e.data)
+            H.log("INFO. socket message", e)
+        };
+
+        _sock.onclose = function() {
+            // todo. reconnect socket with longer and longer delays
+            // just rerun this function
+            msg.error("closing socket")
+        };
+    }
+
+    // mach
+    Sock.test = function(){
+        msg.info("sending socket test")
+        _sock.send('test');
+    }
+
+    return Sock
 }())
 
 var Orientation = (function(){
@@ -186,7 +219,6 @@ var Select = (function(){
                           .copy(intersect.face.normal)
                           .multiplyScalar(0.5))) // normal's unit length so gotta scale by half to fit inside the box
             Obj.highlight(_selected, true)
-            // mk.
             Highlight.hideAllHighlights()
             Player.updateCurPlayer(1)
         } else { // start selecting
@@ -268,7 +300,6 @@ var Highlight = (function(){
 
     }
 
-    // mk.
     Highlight.highlightCells = function(positions, color){
         for (var i = 0; i < positions.length; i++){
             var position = positions[i]
@@ -280,7 +311,6 @@ var Highlight = (function(){
         }
     }
 
-    // mk.
     Highlight.makeHighlight = function(color){
         var highlight = new THREE.Mesh(HIGHLIGHT_GEOMETRY, HIGHLIGHT_MATERIALS[color]);
         Scene.addObj(highlight)
@@ -288,14 +318,12 @@ var Highlight = (function(){
         return highlight
     }
 
-    // mk.
     Highlight.hideHighlights = function(color){
         for (var i = 0; i < _highlights[color].length; i++){
             _highlights[color][i].visible = false
         }
     }
 
-    // mk.
     Highlight.hideAllHighlights = function(){
         for (var color in Highlight.COLORS) {
             if (Highlight.COLORS.hasOwnProperty(color)){
@@ -648,8 +676,9 @@ var Move = (function(){
         }
     }
 
-    // mk.
     Move.highlightAvailableMoves = function(obj){
+        // mach
+        Sock.test()
         Highlight.highlightCells(Move.findAvailableMoves(obj), Highlight.COLORS.green)
         Highlight.highlightCells(Move.findAvailableKills(obj), Highlight.COLORS.red)
     }
@@ -798,6 +827,8 @@ window.onload = function(){
         KeyNav.init(Rollover.getMesh(), _camera, render) // toggle
 
         initRenderer(container)
+
+        Sock.init()
     }
 
     function initContainer(){
