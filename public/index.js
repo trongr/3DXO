@@ -50,7 +50,7 @@ var Sock = (function(){
 
     Sock.init = function(){
         // mach
-        _sock = new SockJS('http://localhost:8080/chat');
+        _sock = new SockJS('http://localhost:8080/move');
 
         _sock.onopen = function() {
             msg.info("opening socket")
