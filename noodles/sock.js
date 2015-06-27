@@ -9,31 +9,32 @@ var Sock = module.exports = (function(){
     var _publisher = redis.createClient();
 
     Sock.init = function(server){
-        _server = sockjs.createServer({ // mach
+        _server = sockjs.createServer({
             sockjs_url: "http://cdn.sockjs.org/sockjs-0.3.min.js",
             // heartbeat_delay: 25000, // default 25 seconds
             disconnect_delay: 60000, // default 5 seconds
         });
-        _server.on('connection', onServerConnection);
+        _server.on('connection', onConnection);
         _server.installHandlers(server, {prefix:'/move'});
-
     }
 
-    function onServerConnection(conn){
+    function onConnection(conn){
         // todo. how to scale pubsub? encode channel names with coordinates?
         H.log("INFO. opening socket")
 
         var client = redis.createClient();
         client.subscribe('move');
 
-        // When we see a message on move, send it to the client
-        client.on("message", function(channel, message){
-            conn.write(message);
+        // When we see a msg on move, send it to this client
+        client.on("message", function(channel, msg){
+            conn.write(msg);
         });
 
-        // When we receive a message from client, send it to be published
-        conn.on('data', function(message) {
-            _publisher.publish('move', message);
+        // When we receive a msg from client, send it to be published
+        // to everyone, including this client
+        conn.on('data', function(msg) {
+            H.log("INFO. pub move", msg)
+            _publisher.publish('move', msg);
         });
 
         conn.on("close", function(){

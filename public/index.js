@@ -47,13 +47,15 @@ var Sock = (function(){
     var Sock = {}
 
     var _sock = null
+    var _socketAutoReconnectTimeout = null
 
     Sock.init = function(){
-        // mach
         _sock = new SockJS('http://localhost:8080/move');
 
         _sock.onopen = function() {
-            msg.info("opening socket")
+            msg.info("Success! Opening socket")
+            H.log("INFO. opening socket")
+            clearTimeout(_socketAutoReconnectTimeout)
         };
 
         _sock.onmessage = function(e) {
@@ -62,9 +64,11 @@ var Sock = (function(){
         };
 
         _sock.onclose = function() {
-            // todo. reconnect socket with longer and longer delays
-            // just rerun this function
-            msg.error("closing socket")
+            H.log("WARNING. closing socket")
+            msg.warning("Losing socket connection. Retrying in 2 seconds...")
+            setTimeout(function(){
+                Sock.init()
+            }, 2000)
         };
     }
 
