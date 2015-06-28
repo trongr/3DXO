@@ -1,6 +1,4 @@
 
-// TODO center board on keypress
-
 var K = (function(){
 
     var K = {}

@@ -1,6 +1,6 @@
 var sockjs  = require('sockjs');
 var redis   = require('redis');
-var H = require("../lib/h.js")
+var H = require("./lib/h.js")
 
 var Sock = module.exports = (function(){
     var Sock = {}
@@ -39,6 +39,7 @@ var Sock = module.exports = (function(){
 
         conn.on("close", function(){
             H.log("INFO. closing socket")
+            client.unsubscribe() // just to be safe, to avoid memory leak
         })
     }
 

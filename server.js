@@ -1,43 +1,28 @@
-// server.js
-
-// BASE SETUP
-// =============================================================================
-
-// call the packages we need
 var http       = require("http")
-var express    = require('express');        // call express
-var app        = express();                 // define our app using express
+var express    = require('express');
+var app        = express();
 var bodyParser = require('body-parser');
 var path = require('path');
 var H = require("./lib/h.js")
-var Sock = require("./noodles/sock.js")
+var Sock = require("./sock.js")
+var DB = require("./db.js")
 
 // configure app to use bodyParser()
 // this will let us get the data from a POST
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// ROUTES FOR OUR API
-// =============================================================================
-var router = express.Router();              // get an instance of the express Router
+var router = express.Router();
 
-// viewed at http://localhost:8080
-
-app.use("/static", express.static('public'));
+app.use("/static", express.static('static'));
 
 app.get('/', function(req, res) {
-    res.sendFile(path.join(__dirname + '/public/index.html'));
+    res.sendFile(path.join(__dirname + '/static/index.html'));
 });
 
-// more routes for our API will happen here
-
-// REGISTER OUR ROUTES -------------------------------
-// all of our routes will be prefixed with /api
 app.use('/api', router);
 
-// START THE SERVER
-// =============================================================================
-var port = process.env.PORT || 8080;        // set our port
+var port = process.env.PORT || 8080;
 server = http.createServer(app);
 server.listen(port);
 Sock.init(server)
