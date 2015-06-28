@@ -63,10 +63,10 @@ var Sock = (function(){
 
         _sock.onclose = function() {
             H.log("WARNING. closing socket")
-            msg.warning("Losing socket connection. Retrying in 2 seconds...")
+            msg.warning("Losing socket connection. Retrying in 5 seconds...")
             setTimeout(function(){
                 Sock.init()
-            }, 2000)
+            }, 5000)
         };
     }
 
