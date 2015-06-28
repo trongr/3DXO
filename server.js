@@ -1,16 +1,16 @@
 var http       = require("http")
 var express    = require('express');
 var app        = express();
+var logger = require('morgan');
 var bodyParser = require('body-parser');
 var path = require('path');
 var H = require("./lib/h.js")
 var Sock = require("./sock.js")
 var DB = require("./db.js")
 
-// configure app to use bodyParser()
-// this will let us get the data from a POST
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(logger('dev'));
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 var router = express.Router();
 
