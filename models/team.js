@@ -2,8 +2,14 @@ var mongoose = require('mongoose');
 
 var schema = mongoose.Schema({
     name: String,
-    created: Date,
-    modified: Date,
+    created: {
+        type: Date,
+        default: Date.now
+    },
+    modified: {
+        type: Date,
+        default: Date.now
+    },
 });
 
 module.exports = mongoose.model('Team', schema);

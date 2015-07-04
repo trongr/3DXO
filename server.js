@@ -7,8 +7,10 @@ var path = require('path');
 var H = require("./lib/h.js")
 var Sock = require("./sock.js")
 var DB = require("./db.js")
+var Pieces = require("./api/pieces.js")
 var Cells = require("./api/cells.js")
 var Players = require("./api/players.js")
+var Teams = require("./api/teams.js")
 
 app.use(logger('dev'));
 app.use(bodyParser.json());
@@ -28,8 +30,10 @@ app.get('/', function(req, res){
     res.sendFile(path.join(__dirname + '/static/index.html'))
 });
 
-app.use('/api/v1/cell', Cells);
-app.use('/api/v1/player', Players);
+app.use('/api/v1/piece', Pieces.router);
+app.use('/api/v1/cell', Cells.router);
+app.use('/api/v1/player', Players.router);
+app.use('/api/v1/team', Teams.router);
 
 // production error handler. no stacktraces leaked to user
 app.use(function(err, req, res, next) {

@@ -5,6 +5,7 @@ var DB = module.exports = (function(){
     var DB = {}
 
     DB.init = function(done){
+        // mach change db name
         mongoose.connect('mongodb://localhost/test');
         var db = mongoose.connection;
         db.on('error', function(er){

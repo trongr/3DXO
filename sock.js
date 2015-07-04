@@ -39,7 +39,7 @@ var Sock = module.exports = (function(){
 
         conn.on("close", function(){
             H.log("INFO. closing socket")
-            client.unsubscribe() // just to be safe, to avoid memory leak
+            client.unsubscribe() // just to be safe, to avoid potential memory leak
         })
     }
 

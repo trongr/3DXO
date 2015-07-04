@@ -1,20 +1,19 @@
 var mongoose = require('mongoose');
 
 var schema = mongoose.Schema({
-    name: String,
-    team: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Team'
+    name: {type: String, required: true},
+    // team: {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'Team'
+    // },
+    created: {
+        type: Date,
+        default: Date.now
     },
-    created: Date,
-    modified: Date,
+    modified: {
+        type: Date,
+        default: Date.now
+    },
 });
-
-// // NOTE: methods must be added to the schema before
-// // compiling it with mongoose.model()
-// schema.methods.speak = function () {
-//     var greeting = this.name ? "Meow name is " + this.name : "I don't have a name";
-//     console.log(greeting);
-// }
 
 module.exports = mongoose.model('Player', schema);

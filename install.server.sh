@@ -2,7 +2,7 @@
 
 SCRIPT_FILENAME=$0
 if [[ $# -eq 0 ]]; then
-    echo "$0 [--help] [--port PORT] [--deps true|false]"
+    echo "$0 [--help] [--port PORT] [--deps true|false] [--env test]"
     exit 1
 fi
 
@@ -14,6 +14,9 @@ while [[ $# > 0 ]]; do
             ;;
         -d|--deps)
             DEPS="$2"
+            ;;
+        -e|--env)
+            ENV="$2"
             ;;
         -h|--help)
             HELP=TRUE
@@ -31,6 +34,11 @@ fi
 
 if [[ $DEPS == true ]]; then
     npm install --no-bin-links
+fi
+
+if [[ $ENV == test ]]; then
+    pkill redis-server
+    redis-server &
 fi
 
 PORT=$PORT node server.js
