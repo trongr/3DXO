@@ -1,11 +1,13 @@
 var mongoose = require('mongoose');
+var Validate = require("./validate.js")
 
 var schema = mongoose.Schema({
-    x: Number,
-    y: Number,
+    x: {type: Number, required: true, validate: [Validate.isInt, "x not int"]},
+    y: {type: Number, required: true, validate: [Validate.isInt, "y not int"]},
     piece: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Piece'
+        ref: 'Piece',
+        required: true,
     }
 });
 

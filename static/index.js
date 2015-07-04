@@ -436,12 +436,12 @@ var Obj = (function(){
     Obj.initGamePieces = function(){
         var TOTAL_PLAYERS = 2
         var player1 = [
-            Obj.make(0, "pawn", 0, 0, 4),
-            Obj.make(0, "pawn", 1, 0, 4),
+            Obj.make(0, "pawn", 0, 0, 1),
+            Obj.make(0, "pawn", 1, 0, 1),
         ]
         var player2 = [
-            Obj.make(1, "pawn", 1, 1, 4),
-            Obj.make(1, "pawn", 1, 2, 4),
+            Obj.make(1, "pawn", 1, 1, 1),
+            Obj.make(1, "pawn", 1, 2, 1),
         ]
         Obj.loadGamePieces(player1)
         Obj.loadGamePieces(player2)
@@ -604,12 +604,10 @@ var Map = (function(){
     var _map = []
 
     Map.init = function(){
-        var mapSize = 4; // 8 by 8 by 8
+        var mapSize = 8; // 16 by 16 by 1
         for (var x = -mapSize; x < mapSize; x++) {
             for (var y = -mapSize; y < mapSize; y++){
-                for (var z = -mapSize; z < mapSize; z++){
-                    Map.add({x:x, y:y, z:z})
-                }
+                Map.add({x:x, y:y, z:0})
             }
         }
     }
@@ -679,8 +677,6 @@ var Move = (function(){
     }
 
     Move.highlightAvailableMoves = function(obj){
-        // mach
-        Sock.test()
         Highlight.highlightCells(Move.findAvailableMoves(obj), Highlight.COLORS.green)
         Highlight.highlightCells(Move.findAvailableKills(obj), Highlight.COLORS.red)
     }

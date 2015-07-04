@@ -1,7 +1,9 @@
+var async = require("async")
 var request = require("request")
 var express = require('express');
 var Piece = require("../models/piece.js")
 var Players = require("./players.js")
+var Cells = require("./cells.js")
 var H = require("../lib/h.js")
 
 var Pieces = module.exports = (function(){
@@ -15,8 +17,25 @@ var Pieces = module.exports = (function(){
         })
 
     Pieces.make = function(data, done){
-        var piece = new Piece(data)
-        piece.save(function(er){
+        var piece = null
+        async.waterfall([
+            function(done){
+                piece = new Piece(data)
+                piece.save(function(er){
+                    done(er)
+                })
+            },
+            function(done){
+                // mach game logic should check if upserting is allowed
+                Cells.upsert({
+                    piece: piece,
+                    x: piece.x,
+                    y: piece.y,
+                }, function(er, cell){
+                    done(er)
+                })
+            }
+        ], function(er){
             done(er, piece)
         })
     }
