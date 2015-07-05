@@ -37,8 +37,7 @@ if [[ $DEPS == true ]]; then
 fi
 
 if [[ $ENV == test ]]; then
-    pkill redis-server
-    redis-server &
+    echo "Server running in dev mode"
 fi
 
 PORT=$PORT node server.js
