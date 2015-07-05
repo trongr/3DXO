@@ -13,7 +13,7 @@ var Cells = module.exports = (function(){
             var x = H.param(req, "x")
             var y = H.param(req, "y")
             var r = H.param(req, "r")
-            Cell.find(function (er, cells){
+            Cell.find({}).populate("piece").exec(function(er, cells){
                 H.send(res, er, {cells:cells})
             });
         })

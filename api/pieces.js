@@ -28,7 +28,7 @@ var Pieces = module.exports = (function(){
             function(done){
                 // mach game logic should check if upserting is allowed
                 Cells.upsert({
-                    piece: piece,
+                    piece: piece._id,
                     x: piece.x,
                     y: piece.y,
                 }, function(er, cell){

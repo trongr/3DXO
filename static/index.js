@@ -51,19 +51,19 @@ var Sock = (function(){
         _sock = new SockJS('http://localhost:8080/move');
 
         _sock.onopen = function() {
-            msg.info("Success! Opening socket")
-            H.log("INFO. opening socket")
+            msg.info("Opening socket connection")
+            H.log("INFO. opening socket connection")
             clearTimeout(_socketAutoReconnectTimeout)
         };
 
         _sock.onmessage = function(e) {
-            msg.info("received message " + e.data)
+            msg.info("Received message " + e.data)
             H.log("INFO. socket message", e)
         };
 
         _sock.onclose = function() {
             H.log("WARNING. closing socket")
-            msg.warning("Losing socket connection. Retrying in 5 seconds...")
+            msg.warning("Losing socket connection. Retrying in 5s...")
             setTimeout(function(){
                 Sock.init()
             }, 5000)
@@ -245,6 +245,7 @@ var Select = (function(){
         // Scene.getScene().remove( intersect.object );
         // Obj.getObjects().splice( Obj.getObjects().indexOf( intersect.object ), 1 );
         if (_isSelecting){
+            // mach todo let Game manage game mechanics
             Obj.move(_selected, new THREE.Vector3()
                      .copy(intersect.point)
                      .add(new THREE.Vector3()
@@ -425,7 +426,6 @@ var Obj = (function(){
     }
 
     Obj.init = function(done){
-        _objects = []
         Obj.TYPE.pawn = {
             material: [
                 new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn", 0xff4545)),
@@ -446,8 +446,8 @@ var Obj = (function(){
             if (er) return done(er.msg)
             var cells = []
             for (var i = 0; i < _cells.length; i++){
-                // mach store all piece data in the cell, so you can get things like cell.piece.type
-                cells.push(Obj.make(0, "pawn", _cells[i].x, _cells[i].y, 1))
+                var cell = _cells[i]
+                cells.push(Obj.make(0, cell.piece.kind, cell.x, cell.y, 1))
             }
             var TOTAL_PLAYERS = 1
             Obj.loadGamePieces(cells)
@@ -769,6 +769,7 @@ var Move = (function(){
         }
     }
 
+    // todo remove changePlanes feature
     Move.changePlanes = function(obj, x, y, z){
         var curGround = Obj.findGround(obj.position.x, obj.position.y, obj.position.z)
         var down = new THREE.Vector3(x, y, z).sub(new THREE.Vector3().copy(curGround.face.normal))
@@ -794,7 +795,7 @@ var Scene = (function(){
         camera: null
     }
 
-    var _scene = null
+    var _scene
     var _container
     var _stats;
     var _controls, _renderer;
@@ -823,7 +824,6 @@ var Scene = (function(){
         Sock.init()
 
         animate();
-
         Scene.render();
     }
 
@@ -855,7 +855,7 @@ var Scene = (function(){
         _controls.staticMoving = true;
         _controls.dynamicDampingFactor = 0.3;
         _controls.keys = [ 65, 83, 68 ];
-        _controls.addEventListener( 'change', Scene.render );
+        _controls.addEventListener('change', Scene.render);
         // todo. adding this makes moving with the mouse really slow
         // document.addEventListener( 'mousemove', _controls.update.bind( _controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
     }
@@ -959,8 +959,12 @@ var Scene = (function(){
     }
 
     Scene.render = function(){
-        _renderer.render(_scene, Scene.camera);
-        _stats.update();
+        try {
+            _renderer.render(_scene, Scene.camera);
+            _stats.update();
+        } catch (e){
+            msg.warning("Renderer not ready", 2)
+        }
     }
 
     function createDirectionalLight(x, y, z){
@@ -973,6 +977,17 @@ var Scene = (function(){
     }
 
     return Scene
+}())
+
+var Game = (function(){
+    var Game = {}
+
+    // mach
+    Game.move = function(){
+
+    }
+
+    return Game
 }())
 
 window.onload = function(){
