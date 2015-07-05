@@ -79,6 +79,45 @@ var Sock = (function(){
     return Sock
 }())
 
+var API = (function(){
+    var API = {}
+
+    API.req = function(method, url, data, done){
+        $.ajax({
+            type: method,
+            url: url,
+            data: data,
+            dataType: 'json',
+            xhrFields: {
+                withCredentials: true
+            },
+            success: function(re, status, xhr){
+                done(null, re)
+            },
+            error: function (xhr, status, er){
+                done(er)
+            },
+            // complete: function (xhr, status){}
+        });
+    }
+
+    API.Cells = (function(){
+        var Cells = {}
+
+        Cells.get = function(data, done){
+            var url = "/api/v1/cell/" + data.x + "/" + data.y + "/" + data.r
+            API.req("get", url, data, function(er, re){
+                if (re && re.cells) done(null, re.cells)
+                else done({msg:"no cells found", re:re, er:er})
+            })
+        }
+
+        return Cells
+    }())
+
+    return API
+}())
+
 var Orientation = (function(){
     var Orientation = {}
 
@@ -434,18 +473,17 @@ var Obj = (function(){
     }
 
     Obj.initGamePieces = function(){
-        var TOTAL_PLAYERS = 2
+        var TOTAL_PLAYERS = 1
         var player1 = [
             Obj.make(0, "pawn", 0, 0, 1),
             Obj.make(0, "pawn", 1, 0, 1),
         ]
-        var player2 = [
-            Obj.make(1, "pawn", 1, 1, 1),
-            Obj.make(1, "pawn", 1, 2, 1),
-        ]
         Obj.loadGamePieces(player1)
-        Obj.loadGamePieces(player2)
         Player.init(TOTAL_PLAYERS)
+        // mach
+        API.Cells.get({x:0, y:0, r:0}, function(er, cells){
+            console.log(JSON.stringify(cells, 0, 2))
+        })
     }
 
     Obj.loadGamePieces = function(objs){

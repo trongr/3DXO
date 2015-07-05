@@ -10,6 +10,9 @@ var Cells = module.exports = (function(){
     Cells.router.route("/:x/:y/:r")
         .get(function(req, res){
             // mach find cells within R cells of x, y
+            var x = H.param(req, "x")
+            var y = H.param(req, "y")
+            var r = H.param(req, "r")
             Cell.find(function (er, cells){
                 H.send(res, er, {cells:cells})
             });
