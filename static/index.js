@@ -424,7 +424,7 @@ var Obj = (function(){
         return materials
     }
 
-    Obj.init = function(){
+    Obj.init = function(done){
         _objects = []
         Obj.TYPE.pawn = {
             material: [
@@ -442,8 +442,19 @@ var Obj = (function(){
         // faces of the cube. in that case, once you've loaded the
         // game pieces, then the map, do another pass through the
         // pieces and stand them up right.
-        Obj.initGamePieces()
-        Obj.initMap()
+        API.Cells.get({x:0, y:0, r:0}, function(er, _cells){
+            if (er) return done(er.msg)
+            var cells = []
+            for (var i = 0; i < _cells.length; i++){
+                // mach store all piece data in the cell, so you can get things like cell.piece.type
+                cells.push(Obj.make(0, "pawn", _cells[i].x, _cells[i].y, 1))
+            }
+            var TOTAL_PLAYERS = 1
+            Obj.loadGamePieces(cells)
+            Player.init(TOTAL_PLAYERS)
+            Obj.initMap()
+            done(null)
+        })
     }
 
     Obj.initMap = function(){
@@ -457,20 +468,6 @@ var Obj = (function(){
             var mapBlock = Obj.make(null, "ground" + index, x, y, z)
             Obj.addObj(mapBlock) // but also add the actual blocks to the world
         }
-    }
-
-    Obj.initGamePieces = function(){
-        var TOTAL_PLAYERS = 1
-        var player1 = [
-            Obj.make(0, "pawn", 0, 0, 1),
-            Obj.make(0, "pawn", 1, 0, 1),
-        ]
-        Obj.loadGamePieces(player1)
-        Player.init(TOTAL_PLAYERS)
-        // mach
-        API.Cells.get({x:0, y:0, r:0}, function(er, cells){
-            console.log(JSON.stringify(cells, 0, 2))
-        })
     }
 
     Obj.loadGamePieces = function(objs){
@@ -804,29 +801,30 @@ var Scene = (function(){
     var _isShiftDown = false;
 
     Scene.init = function(){
-        _container = initContainer()
-        initStats()
-        initInfo()
-
         _scene = new THREE.Scene();
         var length = Obj.getObjects().length
         for (var i = 0; i < length; i++){
             Scene.addObj(Obj.getObj(i))
         }
 
+        initContainer()
+        initStats()
+        initInfo()
         initLights()
-        Scene.camera = initCamera()
+        initCamera()
+        initControls()
         initListeners()
         initRenderer()
 
         Rollover.init()
-
         Select.init()
         KeyNav.init() // toggle
 
         Sock.init()
 
         animate();
+
+        Scene.render();
     }
 
     Scene.addObj = function(obj){
@@ -838,16 +836,17 @@ var Scene = (function(){
     }
 
     function initContainer(){
-        var container = document.createElement( 'div' );
-        document.body.appendChild( container );
-        return container
+        _container = document.createElement( 'div' );
+        document.body.appendChild(_container);
     }
 
     function initCamera(){
-        var camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, K.BOARD_SIZE * 10 );
-        camera.position.z = K.INIT_CAM_POS; // for some reason you need this or track ball controls won't work properly
+        Scene.camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, K.BOARD_SIZE * 10 );
+        Scene.camera.position.z = K.INIT_CAM_POS; // for some reason you need this or track ball controls won't work properly
+    }
 
-        _controls = new THREE.TrackballControls( camera );
+    function initControls(){
+        _controls = new THREE.TrackballControls(Scene.camera);
         _controls.rotateSpeed = 2.5;
         _controls.zoomSpeed = 1.5;
         _controls.panSpeed = 1.0;
@@ -859,8 +858,6 @@ var Scene = (function(){
         _controls.addEventListener( 'change', Scene.render );
         // todo. adding this makes moving with the mouse really slow
         // document.addEventListener( 'mousemove', _controls.update.bind( _controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
-
-        return camera
     }
 
     function initLights(){
@@ -890,8 +887,6 @@ var Scene = (function(){
         _renderer.shadowMapHeight = 1024;
 
         _container.appendChild( _renderer.domElement );
-
-        Scene.render();
     }
 
     function initListeners(){
@@ -984,8 +979,9 @@ window.onload = function(){
     if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
     (function init() {
-        Obj.init()
-        Scene.init()
+        Obj.init(function(er){
+            Scene.init()
+        })
     }())
 
 }
