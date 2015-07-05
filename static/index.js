@@ -171,10 +171,7 @@ var Orientation = (function(){
 var KeyNav = (function(){
     var KeyNav = {}
 
-    var _mesh
-
-    KeyNav.init = function(mesh){
-        _mesh = mesh
+    KeyNav.init = function(){
         KeyNav.initListeners()
     }
 
@@ -184,12 +181,12 @@ var KeyNav = (function(){
 
     function onDocumentKeyDown( event ) {
         switch( event.keyCode ) {
-        case 65: moveLeft(_mesh, Scene.camera); break; // A
-        case 68: moveRight(_mesh, Scene.camera); break; // D
-        case 81: moveAway(_mesh, Scene.camera); break; // Q
-        case 83: moveDown(_mesh, Scene.camera); break; // S
-        case 87: moveUp(_mesh, Scene.camera); break; // W
-        case 69: moveInto(_mesh, Scene.camera); break; // E
+        case 65: moveLeft(Rollover.getMesh(), Scene.camera); break; // A
+        case 68: moveRight(Rollover.getMesh(), Scene.camera); break; // D
+        case 81: moveAway(Rollover.getMesh(), Scene.camera); break; // Q
+        case 83: moveDown(Rollover.getMesh(), Scene.camera); break; // S
+        case 87: moveUp(Rollover.getMesh(), Scene.camera); break; // W
+        case 69: moveInto(Rollover.getMesh(), Scene.camera); break; // E
         }
         Scene.render()
     }
@@ -801,16 +798,15 @@ var Scene = (function(){
     }
 
     var _scene = null
-
+    var _container
     var _stats;
     var _controls, _renderer;
-
     var _isShiftDown = false;
 
     Scene.init = function(){
-        var container = initContainer()
-        initStats(container)
-        initInfo(container)
+        _container = initContainer()
+        initStats()
+        initInfo()
 
         _scene = new THREE.Scene();
         var length = Obj.getObjects().length
@@ -821,13 +817,12 @@ var Scene = (function(){
         initLights()
         Scene.camera = initCamera()
         initListeners()
+        initRenderer()
 
-        Rollover.init(Scene.render) // toggle
+        Rollover.init()
 
         Select.init()
-        KeyNav.init(Rollover.getMesh(), Scene.render) // toggle
-
-        initRenderer(container)
+        KeyNav.init() // toggle
 
         Sock.init()
 
@@ -875,7 +870,7 @@ var Scene = (function(){
         Scene.addObj(createDirectionalLight(-K.INIT_LIGHT_POS, -2 * K.INIT_LIGHT_POS, -3 * K.INIT_LIGHT_POS));
     }
 
-    function initRenderer(container){
+    function initRenderer(){
         _renderer = new THREE.WebGLRenderer( { antialias:false, alpha:true } );
         _renderer.setClearColor(0x02002B, 1);
         _renderer.setPixelRatio( window.devicePixelRatio );
@@ -894,7 +889,7 @@ var Scene = (function(){
         _renderer.shadowMapWidth = 1024;
         _renderer.shadowMapHeight = 1024;
 
-        container.appendChild( _renderer.domElement );
+        _container.appendChild( _renderer.domElement );
 
         Scene.render();
     }
@@ -906,7 +901,7 @@ var Scene = (function(){
         window.addEventListener( 'resize', onWindowResize, false );
     }
 
-    function initInfo(container){
+    function initInfo(){
         var info = document.createElement( 'div' );
         info.style.color = "white"
         info.style.position = 'absolute';
@@ -917,15 +912,15 @@ var Scene = (function(){
             + "<strong>mouse</strong>: navigate<br>"
             // + "<strong>QWEASD</strong>: move box<br>"
             + '<strong>click</strong>: move box<br>'
-        container.appendChild( info );
+        _container.appendChild( info );
     }
 
-    function initStats(container){
+    function initStats(){
         _stats = new Stats();
         _stats.domElement.style.position = 'absolute';
         _stats.domElement.style.top = '0px';
         _stats.domElement.style.zIndex = 100;
-        container.appendChild( _stats.domElement );
+        _container.appendChild( _stats.domElement );
     }
 
     function onDocumentMouseDown( event ) {
