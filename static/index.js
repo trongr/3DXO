@@ -172,13 +172,9 @@ var KeyNav = (function(){
     var KeyNav = {}
 
     var _mesh
-    var _camera
-    var _render
 
-    KeyNav.init = function(mesh, camera, render){
+    KeyNav.init = function(mesh){
         _mesh = mesh
-        _camera = camera
-        _render = render
         KeyNav.initListeners()
     }
 
@@ -188,14 +184,14 @@ var KeyNav = (function(){
 
     function onDocumentKeyDown( event ) {
         switch( event.keyCode ) {
-        case 65: moveLeft(_mesh, _camera); break; // A
-        case 68: moveRight(_mesh, _camera); break; // D
-        case 81: moveAway(_mesh, _camera); break; // Q
-        case 83: moveDown(_mesh, _camera); break; // S
-        case 87: moveUp(_mesh, _camera); break; // W
-        case 69: moveInto(_mesh, _camera); break; // E
+        case 65: moveLeft(_mesh, Scene.camera); break; // A
+        case 68: moveRight(_mesh, Scene.camera); break; // D
+        case 81: moveAway(_mesh, Scene.camera); break; // Q
+        case 83: moveDown(_mesh, Scene.camera); break; // S
+        case 87: moveUp(_mesh, Scene.camera); break; // W
+        case 69: moveInto(_mesh, Scene.camera); break; // E
         }
-        _render()
+        Scene.render()
     }
 
     function moveInto(mesh, camera){
@@ -231,19 +227,17 @@ var Select = (function(){
     var _isSelecting
     var _raycaster
     var _mouse
-    var _camera
     var _selected
 
-    Select.init = function(camera){
+    Select.init = function(){
         _isSelecting = false
         _raycaster = new THREE.Raycaster();
         _mouse = new THREE.Vector2();
-        _camera = camera
     }
 
     Select.getIntersect = function(clientX, clientY){
         _mouse.set( ( clientX / window.innerWidth ) * 2 - 1, - ( clientY / window.innerHeight ) * 2 + 1 );
-        _raycaster.setFromCamera(_mouse, _camera);
+        _raycaster.setFromCamera(_mouse, Scene.camera);
         return _raycaster.intersectObjects(Obj.getObjects())[0];
     }
 
@@ -285,10 +279,8 @@ var Rollover = (function(){
     var ROLLOVER_MATERIAL = new THREE.MeshLambertMaterial({color:0xffffff, shading:THREE.FlatShading, opacity:0.3, transparent:true})
     var ROLLOVER_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01) // 0.01 extra to prevent highlight from clipping with cube surface
     var _rollover
-    var _render
 
-    Rollover.init = function(render){
-        _render = render
+    Rollover.init = function(){
         _rollover = new THREE.Mesh(ROLLOVER_GEOMETRY, ROLLOVER_MATERIAL);
         Scene.addObj(_rollover)
         // Obj.move(_rollover, new THREE.Vector3(0, 0, 0))
@@ -311,7 +303,7 @@ var Rollover = (function(){
         if (intersect) {
             Obj.move(Rollover.getMesh(), new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
         }
-        _render();
+        Scene.render();
     }
 
     return Rollover
@@ -411,7 +403,6 @@ var Obj = (function(){
     // want to find the ground adjacent to an obj
     var _groundRaycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(), 0, 1)
     var _objects = []
-    var _render = null // so you can call render when done loading objects
 
     Obj.TYPE = {
         pawn: null, // load in Obj.init
@@ -430,15 +421,14 @@ var Obj = (function(){
         } // use colors for non image faces
         materials[4] = new THREE.MeshLambertMaterial({
             map:THREE.ImageUtils.loadTexture(TEXTURES_ROOT + textureName + "4.png", {}, function(){
-                _render()
+                Scene.render()
             })
         })
         return materials
     }
 
-    Obj.init = function(render){
+    Obj.init = function(){
         _objects = []
-        _render = render
         Obj.TYPE.pawn = {
             material: [
                 new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn", 0xff4545)),
@@ -606,34 +596,6 @@ var Obj = (function(){
     }
 
     return Obj
-}())
-
-var Scene = (function(){
-    var Scene = {}
-
-    var _scene = null
-
-    Scene.init = function(){
-        _scene = new THREE.Scene();
-        var length = Obj.getObjects().length
-        for (var i = 0; i < length; i++){
-            Scene.addObj(Obj.getObj(i))
-        }
-    }
-
-    Scene.getScene = function(){
-        return _scene
-    }
-
-    Scene.addObj = function(obj){
-        _scene.add(obj)
-    }
-
-    Scene.removeMesh = function(mesh){
-        _scene.remove(mesh)
-    }
-
-    return Scene
 }())
 
 var Map = (function(){
@@ -833,38 +795,51 @@ var Move = (function(){
     return Move
 }())
 
-window.onload = function(){
-    if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+var Scene = (function(){
+    var Scene = {
+        camera: null
+    }
+
+    var _scene = null
 
     var _stats;
-    var _camera
     var _controls, _renderer;
 
     var _isShiftDown = false;
 
-    init();
-    animate();
-
-    function init() {
+    Scene.init = function(){
         var container = initContainer()
         initStats(container)
         initInfo(container)
 
-        Obj.init(render)
-        Scene.init()
+        _scene = new THREE.Scene();
+        var length = Obj.getObjects().length
+        for (var i = 0; i < length; i++){
+            Scene.addObj(Obj.getObj(i))
+        }
 
         initLights()
-        _camera = initCamera()
+        Scene.camera = initCamera()
         initListeners()
 
-        Rollover.init(render) // toggle
+        Rollover.init(Scene.render) // toggle
 
-        Select.init(_camera)
-        KeyNav.init(Rollover.getMesh(), _camera, render) // toggle
+        Select.init()
+        KeyNav.init(Rollover.getMesh(), Scene.render) // toggle
 
         initRenderer(container)
 
         Sock.init()
+
+        animate();
+    }
+
+    Scene.addObj = function(obj){
+        _scene.add(obj)
+    }
+
+    Scene.removeMesh = function(mesh){
+        _scene.remove(mesh)
     }
 
     function initContainer(){
@@ -886,7 +861,7 @@ window.onload = function(){
         _controls.staticMoving = true;
         _controls.dynamicDampingFactor = 0.3;
         _controls.keys = [ 65, 83, 68 ];
-        _controls.addEventListener( 'change', render );
+        _controls.addEventListener( 'change', Scene.render );
         // todo. adding this makes moving with the mouse really slow
         // document.addEventListener( 'mousemove', _controls.update.bind( _controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
 
@@ -910,7 +885,7 @@ window.onload = function(){
         _renderer.shadowMapSoft = true;
 
         _renderer.shadowCameraNear = 3;
-        _renderer.shadowCameraFar = _camera.far;
+        _renderer.shadowCameraFar = Scene.camera.far;
         _renderer.shadowCameraFov = 45;
 
         _renderer.shadowMapType = THREE.PCFSoftShadowMap;
@@ -921,7 +896,7 @@ window.onload = function(){
 
         container.appendChild( _renderer.domElement );
 
-        render();
+        Scene.render();
     }
 
     function initListeners(){
@@ -957,7 +932,7 @@ window.onload = function(){
         event.preventDefault();
         if (event.which == 1){ // left mouse button
             Select.select(event.clientX, event.clientY)
-            render()
+            Scene.render()
         } else if (event.which == 2){ // middle mouse
             // using middle
         } else if (event.which == 3){ // right mouse
@@ -970,7 +945,7 @@ window.onload = function(){
         // case 32: placeCube(Rollover.getMesh().position); break; // space
         case 16: _isShiftDown = true; break;
         }
-        render()
+        Scene.render()
     }
 
     function onDocumentKeyUp( event ) {
@@ -980,21 +955,21 @@ window.onload = function(){
     }
 
     function onWindowResize() {
-        _camera.aspect = window.innerWidth / window.innerHeight;
-        _camera.updateProjectionMatrix();
+        Scene.camera.aspect = window.innerWidth / window.innerHeight;
+        Scene.camera.updateProjectionMatrix();
         _renderer.setSize( window.innerWidth, window.innerHeight );
         _controls.handleResize();
-        render();
+        Scene.render();
     }
 
     function animate() {
         requestAnimationFrame( animate );
         _controls.update(); // use this too cause zooming's weird without it
-        // render() // don't render on every frame unless you're really animating stuff
+        // Scene.render() // don't render on every frame unless you're really animating stuff
     }
 
-    function render(){
-        _renderer.render( Scene.getScene(), _camera );
+    Scene.render = function(){
+        _renderer.render(_scene, Scene.camera);
         _stats.update();
     }
 
@@ -1006,5 +981,16 @@ window.onload = function(){
         directionalLight.shadowDarkness = 0.2
         return directionalLight
     }
+
+    return Scene
+}())
+
+window.onload = function(){
+    if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+    (function init() {
+        Obj.init()
+        Scene.init()
+    }())
 
 }
