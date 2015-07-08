@@ -241,31 +241,25 @@ var Select = (function(){
     Select.select = function(clientX, clientY){
         var intersect = Select.getIntersect(clientX, clientY)
         if (!intersect) return
-        // REF. removing cube
-        // Scene.getScene().remove( intersect.object );
-        // Obj.getObjects().splice( Obj.getObjects().indexOf( intersect.object ), 1 );
         if (_isSelecting){
-            // mach todo let Game manage game mechanics
-            Obj.move(_selected, new THREE.Vector3()
-                     .copy(intersect.point)
-                     .add(new THREE.Vector3()
-                          .copy(intersect.face.normal)
-                          .multiplyScalar(0.5))) // normal's unit length so gotta scale by half to fit inside the box
-            Obj.highlight(_selected, true)
-            Highlight.hideAllHighlights()
-            Player.updateCurPlayer(1)
+            var moved = Game.move(_selected, new THREE.Vector3()
+                                  .copy(intersect.point)
+                                  .add(new THREE.Vector3()
+                                       .copy(intersect.face.normal)
+                                       .multiplyScalar(0.5))) // normal's unit length so gotta scale by half to fit inside the box
+            if (moved) _isSelecting = false
+            else _isSelecting = true
         } else { // start selecting
             if (Player.objBelongsToPlayer(intersect.object, Player.getCurPlayer())){
                 _selected = intersect.object
                 Obj.highlight(intersect.object, true)
                 Move.highlightAvailableMoves(intersect.object)
+                _isSelecting = true
             } else {
                 Obj.highlight(_selected, false)
                 _isSelecting = false
-                return
             }
         }
-        _isSelecting = !_isSelecting
     }
 
     return Select
@@ -331,9 +325,12 @@ var Highlight = (function(){
 
     }
 
-    Highlight.highlightCells = function(positions, color){
+    // mach
+    Highlight.highlightCells = function(positions){
         for (var i = 0; i < positions.length; i++){
-            var position = positions[i]
+            var move = positions[i]
+            var position = move.xyz
+            var color = move.kill ? "red" : "green"
             var highlight = _highlights[color][i] || Highlight.makeHighlight(color)
             highlight.visible = true
             Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z))
@@ -402,7 +399,7 @@ var Obj = (function(){
     var _groundRaycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(), 0, 1)
     var _objects = []
 
-    Obj.TYPE = {
+    Obj.KIND = {
         pawn: null, // load in Obj.init
         ground0: {
             material: new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
@@ -426,7 +423,7 @@ var Obj = (function(){
     }
 
     Obj.init = function(done){
-        Obj.TYPE.pawn = {
+        Obj.KIND.pawn = {
             material: [
                 new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn", 0xff4545)),
                 new THREE.MeshFaceMaterial(loadFaceTextures("p1pawn", 0x0060ff)),
@@ -476,19 +473,19 @@ var Obj = (function(){
         }
     }
 
-    Obj.getMaterial = function(player, type){
-        if (player != null) return Obj.TYPE[type].material[player]
-        else return Obj.TYPE[type].material // non player materials are unique
+    Obj.getMaterial = function(player, kind){
+        if (player != null) return Obj.KIND[kind].material[player]
+        else return Obj.KIND[kind].material // non player materials are unique
     }
 
-    // todo. better classing. right now ground blocks have type null
-    Obj.make = function(player, type, x, y, z){
-        var mat = Obj.getMaterial(player, type)
+    // todo. better classing. right now ground blocks have kind null
+    Obj.make = function(player, kind, x, y, z){
+        var mat = Obj.getMaterial(player, kind)
         var obj = Obj.makeBox(new THREE.Vector3(x, y, z), mat)
         obj.game = {
             // team: team, // todo
             player: player,
-            type: type,
+            kind: kind,
         }
         return obj
     }
@@ -670,14 +667,27 @@ var Move = (function(){
         }
     }
 
+    // Store currently available moves once player clicks a piece to
+    // move. Each item contains position and a direction, whether it's
+    // a kill move or not, etc. Useful for sending to server to
+    // validate when player moves.
+    Move.validatedMoves = []
+
     Move.highlightAvailableMoves = function(obj){
-        Highlight.highlightCells(Move.findAvailableMoves(obj), Highlight.COLORS.green)
-        Highlight.highlightCells(Move.findAvailableKills(obj), Highlight.COLORS.red)
+        var moves = Move.findAvailableMoves(obj)
+        moves.push.apply(moves, Move.findAvailableKills(obj))
+        Highlight.highlightCells(Move.findAvailableMoves(obj))
+        Move.validatedMoves = moves.filter(function(item){ // Cache available moves
+            // // todo remove
+            // var result = item.kill == false || item.killMove == true
+            // if (result) console.log("it's a real move " + JSON.stringify(item, 0, 2))
+            return item.kill == false || item.killMove == true // Only interested in actual moveable positions
+        })
     }
 
     Move.findAvailableKills = function(obj){
-        var range = Move.getRange(obj.game.type)
-        var killRules = Move.rules.kills[obj.game.type]
+        var range = Move.getRange(obj.game.kind)
+        var killRules = Move.rules.kills[obj.game.kind]
         var moves = []
         for (var i = 0; i < killRules.length; i++){
             var _dirMoves = Move.findKillsInDirection(obj, [
@@ -685,6 +695,21 @@ var Move = (function(){
                 Math.floor(obj.position.y),
                 Math.floor(obj.position.z),
             ], Move.directions[killRules[i]], range, [])
+            moves.push.apply(moves, _dirMoves)
+        }
+        return moves
+    }
+
+    Move.findAvailableMoves = function(obj){
+        var range = Move.getRange(obj.game.kind)
+        var moveRules = Move.rules.moves[obj.game.kind]
+        var moves = []
+        for (var i = 0; i < moveRules.length; i++){
+            var _dirMoves = Move.findMovesInDirection(obj, [
+                Math.floor(obj.position.x),
+                Math.floor(obj.position.y),
+                Math.floor(obj.position.z),
+            ], Move.directions[moveRules[i]], range, [])
             moves.push.apply(moves, _dirMoves)
         }
         return moves
@@ -703,27 +728,17 @@ var Move = (function(){
         var validMove = Move.validateMove(obj, x, y, z, true) // kill move true
         if (!validMove) return [] // can't move here
 
-        moves.push(validMove.xyz)
-        if (validMove.kill) return moves
+        moves.push({
+            xyz: validMove.xyz,
+            kill: true,
+            killMove: validMove.killMove, // the actual kill move, as opposed to intermediate cells
+            direction: direction,
+        })
+        if (validMove.killMove) return moves
         else if (!validMove.more) return [] // can't move past this point
         else return Move.findKillsInDirection(obj, [
             x, y, z
         ], direction, --range, moves) // keep going
-    }
-
-    Move.findAvailableMoves = function(obj){
-        var range = Move.getRange(obj.game.type)
-        var moveRules = Move.rules.moves[obj.game.type]
-        var moves = []
-        for (var i = 0; i < moveRules.length; i++){
-            var _dirMoves = Move.findMovesInDirection(obj, [
-                Math.floor(obj.position.x),
-                Math.floor(obj.position.y),
-                Math.floor(obj.position.z),
-            ], Move.directions[moveRules[i]], range, [])
-            moves.push.apply(moves, _dirMoves)
-        }
-        return moves
     }
 
     // recursively find available moves
@@ -737,7 +752,11 @@ var Move = (function(){
         var validMove = Move.validateMove(obj, x, y, z, false)
         if (!validMove) return moves // can't move here
 
-        moves.push(validMove.xyz)
+        moves.push({
+            xyz: validMove.xyz,
+            kill: false,
+            direction: direction,
+        })
         if (!validMove.more) return moves // can't move past this point
         else return Move.findMovesInDirection(obj, [
             x, y, z
@@ -763,10 +782,17 @@ var Move = (function(){
         } else if (box.game.player == obj.game.player){ // blocked by friendly
             return null
         } else if (box && isKill){ // blocked by enemy
-            return {xyz:{x:x, y:y, z:z}, more:false, kill:true}
+            return {xyz:{x:x, y:y, z:z}, more:false, killMove:true}
         } else { // also blocked by enemy but not a kill move
             return null
         }
+    }
+
+    // mach
+    Move.isValidated = function(x, y, z){
+        return $.grep(Move.validatedMoves, function(item){
+            return item.xyz.x == x && item.xyz.y == y && item.xyz.z == z
+        }).length > 0
     }
 
     // todo remove changePlanes feature
@@ -783,8 +809,8 @@ var Move = (function(){
         }
     }
 
-    Move.getRange = function(objType){
-        return Move.range[objType]
+    Move.getRange = function(objKind){
+        return Move.range[objKind]
     }
 
     return Move
@@ -983,8 +1009,24 @@ var Game = (function(){
     var Game = {}
 
     // mach
-    Game.move = function(){
-
+    // pos can have fractional values: round down to convert to game coordinates
+    Game.move = function(selected, pos){
+        // REF. removing cube
+        // Scene.getScene().remove( intersect.object );
+        // Obj.getObjects().splice( Obj.getObjects().indexOf( intersect.object ), 1 );
+        var x = Math.floor(pos.x)
+        var y = Math.floor(pos.y)
+        var z = Math.floor(pos.z)
+        if (Move.isValidated(x, y, z)){
+            Obj.move(selected, pos)
+            Obj.highlight(selected, true)
+            Highlight.hideAllHighlights()
+            Player.updateCurPlayer(1)
+            return true
+        } else {
+            msg.error("Invalid move")
+            return false
+        }
     }
 
     return Game
