@@ -301,9 +301,10 @@ var Player = (function(){
         return obj.game.friendly == 1
     }
 
+    // Object materials are indexed by 0:ENEMY 1:FRIENDLY
     Player.friendly = function(cell){
-        if (cell.piece.player == _player._id) return 1
-        else return 0
+        if (cell.piece.player == _player._id) return Obj.STANCE.FRIENDLY
+        else return Obj.STANCE.ENEMY
     }
 
     return Player
@@ -318,6 +319,10 @@ var Obj = (function(){
     var _groundRaycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(), 0, 1)
     var _objects = []
 
+    Obj.STANCE = {
+        ENEMY: 0,
+        FRIENDLY: 1,
+    }
     Obj.KIND = {
         pawn: null, // load in Obj.init
         ground0: {
@@ -342,7 +347,6 @@ var Obj = (function(){
     }
 
     Obj.init = function(done){
-        // material[0] and [1] are for friendly and enemy pieces
         Obj.KIND.pawn = {
             material: [
                 new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn", 0xff4545)),
