@@ -101,6 +101,20 @@ var API = (function(){
         });
     }
 
+    API.Player = (function(){
+        var Player = {}
+
+        Player.get = function(data, done){
+            var url = "/api/v1/player"
+            API.req("get", url, data, function(er, re){
+                if (re && re.player) done(null, re.player)
+                else done({msg:"no player found", re:re, er:er})
+            })
+        }
+
+        return Player
+    }())
+
     API.Cells = (function(){
         var Cells = {}
 
@@ -250,7 +264,7 @@ var Select = (function(){
             if (moved) _isSelecting = false
             else _isSelecting = true
         } else { // start selecting
-            if (Player.objBelongsToPlayer(intersect.object, Player.getCurPlayer())){
+            if (Player.objBelongsToPlayer(intersect.object)){
                 _selected = intersect.object
                 Obj.highlight(intersect.object, true)
                 Move.highlightAvailableMoves(intersect.object)
@@ -321,20 +335,15 @@ var Highlight = (function(){
         green: [],
     }
 
-    Highlight.init = function(){
-
-    }
-
-    // mach
-    Highlight.highlightCells = function(positions){
-        for (var i = 0; i < positions.length; i++){
-            var move = positions[i]
+    Highlight.highlightCells = function(moves){
+        for (var i = 0; i < moves.length; i++){
+            var move = moves[i]
             var position = move.xyz
             var color = move.kill ? "red" : "green"
             var highlight = _highlights[color][i] || Highlight.makeHighlight(color)
             highlight.visible = true
             Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z))
-            Obj.standUpRight(highlight, true) // force==true to force up right for nonplayer blocks
+            // Obj.standUpRight(highlight, true) // force==true to force up right for nonplayer blocks
             highlight.position.copy(Obj.findGround(position.x, position.y, position.z).point) // can't use Obj.move() cause it realigns fraction to integer positions
         }
     }
@@ -366,25 +375,29 @@ var Highlight = (function(){
 var Player = (function(){
     var Player = {}
 
-    var TOTAL_PLAYERS = 0
-    var _curPlayer = 0 // index of the player to make the next move
+    var _player = null
 
-    Player.init = function(totalPlayers){
-        TOTAL_PLAYERS = totalPlayers
+    Player.init = function(done){
+        // mach player name
+        var name = "trong"
+        API.Player.get({name:name}, function(er, player){
+            if (er){
+                msg.error("Can't load player: " + name)
+                return done(er.msg)
+            }
+            _player = player
+            done(null)
+        })
     }
 
-    // set incr = -1 for undoos
-    Player.updateCurPlayer = function(incr){
-        _curPlayer = (_curPlayer + incr + TOTAL_PLAYERS) % TOTAL_PLAYERS
-        msg.info("Player: " + _curPlayer)
+    Player.objBelongsToPlayer = function(obj){
+        return obj.game.isFriendly == 1
     }
 
-    Player.getCurPlayer = function(){
-        return _curPlayer
-    }
-
-    Player.objBelongsToPlayer = function(obj, player){
-        return obj.game.player == player
+    // mach
+    Player.isFriendly = function(cell){
+        if (cell.piece.player == _player._id) return 1
+        else return 0
     }
 
     return Player
@@ -423,6 +436,7 @@ var Obj = (function(){
     }
 
     Obj.init = function(done){
+        // material[0] and [1] are for friendly and enemy pieces
         Obj.KIND.pawn = {
             material: [
                 new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn", 0xff4545)),
@@ -444,15 +458,16 @@ var Obj = (function(){
             var cells = []
             for (var i = 0; i < _cells.length; i++){
                 var cell = _cells[i]
-                cells.push(Obj.make(0, cell.piece.kind, cell.x, cell.y, 1))
+                var isFriendly = Player.isFriendly(cell)
+                cells.push(Obj.make(isFriendly, cell.piece.kind, cell.x, cell.y, 1))
             }
             var TOTAL_PLAYERS = 1
             Obj.loadGamePieces(cells)
-            Player.init(TOTAL_PLAYERS)
             Obj.initMap()
             done(null)
         })
     }
+
 
     Obj.initMap = function(){
         Map.init() // keep map block positions separately in Map
@@ -473,30 +488,33 @@ var Obj = (function(){
         }
     }
 
-    Obj.getMaterial = function(player, kind){
-        if (player != null) return Obj.KIND[kind].material[player]
-        else return Obj.KIND[kind].material // non player materials are unique
+    // Right now isFriendly is either null, or 0 or 1, to distinguish
+    // non-player, or friendly or enemy pieces.
+    Obj.getMaterial = function(isFriendly, kind){
+        if (isFriendly == null) return Obj.KIND[kind].material // non player materials are unique
+        else return Obj.KIND[kind].material[isFriendly]
     }
 
     // todo. better classing. right now ground blocks have kind null
-    Obj.make = function(player, kind, x, y, z){
-        var mat = Obj.getMaterial(player, kind)
+    Obj.make = function(isFriendly, kind, x, y, z){
+        var mat = Obj.getMaterial(isFriendly, kind)
         var obj = Obj.makeBox(new THREE.Vector3(x, y, z), mat)
         obj.game = {
             // team: team, // todo
-            player: player,
+            isFriendly: isFriendly,
             kind: kind,
         }
         return obj
     }
 
+    // mac
     Obj.move = function(obj, point){
         obj.position
             .copy(point)
             .divideScalar( K.CUBE_SIZE ).floor()
             .multiplyScalar( K.CUBE_SIZE )
             .addScalar( K.CUBE_SIZE / 2 );
-        Obj.standUpRight(obj)
+        // Obj.standUpRight(obj) // don't need this anymore cause we're always upright
     }
 
     Obj.highlight = function(obj, isHigh){
@@ -653,17 +671,15 @@ var Move = (function(){
         nnn: [-1, -1, -1],
     }
 
+    // don't allow moving in z axis
     Move.rules = {
         moves: {
-            pawn: ["ioo", "oio", "ooi", "noo", "ono", "oon"], // moving along axes
-            rook: ["ioo", "oio", "ooi", "noo", "ono", "oon"],
+            pawn: ["ioo", "oio", "noo", "ono"], // moving along axes
+            rook: ["ioo", "oio", "noo", "ono"],
         },
         kills: {
-            pawn: ["iio", "ioi", "oii", "iii", "nio", "ino", // diagonal kills
-                   "nno", "noi", "ion", "non", "oni", "oin",
-                   "onn", "nii", "ini", "iin", "nni", "nin",
-                   "inn", "nnn"],
-            rook: ["ioo", "oio", "ooi", "noo", "ono", "oon"],
+            pawn: ["iio", "nio", "ino", "nno"], // diagonal kills
+            rook: ["ioo", "oio", "noo", "ono"],
         }
     }
 
@@ -788,7 +804,6 @@ var Move = (function(){
         }
     }
 
-    // mach
     Move.isValidated = function(x, y, z){
         return $.grep(Move.validatedMoves, function(item){
             return item.xyz.x == x && item.xyz.y == y && item.xyz.z == z
@@ -931,7 +946,7 @@ var Scene = (function(){
         info.style.textAlign = 'right';
         info.innerHTML = '3DXO<br>'
             + "<strong>mouse</strong>: navigate<br>"
-            // + "<strong>QWEASD</strong>: move box<br>"
+        // + "<strong>QWEASD</strong>: move box<br>"
             + '<strong>click</strong>: move box<br>'
         _container.appendChild( info );
     }
@@ -958,7 +973,7 @@ var Scene = (function(){
 
     function onDocumentKeyDown( event ) {
         switch( event.keyCode ) {
-        // case 32: placeCube(Rollover.getMesh().position); break; // space
+            // case 32: placeCube(Rollover.getMesh().position); break; // space
         case 16: _isShiftDown = true; break;
         }
         Scene.render()
@@ -1008,8 +1023,29 @@ var Scene = (function(){
 var Game = (function(){
     var Game = {}
 
-    // mach
-    // pos can have fractional values: round down to convert to game coordinates
+    Game.init = function(done){
+        async.waterfall([
+            function(done){
+                Player.init(function(er){
+                    done(er)
+                })
+            },
+            function(done){
+                Obj.init(function(er){
+                    done(er)
+                })
+            },
+            function(done){
+                done(null)
+                Scene.init()
+            }
+        ], function(er){
+            if (er) H.log("ERROR. Game.init", er)
+        })
+    }
+
+    // pos can have fractional values: round down to convert to game
+    // coordinates
     Game.move = function(selected, pos){
         // REF. removing cube
         // Scene.getScene().remove( intersect.object );
@@ -1021,7 +1057,6 @@ var Game = (function(){
             Obj.move(selected, pos)
             Obj.highlight(selected, true)
             Highlight.hideAllHighlights()
-            Player.updateCurPlayer(1)
             return true
         } else {
             msg.error("Invalid move")
@@ -1035,10 +1070,5 @@ var Game = (function(){
 window.onload = function(){
     if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
-    (function init() {
-        Obj.init(function(er){
-            Scene.init()
-        })
-    }())
-
+    Game.init()
 }

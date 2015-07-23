@@ -8,7 +8,13 @@ var Players = module.exports = (function(){
     }
 
     Players.router.route("/")
-	    .post(function(req, res) {
+        .get(function(req, res){
+            var name = H.param(req, "name")
+            Player.findOne({name:name}, function(er, player){
+                H.send(res, er, {player:player})
+            })
+        })
+	    .post(function(req, res){
             // mach create new anonymous player and instantiate army
 	    })
 
