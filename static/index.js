@@ -1,13 +1,15 @@
 
 var K = (function(){
 
-    var K = {}
+    var K = {
+        INIT_CAM_POS: 15,
+        INIT_LIGHT_POS: 10,
+        BOARD_SIZE: 100,
+        CUBE_SIZE: 1,
 
-    K.INIT_CAM_POS = 15
-    K.INIT_LIGHT_POS = 10
-    K.BOARD_SIZE = 100
-    K.CUBE_SIZE = 1
-    K.CUBE_GEO = new THREE.BoxGeometry( K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE )
+        INVALID_MOVE: "INVALID MOVE",
+    }
+    K.CUBE_GEO = new THREE.BoxGeometry(K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE)
 
     return K
 }())
@@ -58,7 +60,7 @@ var Sock = (function(){
 
         _sock.onmessage = function(e) {
             msg.info("Received message " + e.data)
-            H.log("INFO. socket message", e)
+            H.log("INFO. Sock.onmessage", e)
         };
 
         _sock.onclose = function() {
@@ -70,10 +72,9 @@ var Sock = (function(){
         };
     }
 
-    // mach
-    Sock.test = function(){
-        msg.info("sending socket test")
-        _sock.send('test');
+    Sock.move = function(data){
+        msg.info("Moving")
+        _sock.send(JSON.stringify(data))
     }
 
     return Sock
@@ -156,13 +157,16 @@ var Select = (function(){
         var intersect = Select.getIntersect(clientX, clientY)
         if (!intersect) return
         if (_isSelecting){
-            var moved = Game.move(_selected, new THREE.Vector3()
-                                  .copy(intersect.point)
-                                  .add(new THREE.Vector3()
-                                       .copy(intersect.face.normal)
-                                       .multiplyScalar(0.5))) // normal's unit length so gotta scale by half to fit inside the box
-            if (moved) _isSelecting = false
-            else _isSelecting = true
+            Game.move(_selected,
+                      new THREE.Vector3()
+                      .copy(intersect.point)
+                      .add(new THREE.Vector3()
+                           .copy(intersect.face.normal)
+                           .multiplyScalar(0.5)), // normal's unit length so gotta scale by half to fit inside the box
+                      function(er){
+                          if (er) _isSelecting = true
+                          else _isSelecting = false
+                      })
         } else { // start selecting
             if (Player.objBelongsToPlayer(intersect.object)){
                 _selected = intersect.object
@@ -289,11 +293,14 @@ var Player = (function(){
         })
     }
 
+    Player.getPlayer = function(){
+        return _player
+    }
+
     Player.objBelongsToPlayer = function(obj){
         return obj.game.friendly == 1
     }
 
-    // mach
     Player.friendly = function(cell){
         if (cell.piece.player == _player._id) return 1
         else return 0
@@ -779,7 +786,6 @@ var Scene = (function(){
         info.style.textAlign = 'right';
         info.innerHTML = '3DXO<br>'
             + "<strong>mouse</strong>: navigate<br>"
-        // + "<strong>QWEASD</strong>: move box<br>"
             + '<strong>click</strong>: move box<br>'
         _container.appendChild( info );
     }
@@ -806,7 +812,6 @@ var Scene = (function(){
 
     function onDocumentKeyDown( event ) {
         switch( event.keyCode ) {
-            // case 32: placeCube(Rollover.getMesh().position); break; // space
         case 16: _isShiftDown = true; break;
         }
         Scene.render()
@@ -877,24 +882,46 @@ var Game = (function(){
         })
     }
 
+    // mach ref. removing cube
+    // Scene.getScene().remove( intersect.object );
+    // Obj.getObjects().splice( Obj.getObjects().indexOf( intersect.object ), 1 );
+
+    // mach
     // pos can have fractional values: round down to convert to game
     // coordinates
-    Game.move = function(selected, pos){
-        // REF. removing cube
-        // Scene.getScene().remove( intersect.object );
-        // Obj.getObjects().splice( Obj.getObjects().indexOf( intersect.object ), 1 );
+    Game.move = function(selected, pos, done){
         var x = Math.floor(pos.x)
         var y = Math.floor(pos.y)
         var z = Math.floor(pos.z)
-        if (Move.isValidated(x, y, z)){
-            Obj.move(selected, pos)
-            Obj.highlight(selected, true)
-            Highlight.hideAllHighlights()
-            return true
-        } else {
-            msg.error("Invalid move")
-            return false
-        }
+        async.waterfall([
+            function(done){
+                if (Move.isValidated(x, y, z)) done(null)
+                else done({code:K.INVALID_MOVE})
+            },
+            function(done){
+                // mach callback?
+                done(null)
+                Sock.move({
+                    player: Player.getPlayer(),
+                    piece: selected.game,
+                    // most likely fractions, so need to floor on server:
+                    from: selected.position,
+                    to: pos,
+                })
+            },
+            // mach don't do these things here. load the new move as
+            // any other user, when the server validates and publishes
+            // the move
+            function(done){
+                done(null)
+                Obj.move(selected, pos)
+                Obj.highlight(selected, true)
+                Highlight.hideAllHighlights()
+            }
+        ], function(er){
+            if (er && er.code) msg.error(er.code)
+            done(er)
+        })
     }
 
     return Game

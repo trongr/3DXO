@@ -18,27 +18,29 @@ var Sock = module.exports = (function(){
         _server.installHandlers(server, {prefix:'/move'});
     }
 
+    // todo. how to scale pubsub? encode channel names with coordinates?
     function onConnection(conn){
-        // todo. how to scale pubsub? encode channel names with coordinates?
-        H.log("INFO. opening socket")
+        H.log("INFO. Sock.onConnection.opening socket")
 
         var client = redis.createClient();
         client.subscribe('move');
-
-        // When we see a msg on move, send it to this client
         client.on("message", function(channel, msg){
             conn.write(msg);
         });
 
-        // When we receive a msg from client, send it to be published
-        // to everyone, including this client
         conn.on('data', function(msg) {
-            H.log("INFO. pub move", msg)
+            try {
+                var data = JSON.parse(msg)
+            } catch (e){
+                return H.log("ERROR. Sock.onConnection.conn.data.JSON.parse", msg)
+            }
+            // mach process move
+            H.log("INFO. Sock.onConnection.conn.data")
             _publisher.publish('move', msg);
         });
 
         conn.on("close", function(){
-            H.log("INFO. closing socket")
+            H.log("INFO. Sock.onConnection.conn.close")
             client.unsubscribe() // just to be safe, to avoid potential memory leak
         })
     }
