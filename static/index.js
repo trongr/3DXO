@@ -343,8 +343,7 @@ var Highlight = (function(){
             var highlight = _highlights[color][i] || Highlight.makeHighlight(color)
             highlight.visible = true
             Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z))
-            // Obj.standUpRight(highlight, true) // force==true to force up right for nonplayer blocks
-            highlight.position.copy(Obj.findGround(position.x, position.y, position.z).point) // can't use Obj.move() cause it realigns fraction to integer positions
+            highlight.position.z -= 0.5
         }
     }
 
@@ -391,11 +390,11 @@ var Player = (function(){
     }
 
     Player.objBelongsToPlayer = function(obj){
-        return obj.game.isFriendly == 1
+        return obj.game.friendly == 1
     }
 
     // mach
-    Player.isFriendly = function(cell){
+    Player.friendly = function(cell){
         if (cell.piece.player == _player._id) return 1
         else return 0
     }
@@ -458,8 +457,8 @@ var Obj = (function(){
             var cells = []
             for (var i = 0; i < _cells.length; i++){
                 var cell = _cells[i]
-                var isFriendly = Player.isFriendly(cell)
-                cells.push(Obj.make(isFriendly, cell.piece.kind, cell.x, cell.y, 1))
+                var friendly = Player.friendly(cell)
+                cells.push(Obj.make(friendly, cell.piece.kind, cell.x, cell.y, 1))
             }
             var TOTAL_PLAYERS = 1
             Obj.loadGamePieces(cells)
@@ -488,33 +487,31 @@ var Obj = (function(){
         }
     }
 
-    // Right now isFriendly is either null, or 0 or 1, to distinguish
+    // Right now friendly is either null, or 0 or 1, to distinguish
     // non-player, or friendly or enemy pieces.
-    Obj.getMaterial = function(isFriendly, kind){
-        if (isFriendly == null) return Obj.KIND[kind].material // non player materials are unique
-        else return Obj.KIND[kind].material[isFriendly]
+    Obj.getMaterial = function(friendly, kind){
+        if (friendly == null) return Obj.KIND[kind].material // non player materials are unique
+        else return Obj.KIND[kind].material[friendly]
     }
 
     // todo. better classing. right now ground blocks have kind null
-    Obj.make = function(isFriendly, kind, x, y, z){
-        var mat = Obj.getMaterial(isFriendly, kind)
+    Obj.make = function(friendly, kind, x, y, z){
+        var mat = Obj.getMaterial(friendly, kind)
         var obj = Obj.makeBox(new THREE.Vector3(x, y, z), mat)
         obj.game = {
             // team: team, // todo
-            isFriendly: isFriendly,
+            friendly: friendly,
             kind: kind,
         }
         return obj
     }
 
-    // mac
     Obj.move = function(obj, point){
         obj.position
             .copy(point)
             .divideScalar( K.CUBE_SIZE ).floor()
             .multiplyScalar( K.CUBE_SIZE )
             .addScalar( K.CUBE_SIZE / 2 );
-        // Obj.standUpRight(obj) // don't need this anymore cause we're always upright
     }
 
     Obj.highlight = function(obj, isHigh){
@@ -543,10 +540,7 @@ var Obj = (function(){
         } // else it's the ground and we don't need to stand it up right
     }
 
-    // todo. if there are more than two "grounds" e.g. at a wall, this
-    // will pick the first ground it finds, which might not look
-    // good. in that case the block should keep its current up
-    // orientation
+    // todo. get rid of movement in z axis
     Obj.findGround = function(x, y, z){
         var origin = new THREE.Vector3(Math.floor(x) + 0.5, // +0.5 so ray caster goes through cube face center
                                        Math.floor(y) + 0.5,
