@@ -132,106 +132,6 @@ var API = (function(){
     return API
 }())
 
-var Orientation = (function(){
-    var Orientation = {}
-
-    // get up right and into axes relative to camera orientation
-    //
-    // into is biggest component of camLookAt
-    // up is biggest component of camUp
-    // right is cross product of into and up
-    Orientation.getAxesRelativeToCamera = function(camera){
-        var camUp = camera.up
-        var camLookAt = Orientation.getCamLookAt(camera)
-
-        var camUpMaxComponent = Orientation.getComponentWithMaxMagnitude(camUp)
-        var camLookAtMaxComponent = Orientation.getComponentWithMaxMagnitude(camLookAt)
-
-        var into = new THREE.Vector3()
-        var up = new THREE.Vector3()
-        var right = null
-
-        into.setComponent(camLookAtMaxComponent, camLookAt.getComponent(camLookAtMaxComponent))
-        up.setComponent(camUpMaxComponent, camUp.getComponent(camUpMaxComponent))
-        right = new THREE.Vector3().crossVectors(into, up)
-
-        return {into:into.normalize(), up:up.normalize(), right:right.normalize()}
-    }
-
-    Orientation.getComponentWithMaxMagnitude = function(v){
-        var valuesSorted = [
-            Math.abs(v.x),
-            Math.abs(v.y),
-            Math.abs(v.z),
-        ].sort(function(a, b){
-            return a - b
-        })
-
-        var valueAxes = {}
-        valueAxes[Math.abs(v.x)] = 0 // "x"
-        valueAxes[Math.abs(v.y)] = 1 // "y"
-        valueAxes[Math.abs(v.z)] = 2 // "z"
-
-        return valueAxes[valuesSorted[2]]
-    }
-
-    Orientation.getCamLookAt = function(camera){
-        return new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
-    }
-
-    return Orientation
-}())
-
-var KeyNav = (function(){
-    var KeyNav = {}
-
-    KeyNav.init = function(){
-        KeyNav.initListeners()
-    }
-
-    KeyNav.initListeners = function(){
-        document.addEventListener( 'keydown', onDocumentKeyDown, false );
-    }
-
-    function onDocumentKeyDown( event ) {
-        switch( event.keyCode ) {
-        case 65: moveLeft(Rollover.getMesh(), Scene.camera); break; // A
-        case 68: moveRight(Rollover.getMesh(), Scene.camera); break; // D
-        case 81: moveAway(Rollover.getMesh(), Scene.camera); break; // Q
-        case 83: moveDown(Rollover.getMesh(), Scene.camera); break; // S
-        case 87: moveUp(Rollover.getMesh(), Scene.camera); break; // W
-        case 69: moveInto(Rollover.getMesh(), Scene.camera); break; // E
-        }
-        Scene.render()
-    }
-
-    function moveInto(mesh, camera){
-        mesh.position.add(Orientation.getAxesRelativeToCamera(camera).into.multiplyScalar(K.CUBE_SIZE))
-    }
-
-    function moveAway(mesh, camera){
-        mesh.position.add(Orientation.getAxesRelativeToCamera(camera).into.multiplyScalar(-K.CUBE_SIZE))
-    }
-
-    function moveUp(mesh, camera){
-        mesh.position.add(Orientation.getAxesRelativeToCamera(camera).up.multiplyScalar(K.CUBE_SIZE))
-    }
-
-    function moveDown(mesh, camera){
-        mesh.position.add(Orientation.getAxesRelativeToCamera(camera).up.multiplyScalar(-K.CUBE_SIZE))
-    }
-
-    function moveRight(mesh, camera){
-        mesh.position.add(Orientation.getAxesRelativeToCamera(camera).right.multiplyScalar(K.CUBE_SIZE))
-    }
-
-    function moveLeft(mesh, camera){
-        mesh.position.add(Orientation.getAxesRelativeToCamera(camera).right.multiplyScalar(-K.CUBE_SIZE))
-    }
-
-    return KeyNav
-}())
-
 var Select = (function(){
     var Select = {}
 
@@ -529,42 +429,6 @@ var Obj = (function(){
         return box
     }
 
-    // todo. blacklist ground blocks instead of whitelisting other stuff
-    Obj.standUpRight = function(obj, force){
-        if (Obj.isPlayerObj(obj) || force){
-            var ground = Obj.findGround(obj.position.x, obj.position.y, obj.position.z) // find the ground so you know where up is
-            var up = new THREE.Vector3()
-                .copy(ground.point)
-                .add(ground.face.normal)
-            obj.lookAt(up)
-        } // else it's the ground and we don't need to stand it up right
-    }
-
-    // todo. get rid of movement in z axis
-    Obj.findGround = function(x, y, z){
-        var origin = new THREE.Vector3(Math.floor(x) + 0.5, // +0.5 so ray caster goes through cube face center
-                                       Math.floor(y) + 0.5,
-                                       Math.floor(z) + 0.5)
-        for (var i = 0; i < 3; i++){ // 3 axes
-            for (var j = 1; j <= 2; j++){ // forward and backward
-                var direction = new THREE.Vector3()
-                direction.setComponent(i, Math.pow(-1, j))
-                _groundRaycaster.set(origin, direction)
-                var intersects = _groundRaycaster.intersectObjects(_objects, false)
-                for (var k = 0; k < intersects.length; k++){
-                    var intersect = intersects[k]
-                    if (intersect && Obj.isGround(intersect.object)) return intersect
-                }
-            }
-        }
-        return null
-    }
-
-    // todo. better classing
-    Obj.isGround = function(obj){
-        return !Obj.isPlayerObj(obj)
-    }
-
     // todo. store things in a db for faster obj location
     Obj.findObjAtPosition = function(x, y, z){
         for (var i = 0; i < _objects.length; i++){
@@ -774,19 +638,9 @@ var Move = (function(){
     }
 
     Move.validateMove = function(obj, x, y, z, isKill){
-        var ground = Obj.findGround(x, y, z)
-        var changingPlanes = false
-        if (!ground){
-            var xyz = Move.changePlanes(obj, x, y, z)
-            if (!xyz) return null // blocks can't fly
-            changingPlanes = true
-            x = xyz.x // else if xyz: proceed as normal
-            y = xyz.y
-            z = xyz.z
-        }
         var box = Obj.findObjAtPosition(x, y, z)
         if (!box){ // empty cell
-            return {xyz:{x:x, y:y, z:z}, more:!changingPlanes} // more moves if not changingPlanes
+            return {xyz:{x:x, y:y, z:z}, more:true}
         } else if (box.game.player == null){ // wall / ground
             return null
         } else if (box.game.player == obj.game.player){ // blocked by friendly
@@ -802,20 +656,6 @@ var Move = (function(){
         return $.grep(Move.validatedMoves, function(item){
             return item.xyz.x == x && item.xyz.y == y && item.xyz.z == z
         }).length > 0
-    }
-
-    // todo remove changePlanes feature
-    Move.changePlanes = function(obj, x, y, z){
-        var curGround = Obj.findGround(obj.position.x, obj.position.y, obj.position.z)
-        var down = new THREE.Vector3(x, y, z).sub(new THREE.Vector3().copy(curGround.face.normal))
-        var newGround = Obj.findGround(down.x, down.y, down.z)
-        if (!newGround){ // too far above new plane ground level
-            return null
-        } else if (curGround.face.normal != newGround.face.normal){
-            return {x:down.x, y:down.y, z:down.z}
-        } else { // if the normals are the same then we haven't changed planes
-            return null
-        }
     }
 
     Move.getRange = function(objKind){
@@ -854,7 +694,6 @@ var Scene = (function(){
 
         Rollover.init()
         Select.init()
-        KeyNav.init() // toggle
 
         Sock.init()
 
