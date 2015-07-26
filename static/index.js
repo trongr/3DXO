@@ -68,6 +68,11 @@ var Sock = (function(){
             }
             msg.info("Move confirmed")
             H.log("INFO. Sock.onmessage", data)
+            var sel = Select.getSelected()
+            Obj.move(sel, data.to)
+            Obj.highlight(sel, true)
+            Highlight.hideAllHighlights()
+            Scene.render()
         };
 
         _sock.onclose = function() {
@@ -188,6 +193,10 @@ var Select = (function(){
                 _isSelecting = false
             }
         }
+    }
+
+    Select.getSelected = function(){
+        return _selected
     }
 
     return Select
@@ -887,15 +896,6 @@ var Game = (function(){
                     to: pos,
                 })
             },
-            // mach don't do these things here. load the new move as
-            // any other user, when the server validates and publishes
-            // the move
-            // function(done){
-            //     done(null)
-            //     Obj.move(selected, pos)
-            //     Obj.highlight(selected, true)
-            //     Highlight.hideAllHighlights()
-            // }
         ], function(er){
             if (er && er.code) msg.error(er.code)
             done(er)

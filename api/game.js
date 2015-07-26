@@ -208,8 +208,6 @@ var Game = module.exports = (function(){
                 x: Math.floor(data.to.x),
                 y: Math.floor(data.to.y),
             }
-            data.from = from
-            data.to = to
         } catch (e){
             return done({info:"Move invalid input"})
         }
