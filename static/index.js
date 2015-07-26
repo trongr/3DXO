@@ -542,7 +542,7 @@ var Move = (function(){
     Move.highlightAvailableMoves = function(obj){
         var moves = Move.findAvailableMoves(obj)
         moves.push.apply(moves, Move.findAvailableKills(obj))
-        Highlight.highlightCells(Move.findAvailableMoves(obj))
+        Highlight.highlightCells(moves)
         Move.validatedMoves = moves.filter(function(item){ // Cache available moves
             return item.kill == false || item.killMove == true // Only interested in actual moveable positions
         })
