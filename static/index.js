@@ -505,7 +505,7 @@ var Move = (function(){
     var Move = {}
 
     Move.range = {
-        pawn: 2,
+        pawn: 1,
         rook: 8,
         knight: 1,
     }
@@ -874,10 +874,10 @@ var Game = (function(){
         var y = Math.floor(pos.y)
         var z = 1 // height of every game piece
         async.waterfall([
-            function(done){
-                if (Move.isValidated(x, y, z)) done(null)
-                else done({code:K.INVALID_MOVE})
-            },
+            // function(done){
+            //     if (Move.isValidated(x, y, z)) done(null)
+            //     else done({code:K.INVALID_MOVE})
+            // },
             function(done){
                 done(null)
                 Sock.move({

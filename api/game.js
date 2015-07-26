@@ -3,12 +3,13 @@ var async = require("async")
 var express = require('express');
 var H = require("../lib/h.js")
 var Piece = require("../models/piece.js")
+var Cell = require("../models/cell.js")
 
 var Move = (function(){
     var Move = {}
 
     Move.range = {
-        pawn: 2,
+        pawn: 1,
         rook: 8,
         knight: 1,
     }
@@ -45,6 +46,7 @@ var Move = (function(){
     }
 
     Move.validateMove = function(player, piece, from, to, done){
+        var distance, direction
         async.waterfall([
             function(done){
                 Move.validateMoveFrom(player, piece, from, function(er){
@@ -52,11 +54,45 @@ var Move = (function(){
                 })
             },
             function(done){
-                Move.validateMoveTo(piece, from, to, function(er){
+                distance = Move.validateDistance(piece, from, to)
+                if (distance) done(null)
+                else done({info:"This piece can't move that far"})
+            },
+            function(done){
+                direction = Move.validateDirection(piece, from, to)
+                if (direction) done(null)
+                else done({info:"This piece can't move that way"})
+            },
+            function(done){
+                // distance and direction make it easier to look up cells along the way
+                Move.validateBlock(piece, from, distance, direction, function(er){
                     done(er)
                 })
             }
         ], function(er){
+            done(er)
+        })
+    }
+
+    // Check if there are any pieces in the way
+    Move.validateBlock = function(piece, from, distance, direction, done){
+        var dx = direction[0]
+        var dy = direction[1]
+        async.times(distance, function(i, done){
+            var j = i + 1
+            Cell.findOne({
+                x: from.x + j * dx,
+                y: from.y + j * dy,
+            }).populate("piece").exec(function(er, cell){
+                if (er) done({info:"FATAL DB ERROR", er:er})
+                else if (cell && j < distance) done({info:"Move blocked"})
+                else if (cell && j == distance && piece.player != cell.piece.player.toString()){
+                    done(null)
+                } // Blocked at the destination by non-friendly: can kill
+                else if (cell && j == distance) done({info:"Move blocked"})
+                else done(null) // Nothing's in the way
+            });
+        }, function(er){
             done(er)
         })
     }
@@ -78,32 +114,12 @@ var Move = (function(){
         })
     }
 
-    Move.validateMoveTo = function(piece, from, to, done){
-        var distance, direction = null
-        async.waterfall([
-            function(done){
-                distance = Move.validateDistance(piece, from, to)
-                if (distance) done(null)
-                else done({info:"This piece can't move that far"})
-            },
-            function(done){
-                direction = Move.validateDirection(piece, from, to)
-                if (direction) done(null)
-                else done({info:"This piece can't move that way"})
-            },
-            function(done){
-                done(null)
-            }
-        ], function(er){
-            done(er)
-        })
-    }
-
     Move.validateDistance = function(piece, from, to){
         try {
             var dx = to.x - from.x
             var dy = to.y - from.y
             var distance = Math.max(Math.abs(dx), Math.abs(dy))
+            if (piece.kind == "knight") return Move.range.knight // knight "distance" == 1
             if (distance <= Move.range[piece.kind]) return distance
             else return null
         } catch (e){
@@ -115,11 +131,15 @@ var Move = (function(){
         try {
             var dx = to.x - from.x
             var dy = to.y - from.y
-            // A knight only has range 1, so whatever its dx and dy
+            // A knight only has range 1, so whatever its dx and dy are they
             // should match its list of legal moves, so we don't need
             // to normalize. Only pieces with variable distance moves
             // need normalization
             if (piece.kind != "knight"){
+                // Makes sure non-knights only move either vertically
+                // horizontally or diagonally and not, say, 2 by 3
+                if (Math.abs(dx) != Math.abs(dy) && dx != 0 && dy != 0) return null
+
                 if (dx) dx = parseInt(dx / Math.abs(dx)) // normalize to get direction
                 if (dy) dy = parseInt(dy / Math.abs(dy))
             }
