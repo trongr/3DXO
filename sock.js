@@ -1,6 +1,7 @@
 var sockjs  = require('sockjs');
 var redis   = require('redis');
 var H = require("./lib/h.js")
+var Game = require("./api/game.js")
 
 var Sock = module.exports = (function(){
     var Sock = {}
@@ -34,9 +35,12 @@ var Sock = module.exports = (function(){
             } catch (e){
                 return H.log("ERROR. Sock.onConnection.conn.data.JSON.parse", msg)
             }
-            // mach process move
             H.log("INFO. Sock.onConnection.conn.data")
-            _publisher.publish('move', msg);
+            Game.move(data, function(er, re){
+                if (er) conn.write("ERROR. Can't move there: " + er.info)
+                else if (re) _publisher.publish("move", JSON.stringify(re))
+                else conn.write("FATAL ERROR. Game.move:null")
+            })
         });
 
         conn.on("close", function(){

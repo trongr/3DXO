@@ -43,6 +43,7 @@ var H = (function(){
     return H
 }())
 
+// todo rename sock
 var Sock = (function(){
     var Sock = {}
 
@@ -58,9 +59,15 @@ var Sock = (function(){
             clearTimeout(_socketAutoReconnectTimeout)
         };
 
-        _sock.onmessage = function(e) {
-            msg.info("Received message " + e.data)
-            H.log("INFO. Sock.onmessage", e)
+        _sock.onmessage = function(re){
+            try {
+                var data = JSON.parse(re.data)
+            } catch (e){
+                if (re) return msg.error(re.data)
+                else return msg.error("ERROR. Can't parse server response")
+            }
+            msg.info("Move confirmed")
+            H.log("INFO. Sock.onmessage", data)
         };
 
         _sock.onclose = function() {
@@ -163,7 +170,10 @@ var Select = (function(){
                       .add(new THREE.Vector3()
                            .copy(intersect.face.normal)
                            .multiplyScalar(0.5)), // normal's unit length so gotta scale by half to fit inside the box
-                      function(er){
+                      function(er){ // mach move and render scene when
+                                    // getting pub from server, just
+                                    // like everyone else. then set
+                                    // _isSelecting appropriately
                           if (er) _isSelecting = true
                           else _isSelecting = false
                       })
@@ -247,7 +257,7 @@ var Highlight = (function(){
             var highlight = _highlights[color][i] || Highlight.makeHighlight(color)
             highlight.visible = true
             Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z))
-            highlight.position.z -= 0.5
+            highlight.position.z -= 0.49
         }
     }
 
@@ -298,12 +308,13 @@ var Player = (function(){
     }
 
     Player.objBelongsToPlayer = function(obj){
-        return obj.game.friendly == 1
+        if (!obj.game.piece) return false
+        else return Player.isFriendly(obj.game.piece)
     }
 
     // Object materials are indexed by 0:ENEMY 1:FRIENDLY
-    Player.friendly = function(cell){
-        if (cell.piece.player == _player._id) return Obj.STANCE.FRIENDLY
+    Player.isFriendly = function(piece){
+        if (piece.player == _player._id) return Obj.STANCE.FRIENDLY
         else return Obj.STANCE.ENEMY
     }
 
@@ -368,8 +379,7 @@ var Obj = (function(){
             var cells = []
             for (var i = 0; i < _cells.length; i++){
                 var cell = _cells[i]
-                var friendly = Player.friendly(cell)
-                cells.push(Obj.make(friendly, cell.piece.kind, cell.x, cell.y, 1))
+                cells.push(Obj.make(cell.piece, cell.piece.kind, cell.x, cell.y, 1))
             }
             var TOTAL_PLAYERS = 1
             Obj.loadGamePieces(cells)
@@ -377,7 +387,6 @@ var Obj = (function(){
             done(null)
         })
     }
-
 
     Obj.initMap = function(){
         Map.init() // keep map block positions separately in Map
@@ -398,21 +407,20 @@ var Obj = (function(){
         }
     }
 
-    // Right now friendly is either null, or 0 or 1, to distinguish
+    // Right now isFriendly is either null, or 0 or 1, to distinguish
     // non-player, or friendly or enemy pieces.
-    Obj.getMaterial = function(friendly, kind){
-        if (friendly == null) return Obj.KIND[kind].material // non player materials are unique
-        else return Obj.KIND[kind].material[friendly]
+    Obj.getMaterial = function(isFriendly, kind){
+        if (isFriendly == null) return Obj.KIND[kind].material // non player materials are unique
+        else return Obj.KIND[kind].material[isFriendly]
     }
 
-    // todo. better classing. right now ground blocks have kind null
-    Obj.make = function(friendly, kind, x, y, z){
-        var mat = Obj.getMaterial(friendly, kind)
+    Obj.make = function(piece, kind, x, y, z){
+        if (piece) var isFriendly = Player.isFriendly(piece)
+        else var isFriendly = null
+        var mat = Obj.getMaterial(isFriendly, kind)
         var obj = Obj.makeBox(new THREE.Vector3(x, y, z), mat)
         obj.game = {
-            // team: team, // todo
-            friendly: friendly,
-            kind: kind,
+            piece: piece,
         }
         return obj
     }
@@ -450,15 +458,6 @@ var Obj = (function(){
             if (X == x && Y == y && Z == z) return obj
         }
         return null
-    }
-
-    // todo. better classing
-    Obj.isPlayerObj = function(obj){
-        try {
-            return (obj.game.player != null)
-        } catch (e){
-            return false
-        }
     }
 
     Obj.getObjects = function(){
@@ -514,30 +513,12 @@ var Move = (function(){
     Move.directions = {
         ioo: [ 1,  0,  0],
         oio: [ 0,  1,  0],
-        ooi: [ 0,  0,  1],
         iio: [ 1,  1,  0],
-        ioi: [ 1,  0,  1],
-        oii: [ 0,  1,  1],
-        iii: [ 1,  1,  1],
         noo: [-1,  0,  0],
         ono: [ 0, -1,  0],
-        oon: [ 0,  0, -1],
         nio: [-1,  1,  0],
         ino: [ 1, -1,  0],
         nno: [-1, -1,  0],
-        noi: [-1,  0,  1],
-        ion: [ 1,  0, -1],
-        non: [-1,  0, -1],
-        oni: [ 0, -1,  1],
-        oin: [ 0,  1, -1],
-        onn: [ 0, -1, -1],
-        nii: [-1,  1,  1],
-        ini: [ 1, -1,  1],
-        iin: [ 1,  1, -1],
-        nni: [-1, -1,  1],
-        nin: [-1,  1, -1],
-        inn: [ 1, -1, -1],
-        nnn: [-1, -1, -1],
     }
 
     // don't allow moving in z axis
@@ -563,39 +544,36 @@ var Move = (function(){
         moves.push.apply(moves, Move.findAvailableKills(obj))
         Highlight.highlightCells(Move.findAvailableMoves(obj))
         Move.validatedMoves = moves.filter(function(item){ // Cache available moves
-            // // todo remove
-            // var result = item.kill == false || item.killMove == true
-            // if (result) console.log("it's a real move " + JSON.stringify(item, 0, 2))
             return item.kill == false || item.killMove == true // Only interested in actual moveable positions
         })
     }
 
     Move.findAvailableKills = function(obj){
-        var range = Move.getRange(obj.game.kind)
-        var killRules = Move.rules.kills[obj.game.kind]
+        var range = Move.getRange(obj.game.piece.kind)
+        var killRules = Move.rules.kills[obj.game.piece.kind]
         var moves = []
         for (var i = 0; i < killRules.length; i++){
-            var _dirMoves = Move.findKillsInDirection(obj, [
+            var dirMoves = Move.findKillsInDirection(obj, [
                 Math.floor(obj.position.x),
                 Math.floor(obj.position.y),
                 Math.floor(obj.position.z),
             ], Move.directions[killRules[i]], range, [])
-            moves.push.apply(moves, _dirMoves)
+            moves.push.apply(moves, dirMoves)
         }
         return moves
     }
 
     Move.findAvailableMoves = function(obj){
-        var range = Move.getRange(obj.game.kind)
-        var moveRules = Move.rules.moves[obj.game.kind]
+        var range = Move.getRange(obj.game.piece.kind)
+        var moveRules = Move.rules.moves[obj.game.piece.kind]
         var moves = []
         for (var i = 0; i < moveRules.length; i++){
-            var _dirMoves = Move.findMovesInDirection(obj, [
+            var dirMoves = Move.findMovesInDirection(obj, [
                 Math.floor(obj.position.x),
                 Math.floor(obj.position.y),
                 Math.floor(obj.position.z),
             ], Move.directions[moveRules[i]], range, [])
-            moves.push.apply(moves, _dirMoves)
+            moves.push.apply(moves, dirMoves)
         }
         return moves
     }
@@ -652,9 +630,9 @@ var Move = (function(){
         var box = Obj.findObjAtPosition(x, y, z)
         if (!box){ // empty cell
             return {xyz:{x:x, y:y, z:z}, more:true}
-        } else if (box.game.player == null){ // wall / ground
+        } else if (box.game.piece == null){ // wall / ground
             return null
-        } else if (box.game.player == obj.game.player){ // blocked by friendly
+        } else if (box.game.piece.player == obj.game.piece.player){ // blocked by friendly
             return null
         } else if (box && isKill){ // blocked by enemy
             return {xyz:{x:x, y:y, z:z}, more:false, killMove:true}
@@ -663,6 +641,7 @@ var Move = (function(){
         }
     }
 
+    // Checks that xyz is in the list of validated moves that we just calculated
     Move.isValidated = function(x, y, z){
         return $.grep(Move.validatedMoves, function(item){
             return item.xyz.x == x && item.xyz.y == y && item.xyz.z == z
@@ -890,9 +869,6 @@ var Game = (function(){
     // Scene.getScene().remove( intersect.object );
     // Obj.getObjects().splice( Obj.getObjects().indexOf( intersect.object ), 1 );
 
-    // mach
-    // pos can have fractional values: round down to convert to game
-    // coordinates
     Game.move = function(selected, pos, done){
         var x = Math.floor(pos.x)
         var y = Math.floor(pos.y)
@@ -903,25 +879,23 @@ var Game = (function(){
                 else done({code:K.INVALID_MOVE})
             },
             function(done){
-                // mach callback?
                 done(null)
                 Sock.move({
                     player: Player.getPlayer(),
-                    piece: selected.game,
-                    // most likely fractions, so need to floor on server:
-                    from: selected.position,
+                    piece: selected.game.piece,
+                    from: selected.position, // most likely fractions, so need to floor on server:
                     to: pos,
                 })
             },
             // mach don't do these things here. load the new move as
             // any other user, when the server validates and publishes
             // the move
-            function(done){
-                done(null)
-                Obj.move(selected, pos)
-                Obj.highlight(selected, true)
-                Highlight.hideAllHighlights()
-            }
+            // function(done){
+            //     done(null)
+            //     Obj.move(selected, pos)
+            //     Obj.highlight(selected, true)
+            //     Highlight.hideAllHighlights()
+            // }
         ], function(er){
             if (er && er.code) msg.error(er.code)
             done(er)
@@ -932,7 +906,6 @@ var Game = (function(){
 }())
 
 window.onload = function(){
-    if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
-
+    if (!Detector.webgl) Detector.addGetWebGLMessage();
     Game.init()
 }
