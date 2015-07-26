@@ -22,13 +22,22 @@ var Move = (function(){
         nio: [-1,  1],
         ino: [ 1, -1],
         nno: [-1, -1],
+        i2i: [ 2,  1], // knight moves:
+        ii2: [ 1,  2],
+        ni2: [-1,  2],
+        n2i: [-2,  1],
+        n2n: [-2, -1],
+        nn2: [-1, -2],
+        in2: [ 1, -2],
+        i2n: [ 2, -1],
     }
 
     // don't allow moving in z axis
     Move.rules = {
         moves: {
-            pawn: ["ioo", "oio", "noo", "ono"], // moving along axes
+            pawn: ["ioo", "oio", "noo", "ono"],
             rook: ["ioo", "oio", "noo", "ono"],
+            knight: ["i2i", "ii2", "ni2", "n2i", "n2n", "nn2", "in2", "i2n"],
         },
         kills: { // pawns are the only ones with different kill moves than regular moves
             pawn: ["iio", "nio", "ino", "nno"],
@@ -106,9 +115,17 @@ var Move = (function(){
         try {
             var dx = to.x - from.x
             var dy = to.y - from.y
-            if (dx) dx = parseInt(dx / Math.abs(dx)) // normalize to get direction
-            if (dy) dy = parseInt(dy / Math.abs(dy))
+            // A knight only has range 1, so whatever its dx and dy
+            // should match its list of legal moves, so we don't need
+            // to normalize. Only pieces with variable distance moves
+            // need normalization
+            if (piece.kind != "knight"){
+                if (dx) dx = parseInt(dx / Math.abs(dx)) // normalize to get direction
+                if (dy) dy = parseInt(dy / Math.abs(dy))
+            }
             var direction = [dx, dy]
+
+            // Get the name of this direction
             var directionName = null
             for (d in Move.directions){
                 if (_.isEqual(direction, Move.directions[d])){
@@ -117,6 +134,8 @@ var Move = (function(){
                 }
             }
             if (!directionName) return null
+
+            // Check that this direction name is in this piece's list of legal moves
             var directions = Move.rules.moves[piece.kind]
             var directionFound = false
             for (var i = 0; i < directions.length; i++){
@@ -125,6 +144,7 @@ var Move = (function(){
                     break;
                 }
             }
+
             // If it's a pawn also check if it's a killmove
             if (piece.kind == "pawn"){
                 directions = Move.rules.kills[piece.kind]
@@ -135,6 +155,7 @@ var Move = (function(){
                     }
                 }
             }
+
             if (directionFound){
                 return direction
             } else {
