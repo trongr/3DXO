@@ -125,6 +125,16 @@ var Move = (function(){
                     break;
                 }
             }
+            // If it's a pawn also check if it's a killmove
+            if (piece.kind == "pawn"){
+                directions = Move.rules.kills[piece.kind]
+                for (var i = 0; i < directions.length; i++){
+                    if (directions[i] == directionName){
+                        directionFound = true
+                        break;
+                    }
+                }
+            }
             if (directionFound){
                 return direction
             } else {

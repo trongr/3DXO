@@ -872,7 +872,7 @@ var Game = (function(){
     Game.move = function(selected, pos, done){
         var x = Math.floor(pos.x)
         var y = Math.floor(pos.y)
-        var z = Math.floor(pos.z)
+        var z = 1 // height of every game piece
         async.waterfall([
             function(done){
                 if (Move.isValidated(x, y, z)) done(null)
