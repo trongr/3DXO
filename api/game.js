@@ -4,6 +4,7 @@ var express = require('express');
 var H = require("../lib/h.js")
 var Piece = require("../models/piece.js")
 var Cell = require("../models/cell.js")
+var Cells = require("../api/cells.js")
 
 var Move = (function(){
     var Move = {}
@@ -86,13 +87,19 @@ var Move = (function(){
                 x: from.x + j * dx,
                 y: from.y + j * dy,
             }).populate("piece").exec(function(er, cell){
-                if (er) done({info:"FATAL DB ERROR", er:er})
+                if (er) return done({info:"FATAL DB ERROR", er:er})
+
+                // pawn kill but nothing at the kill destination: illegal move
+                if (isPawnKill && (!cell || (cell && !cell.piece))){
+                    return done({info:"Illegal move"})
+                }
+
+                if (!cell || (cell && !cell.piece)) done(null) // empty cell
                 else if (cell && j < distance) done({info:"Move blocked"})
                 else if (cell && j == distance && piece.player != cell.piece.player.toString()){
-                    done(null)
-                } // Blocked at the destination by non-friendly: can kill
-                else if (cell && j == distance) done({info:"Move blocked"})
-                else if (!cell && isPawnKill) done({info:"Illegal move"}) // pawn kill move but nothing there
+                    done(null) // Blocked at the destination by non-friendly: can kill
+                }
+                else if (cell && j == distance) done({info:"Move blocked"}) // blocked by friendly
                 else done(null) // Nothing's in the way
             });
         }, function(er){
@@ -130,7 +137,6 @@ var Move = (function(){
         }
     }
 
-    // mach
     Move.validateDirection = function(piece, from, to, done){
         var error = {info:"Can't move that way"}
         var isPawnKill = false
@@ -197,8 +203,44 @@ var Move = (function(){
         }
     }
 
+    // Actually making the move
     Move.move = function(player, piece, from, to, done){
-        done(null)
+        async.waterfall([
+            function(done){ // update origin cell
+                Cell.update({
+                    piece: piece._id,
+                    x: from.x,
+                    y: from.y,
+                }, {
+                    $set: {
+                        piece: null
+                    }
+                }, {}, function(er, re){
+                    done(er)
+                })
+            },
+            function(done){ // update destination cell
+                Cells.upsert({
+                    piece: piece._id,
+                    x: to.x,
+                    y: to.y,
+                }, function(er, cell){
+                    done(er)
+                })
+            },
+            function(done){
+                Piece.update(piece, { // update piece data
+                    $set: {
+                        x: to.x,
+                        y: to.y
+                    }
+                }, {}, function(er, re){
+                    done(er)
+                })
+            },
+        ], function(er){
+            done(er)
+        })
     }
 
     return Move
