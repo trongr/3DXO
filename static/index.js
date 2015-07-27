@@ -69,6 +69,8 @@ var Sock = (function(){
             msg.info("Move confirmed")
             H.log("INFO. Sock.onmessage", data)
             var sel = Select.getSelected()
+            sel.game.piece = data.piece // update piece with new position data
+
             Obj.move(sel, data.to)
             Obj.highlight(sel, true)
             Highlight.hideAllHighlights()

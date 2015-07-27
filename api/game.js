@@ -205,6 +205,7 @@ var Move = (function(){
 
     // Actually making the move
     Move.move = function(player, piece, from, to, done){
+        var nPiece = null
         async.waterfall([
             function(done){ // update origin cell
                 Cell.update({
@@ -229,17 +230,21 @@ var Move = (function(){
                 })
             },
             function(done){
-                Piece.update(piece, { // update piece data
+                Piece.findOneAndUpdate(piece, { // update piece data
                     $set: {
                         x: to.x,
                         y: to.y
                     }
-                }, {}, function(er, re){
+                }, {
+                    new: true,
+                    runValidators: true,
+                }, function(er, _piece){
+                    nPiece = _piece
                     done(er)
                 })
             },
         ], function(er){
-            done(er)
+            done(er, nPiece)
         })
     }
 
@@ -250,6 +255,7 @@ var Game = module.exports = (function(){
     Game = {}
 
     Game.move = function(data, done){
+        var nPiece = null
         try {
             var player = data.player
             var piece = data.piece
@@ -271,11 +277,13 @@ var Game = module.exports = (function(){
                 })
             },
             function(done){
-                Move.move(player, piece, from, to, function(er){
+                Move.move(player, piece, from, to, function(er, _piece){
+                    nPiece = _piece
                     done(er)
                 })
             }
         ], function(er){
+            data.piece = nPiece
             done(er, data)
         })
     }
