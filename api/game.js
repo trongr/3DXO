@@ -56,12 +56,13 @@ var Move = (function(){
             function(done){
                 distance = Move.validateDistance(piece, from, to)
                 if (distance) done(null)
-                else done({info:"This piece can't move that far"})
+                else done({info:"Can't move that far"})
             },
             function(done){
-                direction = Move.validateDirection(piece, from, to)
-                if (direction) done(null)
-                else done({info:"This piece can't move that way"})
+                Move.validateDirection(piece, from, to, function(er, _direction){
+                    direction = _direction
+                    done(er)
+                })
             },
             function(done){
                 // distance and direction make it easier to look up cells along the way
@@ -76,8 +77,9 @@ var Move = (function(){
 
     // Check if there are any pieces in the way
     Move.validateBlock = function(piece, from, distance, direction, done){
-        var dx = direction[0]
-        var dy = direction[1]
+        var dx = direction.dx
+        var dy = direction.dy
+        var isPawnKill = direction.isPawnKill
         async.times(distance, function(i, done){
             var j = i + 1
             Cell.findOne({
@@ -90,6 +92,7 @@ var Move = (function(){
                     done(null)
                 } // Blocked at the destination by non-friendly: can kill
                 else if (cell && j == distance) done({info:"Move blocked"})
+                else if (!cell && isPawnKill) done({info:"Illegal move"}) // pawn kill move but nothing there
                 else done(null) // Nothing's in the way
             });
         }, function(er){
@@ -127,7 +130,10 @@ var Move = (function(){
         }
     }
 
-    Move.validateDirection = function(piece, from, to){
+    // mach
+    Move.validateDirection = function(piece, from, to, done){
+        var error = {info:"Can't move that way"}
+        var isPawnKill = false
         try {
             var dx = to.x - from.x
             var dy = to.y - from.y
@@ -138,7 +144,7 @@ var Move = (function(){
             if (piece.kind != "knight"){
                 // Makes sure non-knights only move either vertically
                 // horizontally or diagonally and not, say, 2 by 3
-                if (Math.abs(dx) != Math.abs(dy) && dx != 0 && dy != 0) return null
+                if (Math.abs(dx) != Math.abs(dy) && dx != 0 && dy != 0) return done(error)
 
                 if (dx) dx = parseInt(dx / Math.abs(dx)) // normalize to get direction
                 if (dy) dy = parseInt(dy / Math.abs(dy))
@@ -153,7 +159,7 @@ var Move = (function(){
                     break;
                 }
             }
-            if (!directionName) return null
+            if (!directionName) return done(error)
 
             // Check that this direction name is in this piece's list of legal moves
             var directions = Move.rules.moves[piece.kind]
@@ -171,18 +177,23 @@ var Move = (function(){
                 for (var i = 0; i < directions.length; i++){
                     if (directions[i] == directionName){
                         directionFound = true
+                        isPawnKill = true
                         break;
                     }
                 }
             }
 
             if (directionFound){
-                return direction
+                return done(null, {
+                    dx: direction[0],
+                    dy: direction[1],
+                    isPawnKill: isPawnKill, // so Move.validateBlock can check if there's any piece at the kill move destination
+                })
             } else {
-                return null
+                return done(error)
             }
         } catch (e){
-            return null
+            return done(error)
         }
     }
 

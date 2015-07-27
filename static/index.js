@@ -63,7 +63,7 @@ var Sock = (function(){
             try {
                 var data = JSON.parse(re.data)
             } catch (e){
-                if (re) return msg.error(re.data)
+                if (re) return msg.error(re.data) // mach cancel highlight so people can select again
                 else return msg.error("ERROR. Can't parse server response")
             }
             msg.info("Move confirmed")
