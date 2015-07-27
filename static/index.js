@@ -70,10 +70,7 @@ var Sock = (function(){
             H.log("INFO. Sock.onmessage", data)
             var sel = Select.getSelected()
             sel.game.piece = data.piece // update piece with new position data
-
             Obj.move(sel, data.to)
-            Obj.highlight(sel, true)
-            Highlight.hideAllHighlights()
             Scene.render()
         };
 
@@ -176,14 +173,8 @@ var Select = (function(){
                       .copy(intersect.point)
                       .add(new THREE.Vector3()
                            .copy(intersect.face.normal)
-                           .multiplyScalar(0.5)), // normal's unit length so gotta scale by half to fit inside the box
-                      function(er){ // mach move and render scene when
-                                    // getting pub from server, just
-                                    // like everyone else. then set
-                                    // _isSelecting appropriately
-                          if (er) _isSelecting = true
-                          else _isSelecting = false
-                      })
+                           .multiplyScalar(0.5))) // normal's unit length so gotta scale by half to fit inside the box
+            _isSelecting = false
         } else { // start selecting
             if (Player.objBelongsToPlayer(intersect.object)){
                 _selected = intersect.object
@@ -880,15 +871,15 @@ var Game = (function(){
     // Scene.getScene().remove( intersect.object );
     // Obj.getObjects().splice( Obj.getObjects().indexOf( intersect.object ), 1 );
 
-    Game.move = function(selected, pos, done){
+    Game.move = function(selected, pos){
         var x = Math.floor(pos.x)
         var y = Math.floor(pos.y)
         var z = 1 // height of every game piece
         async.waterfall([
-            // function(done){
-            //     if (Move.isValidated(x, y, z)) done(null)
-            //     else done({code:K.INVALID_MOVE})
-            // },
+            function(done){
+                if (Move.isValidated(x, y, z)) done(null)
+                else done({code:K.INVALID_MOVE})
+            },
             function(done){
                 done(null)
                 Sock.move({
@@ -900,7 +891,9 @@ var Game = (function(){
             },
         ], function(er){
             if (er && er.code) msg.error(er.code)
-            done(er)
+            Obj.highlight(Select.getSelected(), false)
+            Highlight.hideAllHighlights()
+            Scene.render()
         })
     }
 
