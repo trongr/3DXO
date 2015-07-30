@@ -63,16 +63,27 @@ var Sock = (function(){
             try {
                 var data = JSON.parse(re.data)
             } catch (e){
-                if (re) return msg.error(re.data) // mach cancel highlight so people can select again
+                if (re) return msg.error(re.data)
                 else return msg.error("ERROR. Can't parse server response")
             }
             msg.info("Move confirmed")
             H.log("INFO. Sock.onmessage", data)
             // mach check if the new move is your move or someone else's move.
             // find the moved piece instead of using sel
+
+            // remove any piece already at dst
+            var dstObj = Obj.findObjAtPosition(Math.floor(data.to.x), Math.floor(data.to.y), 1)
+            if (dstObj){
+                Scene.getScene().remove(dstObj);
+                Obj.getObjects().splice(Obj.getObjects().indexOf(dstObj), 1);
+            }
+
+            // move selected
             var sel = Select.getSelected()
             sel.game.piece = data.piece // update piece with new position data
+            data.to.z = 1.5
             Obj.move(sel, data.to)
+
             Scene.render()
         };
 
@@ -478,6 +489,8 @@ var Obj = (function(){
         return _objects[index]
     }
 
+    // mach
+
     return Obj
 }())
 
@@ -704,6 +717,10 @@ var Scene = (function(){
         _scene.remove(mesh)
     }
 
+    Scene.getScene = function(){
+        return _scene
+    }
+
     function initContainer(){
         _container = document.createElement( 'div' );
         document.body.appendChild(_container);
@@ -870,10 +887,6 @@ var Game = (function(){
             if (er) H.log("ERROR. Game.init", er)
         })
     }
-
-    // mach ref. removing cube
-    // Scene.getScene().remove( intersect.object );
-    // Obj.getObjects().splice( Obj.getObjects().indexOf( intersect.object ), 1 );
 
     Game.move = function(selected, pos){
         var x = Math.floor(pos.x)
