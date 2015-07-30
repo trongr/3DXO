@@ -68,8 +68,6 @@ var Sock = (function(){
             }
             msg.info("Move confirmed")
             H.log("INFO. Sock.onmessage", data)
-            // mach check if the new move is your move or someone else's move.
-            // find the moved piece instead of using sel
 
             // remove any piece already at dst
             var dstObj = Obj.findObjAtPosition(Math.floor(data.to.x), Math.floor(data.to.y), 1)
@@ -79,7 +77,7 @@ var Sock = (function(){
             }
 
             // move selected
-            var sel = Select.getSelected()
+            var sel = Obj.findObjAtPosition(Math.floor(data.from.x), Math.floor(data.from.y), 1)
             sel.game.piece = data.piece // update piece with new position data
             data.to.z = 1.5
             Obj.move(sel, data.to)
@@ -489,7 +487,7 @@ var Obj = (function(){
         return _objects[index]
     }
 
-    // mach
+    // mach. obj.removeObj
 
     return Obj
 }())
