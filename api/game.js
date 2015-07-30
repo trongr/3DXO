@@ -205,7 +205,7 @@ var Move = (function(){
 
     // Actually making the move
     Move.move = function(player, piece, from, to, done){
-        var nPiece = null
+        var nPiece, dstCell = null
         async.waterfall([
             function(done){ // update origin cell
                 Cell.update({
@@ -219,6 +219,32 @@ var Move = (function(){
                 }, {}, function(er, re){
                     done(er)
                 })
+            },
+            function(done){
+                // Check if dst has an enemy piece. (Since we're
+                // already here at Move.move if there's anything here
+                // it has to be an enemy.)
+                Cell.findOne({
+                    x: to.x,
+                    y: to.y,
+                }).populate("piece").exec(function(er, cell){
+                    dstCell = cell
+                    if (er) return done({info:"FATAL DB ERROR", er:er})
+                    done(null)
+                });
+            },
+            function(done){
+                if (dstCell && dstCell.piece){ // is a kill move: remove dst piece
+                    Piece.find(dstCell.piece, function(er, pieces){
+                        console.log(JSON.stringify(piece, 0, 2))
+                        if (pieces && pieces.length) pieces[0].remove(function(er, _piece){
+                            if (er) H.log("ERROR. Game.Move.move.remove dst piece", er)
+                        })
+                        done(er)
+                    })
+                } else { // do nothing
+                    done(null)
+                }
             },
             function(done){ // update destination cell
                 Cells.upsert({

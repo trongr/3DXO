@@ -4,7 +4,7 @@ var K = (function(){
     var K = {
         INIT_CAM_POS: 15,
         INIT_LIGHT_POS: 10,
-        BOARD_SIZE: 100,
+        BOARD_SIZE: 10,
         CUBE_SIZE: 1,
 
         INVALID_MOVE: "INVALID MOVE",
@@ -68,6 +68,8 @@ var Sock = (function(){
             }
             msg.info("Move confirmed")
             H.log("INFO. Sock.onmessage", data)
+            // mach check if the new move is your move or someone else's move.
+            // find the moved piece instead of using sel
             var sel = Select.getSelected()
             sel.game.piece = data.piece // update piece with new position data
             Obj.move(sel, data.to)
@@ -381,7 +383,9 @@ var Obj = (function(){
             var cells = []
             for (var i = 0; i < _cells.length; i++){
                 var cell = _cells[i]
-                cells.push(Obj.make(cell.piece, cell.piece.kind, cell.x, cell.y, 1))
+                if (cell && cell.piece){
+                    cells.push(Obj.make(cell.piece, cell.piece.kind, cell.x, cell.y, 1))
+                }
             }
             var TOTAL_PLAYERS = 1
             Obj.loadGamePieces(cells)
@@ -483,9 +487,8 @@ var Map = (function(){
     var _map = []
 
     Map.init = function(){
-        var mapSize = 8; // 16 by 16 by 1
-        for (var x = -mapSize; x < mapSize; x++) {
-            for (var y = -mapSize; y < mapSize; y++){
+        for (var x = -K.BOARD_SIZE; x < K.BOARD_SIZE; x++) {
+            for (var y = -K.BOARD_SIZE; y < K.BOARD_SIZE; y++){
                 Map.add({x:x, y:y, z:0})
             }
         }
@@ -707,7 +710,7 @@ var Scene = (function(){
     }
 
     function initCamera(){
-        Scene.camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, K.BOARD_SIZE * 10 );
+        Scene.camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 20 );
         Scene.camera.position.z = K.INIT_CAM_POS; // for some reason you need this or track ball controls won't work properly
     }
 
