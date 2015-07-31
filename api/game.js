@@ -235,8 +235,8 @@ var Move = (function(){
             },
             function(done){
                 if (dstCell && dstCell.piece){ // is a kill move: remove dst piece
-                    Piece.find(dstCell.piece, function(er, pieces){
-                        if (pieces && pieces.length) pieces[0].remove(function(er, _piece){
+                    Piece.findOne(dstCell.piece, function(er, piece){
+                        if (piece) piece.remove(function(er, _piece){
                             if (er) H.log("ERROR. Game.Move.move.remove dst piece", er)
                         })
                         done(er)

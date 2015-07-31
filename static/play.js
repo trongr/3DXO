@@ -223,13 +223,16 @@ var Player = (function(){
 
     Player.init = function(done){
         // mach player name
+        // everyone's password is robert
         var name = "trong"
-        API.Player.get({name:name}, function(er, player){
+        var pass = "robert"
+        API.Player.get({name:name, pass:pass}, function(er, player){
             if (er){
                 msg.error("Can't load player: " + name)
                 return done(er.info)
             }
             _player = player
+            console.log(JSON.stringify(player, 0, 2)) // mach remove
             done(null)
         })
     }

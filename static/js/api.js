@@ -29,7 +29,15 @@ var API = (function(){
             var url = API_PREFIX + "player"
             API.req("get", url, data, function(er, re){
                 if (re && re.player) done(null, re.player)
-                else done({info:"no player found", re:re, er:er})
+                else done({info:"API.Player.get", re:re, er:er})
+            })
+        }
+
+        Player.post = function(data, done){
+            var url = API_PREFIX + "player"
+            API.req("post", url, data, function(er, re){
+                if (re && re.player) done(null, re.player)
+                else done({info:"API.Player.post", re:re, er:er})
             })
         }
 

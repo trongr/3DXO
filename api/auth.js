@@ -8,14 +8,20 @@ var Auth = module.exports = (function(){
     Auth = {}
 
     Auth.authenticate = function(req, res, next){
-        var name = H.param(req, "name")
+        if (req.method == "POST") return next() // let Players.js handle player post
+        var name = H.param(req, "name")         // middleware for auth login
         var pass = H.param(req, "pass")
         Player.findOne({
             name: name,
-            pass: pass,
-        }, function(er, player){
-            if (er) res.status(505).send({info:"ERROR. Auth.authenticate"})
-            else if (player) next()
+        }, "pass", function(er, player){
+            if (er) return res.status(505).send({info:"ERROR. Auth.authenticate"})
+            else if (player){
+                player.comparePassword(pass, function(er, isMatch){
+                    if (er) return res.status(505).send({info:"ERROR. Auth.authenticate"})
+                    else if (isMatch) return next()
+                    else return res.send({info:"ERROR. Invalid login"})
+                })
+            }
             else res.send({info:"ERROR. Invalid login"})
         })
     }

@@ -1,3 +1,4 @@
+
 var express = require('express');
 var Player = require("../models/player.js")
 var H = require("../lib/h.js")
@@ -15,7 +16,14 @@ var Players = module.exports = (function(){
             })
         })
 	    .post(function(req, res){
-            // mach create new anonymous player and instantiate army
+            var name = req.body.name
+            var pass = req.body.pass
+            Players.make({
+                name: name,
+                pass: pass,
+            }, function(er, player){
+                H.send(res, er, {player:player})
+            })
 	    })
 
     Players.make = function(data, done){
