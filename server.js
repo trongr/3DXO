@@ -6,6 +6,7 @@ var app        = express();
 var logger = require('morgan');
 var bodyParser = require('body-parser');
 var path = require('path');
+var session = require('express-session')
 var H = require("./lib/h.js")
 var Sock = require("./sock.js")
 var DB = require("./db.js")
@@ -14,6 +15,13 @@ var Pieces = require("./api/pieces.js")
 var Cells = require("./api/cells.js")
 var Players = require("./api/players.js")
 var Teams = require("./api/teams.js")
+
+// mach use some other session store
+app.use(session({
+    secret: 'keyboard cat',       // mach change for prod
+    resave: false,
+    saveUninitialized: true
+}))
 
 app.use(logger('dev'));
 app.use(bodyParser.json());

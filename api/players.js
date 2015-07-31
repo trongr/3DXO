@@ -10,7 +10,8 @@ var Players = module.exports = (function(){
 
     Players.router.route("/")
         .get(function(req, res){
-            var name = H.param(req, "name")
+            // client can provide name to query other players, otw defaults to themself
+            var name = H.param(req, "name") || req.session.player.name
             Player.findOne({name:name}, function(er, player){
                 H.send(res, er, {player:player})
             })

@@ -9,17 +9,21 @@ var Auth = module.exports = (function(){
 
     Auth.authenticate = function(req, res, next){
         if (req.method == "POST") return next() // let Players.js handle player post
+        if (req.session.player) return next()
         var name = H.param(req, "name")         // middleware for auth login
         var pass = H.param(req, "pass")
         Player.findOne({
             name: name,
-        }, "pass", function(er, player){
+        }, "+pass", function(er, player){
             if (er) return res.status(505).send({info:"ERROR. Auth.authenticate"})
             else if (player){
                 player.comparePassword(pass, function(er, isMatch){
                     if (er) return res.status(505).send({info:"ERROR. Auth.authenticate"})
-                    else if (isMatch) return next()
-                    else return res.send({info:"ERROR. Invalid login"})
+                    else if (isMatch){
+                        console.log("saving player to session " + JSON.stringify(player, 0, 2))
+                        req.session.player = player
+                        return next()
+                    } else return res.send({info:"ERROR. Invalid login"})
                 })
             }
             else res.send({info:"ERROR. Invalid login"})

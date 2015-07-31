@@ -222,11 +222,7 @@ var Player = (function(){
     var _player = null
 
     Player.init = function(done){
-        // mach player name
-        // everyone's password is robert
-        var name = "trong"
-        var pass = "robert"
-        API.Player.get({name:name, pass:pass}, function(er, player){
+        API.Player.get({}, function(er, player){
             if (er){
                 msg.error("Can't load player: " + name)
                 return done(er.info)
