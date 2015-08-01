@@ -6,6 +6,7 @@ var K = (function(){
         INIT_LIGHT_POS: 10,
         BOARD_SIZE: 10,
         CUBE_SIZE: 1,
+        QUADRANT_SIZE: 10,
 
         INVALID_MOVE: "INVALID MOVE",
     }
@@ -134,8 +135,6 @@ var Rollover = (function(){
     Rollover.init = function(){
         _rollover = new THREE.Mesh(ROLLOVER_GEOMETRY, ROLLOVER_MATERIAL);
         Scene.addObj(_rollover)
-        // Obj.move(_rollover, new THREE.Vector3(0, 0, 0))
-        // document.addEventListener( 'mousemove', onDocumentMouseMove, false );
     }
 
     Rollover.getMesh = function(){
@@ -365,7 +364,6 @@ var Obj = (function(){
         return box
     }
 
-    // mach
     // todo. store things in a db for faster obj location
     Obj.findObjAtPosition = function(x, y, z){
         for (var i = 0; i < _objects.length; i++){
@@ -400,27 +398,12 @@ var Map = (function(){
 
     // mach
     Map.init = function(){
-		var size = 500, step = 1;
-		var geometry = new THREE.Geometry();
-		for ( var i = - size; i <= size; i += step ) {
-			geometry.vertices.push( new THREE.Vector3( - size, i, 1 ) );
-			geometry.vertices.push( new THREE.Vector3(   size, i, 1 ) );
-			geometry.vertices.push( new THREE.Vector3( i, - size, 1 ) );
-			geometry.vertices.push( new THREE.Vector3( i,   size, 1 ) );
-		}
-		var material = new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.2, transparent: true } );
-		var line = new THREE.Line( geometry, material, THREE.LinePieces );
-		Scene.getScene().add( line ); // mach do something about the load order
-
-        geometry = new THREE.PlaneBufferGeometry( 1000, 1000 );
-        material = new THREE.MeshBasicMaterial({color:0x7B84A8});
-		plane = new THREE.Mesh(geometry, material);
-		plane.visible = true; // mach false
-        plane.translateZ(1)
-		Scene.getScene().add( plane );
-		Obj.addObj(plane);
-
-        Scene.render()
+        Map.addMouseDragListener(function(){
+            var x = Scene.camera.position.x
+            var y = Scene.camera.position.y
+            Map.loadMapQuadrants(x, y)
+        })
+        Map.loadMapQuadrants(0, 0) // mach load map wherever player spawns
     }
 
     // obj = {x:asdf, y:asdf, z:asdf}
@@ -430,6 +413,65 @@ var Map = (function(){
 
     Map.getMap = function(){
         return _map
+    }
+
+    Map.addMouseDragListener = function(handler){
+        var isDragging = false;
+        $(document).mousedown(function() {
+            isDragging = false;
+        }).mousemove(function() {
+            isDragging = true;
+        }).mouseup(function() {
+            var wasDragging = isDragging;
+            isDragging = false;
+            if (wasDragging) {
+                handler()
+            }
+        });
+    }
+
+    // keys are string representations of arrays, e.g. a[[1,2]] ==
+    // "asdf" means a = {"1,2":"asdf"}
+    Map.knownQuadrants = {}
+
+    Map.loadMapQuadrants = function(x, y){
+        for (var i = -1; i <= 1; i++){
+            for (var j = -1; j <= 1; j++){
+                Map.loadMapQuadrant(x + i * K.QUADRANT_SIZE, y + j * K.QUADRANT_SIZE)
+            }
+        }
+    }
+
+    Map.loadMapQuadrant = function(x, y){
+        var X = Math.floor(x / K.QUADRANT_SIZE)
+        var Y = Math.floor(y / K.QUADRANT_SIZE)
+
+        // Check if we already rendered this quadrant
+        if (Map.knownQuadrants[[X, Y]]) return
+        else Map.knownQuadrants[[X, Y]] = true
+
+		var geometry = new THREE.Geometry();
+		for ( var i = 0; i < K.QUADRANT_SIZE; i++){
+			geometry.vertices.push( new THREE.Vector3(X * K.QUADRANT_SIZE + i,               Y * K.QUADRANT_SIZE + 0,               1));
+			geometry.vertices.push( new THREE.Vector3(X * K.QUADRANT_SIZE + i,               Y * K.QUADRANT_SIZE + K.QUADRANT_SIZE, 1));
+			geometry.vertices.push( new THREE.Vector3(X * K.QUADRANT_SIZE + 0,               Y * K.QUADRANT_SIZE + i,               1));
+			geometry.vertices.push( new THREE.Vector3(X * K.QUADRANT_SIZE + K.QUADRANT_SIZE, Y * K.QUADRANT_SIZE + i,               1));
+		}
+		var material = new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.2, transparent: true } );
+		var line = new THREE.Line( geometry, material, THREE.LinePieces );
+		Scene.addObj(line); // mach do something about the load order
+
+        geometry = new THREE.PlaneBufferGeometry(K.QUADRANT_SIZE, K.QUADRANT_SIZE);
+        material = new THREE.MeshBasicMaterial({color:0x7B84A8});
+		plane = new THREE.Mesh(geometry, material);
+		plane.visible = true;
+        plane.position.set(X * K.QUADRANT_SIZE + K.QUADRANT_SIZE / 2,
+                           Y * K.QUADRANT_SIZE + K.QUADRANT_SIZE / 2,
+                           1)
+		Scene.addObj(plane);
+		Obj.addObj(plane);
+
+        Scene.render()
     }
 
     return Map
@@ -650,9 +692,8 @@ var Scene = (function(){
         _controls.rotateSpeed = 2.5;
         _controls.zoomSpeed = 1.5;
         _controls.panSpeed = 1.0;
-        // mach toggle
-        // _controls.noRotate = true;
-        // _controls.noZoom = true;
+        _controls.noRotate = true;
+        _controls.noZoom = false;
         _controls.noPan = false;
         _controls.staticMoving = true;
         _controls.dynamicDampingFactor = 0.3;

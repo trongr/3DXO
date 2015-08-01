@@ -27,9 +27,8 @@ var Auth = module.exports = (function(){
                     player.comparePassword(pass, function(er, isMatch){
                         if (er) return res.status(505).send({info:"ERROR. Auth.get"})
                         else if (isMatch){
-                            console.log("saving player to session " + JSON.stringify(player, 0, 2))
                             req.session.player = player
-                            return res.send({ok:true})
+                            return res.send({player:player})
                         } else return res.send({info:"ERROR. Invalid login"})
                     })
                 }
