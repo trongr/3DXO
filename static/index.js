@@ -4,7 +4,7 @@ var Bind = (function(){
     Bind.login = function(e){
         var username = $("#username").val()
         var password = $("#password").val()
-        API.Player.get({
+        API.Auth.get({
             name: username,
             pass: password,
         }, function(er, player){
@@ -13,7 +13,6 @@ var Bind = (function(){
                 return H.log("ERROR. Bind.login", er)
             }
             msg.info("Login successful")
-            console.log(JSON.stringify(player, 0, 2)) // mach remove
             location.href = "/play";
         })
     }
@@ -21,7 +20,7 @@ var Bind = (function(){
     Bind.register = function(e){
         var username = $("#username").val()
         var password = $("#password").val()
-        API.Player.post({
+        API.Auth.post({
             name: username,
             pass: password,
         }, function(er, player){

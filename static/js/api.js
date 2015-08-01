@@ -22,6 +22,30 @@ var API = (function(){
         });
     }
 
+    // Auth is for individual player authentication. Player is for
+    // querying a generic player
+    API.Auth = (function(){
+        var Auth = {}
+
+        Auth.get = function(data, done){
+            var url = API_PREFIX + "auth"
+            API.req("get", url, data, function(er, re){
+                if (re && re.player) done(null, re.player)
+                else done({info:"API.Auth.get", re:re, er:er})
+            })
+        }
+
+        Auth.post = function(data, done){
+            var url = API_PREFIX + "auth"
+            API.req("post", url, data, function(er, re){
+                if (re && re.player) done(null, re.player)
+                else done({info:"API.Auth.post", re:re, er:er})
+            })
+        }
+
+        return Auth
+    }())
+
     API.Player = (function(){
         var Player = {}
 
@@ -30,14 +54,6 @@ var API = (function(){
             API.req("get", url, data, function(er, re){
                 if (re && re.player) done(null, re.player)
                 else done({info:"API.Player.get", re:re, er:er})
-            })
-        }
-
-        Player.post = function(data, done){
-            var url = API_PREFIX + "player"
-            API.req("post", url, data, function(er, re){
-                if (re && re.player) done(null, re.player)
-                else done({info:"API.Player.post", re:re, er:er})
             })
         }
 
