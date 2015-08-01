@@ -42,7 +42,7 @@ var Sock = (function(){
 
             // remove any piece already at dst
             var dstObj = Obj.findObjAtPosition(Math.floor(data.to.x), Math.floor(data.to.y), 1)
-            if (dstObj){
+            if (dstObj && dstObj.game){
                 Scene.getScene().remove(dstObj);
                 Obj.getObjects().splice(Obj.getObjects().indexOf(dstObj), 1);
             }
@@ -228,7 +228,6 @@ var Player = (function(){
                 return done(er.info)
             }
             _player = player
-            console.log(JSON.stringify(player, 0, 2)) // mach remove
             done(null)
         })
     }
@@ -238,7 +237,7 @@ var Player = (function(){
     }
 
     Player.objBelongsToPlayer = function(obj){
-        if (!obj.game.piece) return false
+        if (!obj.game || !obj.game.piece) return false
         else return Player.isFriendly(obj.game.piece)
     }
 
@@ -315,22 +314,8 @@ var Obj = (function(){
             }
             var TOTAL_PLAYERS = 1
             Obj.loadGamePieces(cells)
-            Obj.initMap()
             done(null)
         })
-    }
-
-    Obj.initMap = function(){
-        Map.init() // keep map block positions separately in Map
-        var map = Map.getMap()
-        for (var i = 0; i < map.length; i++){
-            var x = map[i].x
-            var y = map[i].y
-            var z = map[i].z
-            var index = ((x + y + z) % 2 + 2) % 2 // alternating odd and even cell
-            var mapBlock = Obj.make(null, "ground" + index, x, y, z)
-            Obj.addObj(mapBlock) // but also add the actual blocks to the world
-        }
     }
 
     Obj.loadGamePieces = function(objs){
@@ -368,7 +353,7 @@ var Obj = (function(){
     Obj.highlight = function(obj, isHigh){
         if (!obj) return
         if (isHigh) Obj.move(Rollover.getMesh(), obj.position)
-        else Obj.move(Rollover.getMesh(), new THREE.Vector3(0, 0, 0)) // just move the rollover out of sight
+        else Obj.move(Rollover.getMesh(), new THREE.Vector3(0, 0, -1)) // just move the rollover out of sight
     }
 
     Obj.makeBox = function(position, material){
@@ -380,6 +365,7 @@ var Obj = (function(){
         return box
     }
 
+    // mach
     // todo. store things in a db for faster obj location
     Obj.findObjAtPosition = function(x, y, z){
         for (var i = 0; i < _objects.length; i++){
@@ -404,8 +390,6 @@ var Obj = (function(){
         return _objects[index]
     }
 
-    // mach. obj.removeObj
-
     return Obj
 }())
 
@@ -414,12 +398,29 @@ var Map = (function(){
 
     var _map = []
 
+    // mach
     Map.init = function(){
-        for (var x = -K.BOARD_SIZE; x < K.BOARD_SIZE; x++) {
-            for (var y = -K.BOARD_SIZE; y < K.BOARD_SIZE; y++){
-                Map.add({x:x, y:y, z:0})
-            }
-        }
+		var size = 500, step = 1;
+		var geometry = new THREE.Geometry();
+		for ( var i = - size; i <= size; i += step ) {
+			geometry.vertices.push( new THREE.Vector3( - size, i, 1 ) );
+			geometry.vertices.push( new THREE.Vector3(   size, i, 1 ) );
+			geometry.vertices.push( new THREE.Vector3( i, - size, 1 ) );
+			geometry.vertices.push( new THREE.Vector3( i,   size, 1 ) );
+		}
+		var material = new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.2, transparent: true } );
+		var line = new THREE.Line( geometry, material, THREE.LinePieces );
+		Scene.getScene().add( line ); // mach do something about the load order
+
+        geometry = new THREE.PlaneBufferGeometry( 1000, 1000 );
+        material = new THREE.MeshBasicMaterial({color:0x7B84A8});
+		plane = new THREE.Mesh(geometry, material);
+		plane.visible = true; // mach false
+        plane.translateZ(1)
+		Scene.getScene().add( plane );
+		Obj.addObj(plane);
+
+        Scene.render()
     }
 
     // obj = {x:asdf, y:asdf, z:asdf}
@@ -561,10 +562,8 @@ var Move = (function(){
 
     Move.validateMove = function(obj, x, y, z, isKill){
         var box = Obj.findObjAtPosition(x, y, z)
-        if (!box){ // empty cell
+        if (!box || !box.game){ // empty cell
             return {xyz:{x:x, y:y, z:z}, more:true}
-        } else if (box.game.piece == null){ // wall / ground
-            return null
         } else if (box.game.piece.player == obj.game.piece.player){ // blocked by friendly
             return null
         } else if (box && isKill){ // blocked by enemy
@@ -642,7 +641,7 @@ var Scene = (function(){
     }
 
     function initCamera(){
-        Scene.camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 20 );
+        Scene.camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 50 );
         Scene.camera.position.z = K.INIT_CAM_POS; // for some reason you need this or track ball controls won't work properly
     }
 
@@ -651,8 +650,9 @@ var Scene = (function(){
         _controls.rotateSpeed = 2.5;
         _controls.zoomSpeed = 1.5;
         _controls.panSpeed = 1.0;
-        _controls.noRotate = true;
-        _controls.noZoom = true;
+        // mach toggle
+        // _controls.noRotate = true;
+        // _controls.noZoom = true;
         _controls.noPan = false;
         _controls.staticMoving = true;
         _controls.dynamicDampingFactor = 0.3;
@@ -797,6 +797,7 @@ var Game = (function(){
             function(done){
                 done(null)
                 Scene.init()
+                Map.init()
             }
         ], function(er){
             if (er) H.log("ERROR. Game.init", er)
