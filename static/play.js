@@ -221,7 +221,9 @@ var Player = (function(){
     var _player = null
 
     Player.init = function(done){
-        API.Player.get({}, function(er, player){
+        // for testing to bypass auth
+        var name = "trong" // mach remove name query to get player's obj
+        API.Player.get({name:name}, function(er, player){
             if (er){
                 msg.error("Can't load player: " + name)
                 return done(er.info)
@@ -285,42 +287,43 @@ var Obj = (function(){
         return materials
     }
 
-    Obj.init = function(done){
+    Obj.init = function(){
         Obj.KIND.pawn = {
             material: [
                 new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn", 0xff4545)),
                 new THREE.MeshFaceMaterial(loadFaceTextures("p1pawn", 0x0060ff)),
             ],
         }
-        // if you load the map before the game pieces, the pieces'
-        // faces will all have the same texture. what the heck
-        //
-        // todo. you're loading game pieces first and then the map,
-        // which is bad because without the map the pieces can't
-        // tell which direction is up. for now it's OK, but will
-        // become a problem once you start loading pieces on different
-        // faces of the cube. in that case, once you've loaded the
-        // game pieces, then the map, do another pass through the
-        // pieces and stand them up right.
-        API.Cells.get({x:0, y:0, r:0}, function(er, _cells){
+    }
+
+    Obj.loadQuadrant = function(x, y, done){
+        API.Cells.get({x:x, y:y, r:10}, function(er, _cells){
             if (er) return done(er.info)
             var cells = []
             for (var i = 0; i < _cells.length; i++){
                 var cell = _cells[i]
                 if (cell && cell.piece){
                     cells.push(Obj.make(cell.piece, cell.piece.kind, cell.x, cell.y, 1))
+                    console.log(JSON.stringify(cell.piece, 0, 2))
                 }
             }
-            var TOTAL_PLAYERS = 1
-            Obj.loadGamePieces(cells)
-            done(null)
-        })
-    }
+            for (var i = 0; i < cells.length; i++){
+                Obj.addObj(cells[i])
+                Scene.addObj(cells[i])
+            }
+            Scene.render()
 
-    Obj.loadGamePieces = function(objs){
-        for (var i = 0; i < objs.length; i++){
-            Obj.addObj(objs[i])
-        }
+            // mach remove
+            // mach duplicate pieces every time you load a quadrant
+            var objs = Obj.getObjects()
+            var count = 0
+            for (var i = 0; i < objs.length; i++){
+                if (objs[i].game) count++
+            }
+            console.log("objs count " + count)
+
+            if (done) done(null)
+        })
     }
 
     // Right now isFriendly is either null, or 0 or 1, to distinguish
@@ -396,14 +399,13 @@ var Map = (function(){
 
     var _map = []
 
-    // mach
     Map.init = function(){
         Map.addMouseDragListener(function(){
             var x = Scene.camera.position.x
             var y = Scene.camera.position.y
-            Map.loadMapQuadrants(x, y)
+            Map.loadQuadrants(x, y)
         })
-        Map.loadMapQuadrants(0, 0) // mach load map wherever player spawns
+        Map.loadQuadrants(0, 0) // mach load map wherever player spawns
     }
 
     // obj = {x:asdf, y:asdf, z:asdf}
@@ -434,15 +436,18 @@ var Map = (function(){
     // "asdf" means a = {"1,2":"asdf"}
     Map.knownQuadrants = {}
 
-    Map.loadMapQuadrants = function(x, y){
+    // mach
+    Map.loadQuadrants = function(x, y){
         for (var i = -1; i <= 1; i++){
             for (var j = -1; j <= 1; j++){
-                Map.loadMapQuadrant(x + i * K.QUADRANT_SIZE, y + j * K.QUADRANT_SIZE)
+                Map.loadQuadrant(x + i * K.QUADRANT_SIZE, y + j * K.QUADRANT_SIZE)
+                Obj.loadQuadrant(x + i * K.QUADRANT_SIZE, y + j * K.QUADRANT_SIZE)
+                console.log("loading quadrant " + (x + i * K.QUADRANT_SIZE), y + j * K.QUADRANT_SIZE)
             }
         }
     }
 
-    Map.loadMapQuadrant = function(x, y){
+    Map.loadQuadrant = function(x, y){
         var X = Math.floor(x / K.QUADRANT_SIZE)
         var Y = Math.floor(y / K.QUADRANT_SIZE)
 
@@ -459,7 +464,7 @@ var Map = (function(){
 		}
 		var material = new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.2, transparent: true } );
 		var line = new THREE.Line( geometry, material, THREE.LinePieces );
-		Scene.addObj(line); // mach do something about the load order
+		Scene.addObj(line);
 
         geometry = new THREE.PlaneBufferGeometry(K.QUADRANT_SIZE, K.QUADRANT_SIZE);
         material = new THREE.MeshBasicMaterial({color:0x7B84A8});
@@ -634,19 +639,13 @@ var Scene = (function(){
         camera: null
     }
 
-    var _scene
+    var _scene = new THREE.Scene();
     var _container
     var _stats;
     var _controls, _renderer;
     var _isShiftDown = false;
 
     Scene.init = function(){
-        _scene = new THREE.Scene();
-        var length = Obj.getObjects().length
-        for (var i = 0; i < length; i++){
-            Scene.addObj(Obj.getObj(i))
-        }
-
         initContainer()
         initStats()
         initInfo()
@@ -831,15 +830,11 @@ var Game = (function(){
                 })
             },
             function(done){
-                Obj.init(function(er){
-                    done(er)
-                })
-            },
-            function(done){
                 done(null)
                 Scene.init()
+                Obj.init()
                 Map.init()
-            }
+            },
         ], function(er){
             if (er) H.log("ERROR. Game.init", er)
         })

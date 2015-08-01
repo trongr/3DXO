@@ -63,9 +63,10 @@ var API = (function(){
     API.Cells = (function(){
         var Cells = {}
 
+        // data.r is ignored by server
         Cells.get = function(data, done){
             var url = API_PREFIX + "cell/" + data.x + "/" + data.y + "/" + data.r
-            API.req("get", url, data, function(er, re){
+            API.req("get", url, {}, function(er, re){
                 if (re && re.cells) done(null, re.cells)
                 else done({info:"no cells found", re:re, er:er})
             })

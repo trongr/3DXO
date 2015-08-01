@@ -1,6 +1,8 @@
 var express = require('express');
 var Cell = require("../models/cell.js")
 var H = require("../lib/h.js")
+var Sanitize = require("../lib/sanitize.js")
+var K = require("../conf/k.js")
 
 var Cells = module.exports = (function(){
     Cells = {
@@ -9,11 +11,17 @@ var Cells = module.exports = (function(){
 
     Cells.router.route("/:x/:y/:r")
         .get(function(req, res){
-            // mach find cells within R cells of x, y
-            var x = H.param(req, "x")
-            var y = H.param(req, "y")
-            var r = H.param(req, "r")
+            try {
+                var x = Math.floor(Sanitize.integer(H.param(req, "x")) / K.QUADRANT_SIZE) * K.QUADRANT_SIZE
+                var y = Math.floor(Sanitize.integer(H.param(req, "y")) / K.QUADRANT_SIZE) * K.QUADRANT_SIZE
+                // var r = Sanitize.integer(H.param(req, "r"))
+                var r = K.QUADRANT_SIZE // use default quadrant size
+            } catch (e){
+                return H.send(res, {info:"ERROR. Cells.get.x.y.r: " + e}, null)
+            }
             Cell.find({
+                x: {$gte: x, $lt: x + r},
+                y: {$gte: y, $lt: y + r},
                 piece: {$ne:null}
             }).populate("piece").exec(function(er, cells){
                 H.send(res, er, {cells:cells})

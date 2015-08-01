@@ -48,10 +48,11 @@ app.get('/play', function(req, res){
 // mach Auth.authenticate for all routes
 app.use('/api/v1/auth', Auth.router); // login and register
 
-app.use('/api/v1/piece', Auth.authenticate, Pieces.router);
-app.use('/api/v1/cell', Auth.authenticate, Cells.router);
-app.use('/api/v1/player', Auth.authenticate, Players.router);
-app.use('/api/v1/team', Auth.authenticate, Teams.router);
+// app.use('/api/v1/piece', Auth.authenticate, Pieces.router);
+app.use('/api/v1/piece', Pieces.router);
+app.use('/api/v1/cell', Cells.router);
+app.use('/api/v1/player', Players.router); // mach use auth
+app.use('/api/v1/team', Teams.router);
 
 // production error handler. no stacktraces leaked to user
 app.use(function(err, req, res, next) {
