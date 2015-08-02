@@ -304,7 +304,6 @@ var Obj = (function(){
                 var cell = _cells[i]
                 if (cell && cell.piece){
                     cells.push(Obj.make(cell.piece, cell.piece.kind, cell.x, cell.y, 1))
-                    console.log(JSON.stringify(cell.piece, 0, 2))
                 }
             }
             for (var i = 0; i < cells.length; i++){
@@ -312,16 +311,6 @@ var Obj = (function(){
                 Scene.addObj(cells[i])
             }
             Scene.render()
-
-            // mach remove
-            // mach duplicate pieces every time you load a quadrant
-            var objs = Obj.getObjects()
-            var count = 0
-            for (var i = 0; i < objs.length; i++){
-                if (objs[i].game) count++
-            }
-            console.log("objs count " + count)
-
             if (done) done(null)
         })
     }
@@ -436,31 +425,31 @@ var Map = (function(){
     // "asdf" means a = {"1,2":"asdf"}
     Map.knownQuadrants = {}
 
-    // mach
+    // x and y are real game coordinates
     Map.loadQuadrants = function(x, y){
+        // also load the 8 neighbouring quadrants to x, y
         for (var i = -1; i <= 1; i++){
             for (var j = -1; j <= 1; j++){
-                Map.loadQuadrant(x + i * K.QUADRANT_SIZE, y + j * K.QUADRANT_SIZE)
-                Obj.loadQuadrant(x + i * K.QUADRANT_SIZE, y + j * K.QUADRANT_SIZE)
-                console.log("loading quadrant " + (x + i * K.QUADRANT_SIZE), y + j * K.QUADRANT_SIZE)
+                var X = Math.floor((x + i * K.QUADRANT_SIZE) / K.QUADRANT_SIZE) * K.QUADRANT_SIZE
+                var Y = Math.floor((y + j * K.QUADRANT_SIZE) / K.QUADRANT_SIZE) * K.QUADRANT_SIZE
+
+                if (Map.knownQuadrants[[X, Y]]) continue // Check if we already rendered this quadrant
+                else Map.knownQuadrants[[X, Y]] = true
+
+                Map.loadQuadrant(X, Y)
+                Obj.loadQuadrant(X, Y)
             }
         }
     }
 
-    Map.loadQuadrant = function(x, y){
-        var X = Math.floor(x / K.QUADRANT_SIZE)
-        var Y = Math.floor(y / K.QUADRANT_SIZE)
-
-        // Check if we already rendered this quadrant
-        if (Map.knownQuadrants[[X, Y]]) return
-        else Map.knownQuadrants[[X, Y]] = true
-
+    // X and Y are game units rounded to nearest multiple of QUADRANT_SIZE
+    Map.loadQuadrant = function(X, Y){
 		var geometry = new THREE.Geometry();
 		for ( var i = 0; i < K.QUADRANT_SIZE; i++){
-			geometry.vertices.push( new THREE.Vector3(X * K.QUADRANT_SIZE + i,               Y * K.QUADRANT_SIZE + 0,               1));
-			geometry.vertices.push( new THREE.Vector3(X * K.QUADRANT_SIZE + i,               Y * K.QUADRANT_SIZE + K.QUADRANT_SIZE, 1));
-			geometry.vertices.push( new THREE.Vector3(X * K.QUADRANT_SIZE + 0,               Y * K.QUADRANT_SIZE + i,               1));
-			geometry.vertices.push( new THREE.Vector3(X * K.QUADRANT_SIZE + K.QUADRANT_SIZE, Y * K.QUADRANT_SIZE + i,               1));
+			geometry.vertices.push( new THREE.Vector3(X + i,               Y + 0,               1));
+			geometry.vertices.push( new THREE.Vector3(X + i,               Y + K.QUADRANT_SIZE, 1));
+			geometry.vertices.push( new THREE.Vector3(X + 0,               Y + i,               1));
+			geometry.vertices.push( new THREE.Vector3(X + K.QUADRANT_SIZE, Y + i,               1));
 		}
 		var material = new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.2, transparent: true } );
 		var line = new THREE.Line( geometry, material, THREE.LinePieces );
@@ -470,9 +459,7 @@ var Map = (function(){
         material = new THREE.MeshBasicMaterial({color:0x7B84A8});
 		plane = new THREE.Mesh(geometry, material);
 		plane.visible = true;
-        plane.position.set(X * K.QUADRANT_SIZE + K.QUADRANT_SIZE / 2,
-                           Y * K.QUADRANT_SIZE + K.QUADRANT_SIZE / 2,
-                           1)
+        plane.position.set(X + K.QUADRANT_SIZE / 2, Y + K.QUADRANT_SIZE / 2, 1)
 		Scene.addObj(plane);
 		Obj.addObj(plane);
 
