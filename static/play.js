@@ -363,7 +363,9 @@ var Obj = (function(){
             var X = Math.floor(obj.position.x)
             var Y = Math.floor(obj.position.y)
             var Z = Math.floor(obj.position.z)
-            if (X == x && Y == y && Z == z) return obj
+            // need to check that obj.game exists, cause ground planes
+            // don't have that and we don't want ground planes
+            if (X == x && Y == y && Z == z && obj.game) return obj
         }
         return null
     }
