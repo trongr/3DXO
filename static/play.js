@@ -445,14 +445,26 @@ var Map = (function(){
     Map.loadQuadrant = function(X, Y){
 		var geometry = new THREE.Geometry();
 		for ( var i = 0; i < K.QUADRANT_SIZE; i++){
-			geometry.vertices.push( new THREE.Vector3(X + i,               Y + 0,               1));
-			geometry.vertices.push( new THREE.Vector3(X + i,               Y + K.QUADRANT_SIZE, 1));
-			geometry.vertices.push( new THREE.Vector3(X + 0,               Y + i,               1));
-			geometry.vertices.push( new THREE.Vector3(X + K.QUADRANT_SIZE, Y + i,               1));
+			geometry.vertices.push(new THREE.Vector3(X + i,               Y + 0,               1));
+			geometry.vertices.push(new THREE.Vector3(X + i,               Y + K.QUADRANT_SIZE, 1));
+			geometry.vertices.push(new THREE.Vector3(X + 0,               Y + i,               1));
+			geometry.vertices.push(new THREE.Vector3(X + K.QUADRANT_SIZE, Y + i,               1));
 		}
 		var material = new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.2, transparent: true } );
 		var line = new THREE.Line( geometry, material, THREE.LinePieces );
-		Scene.addObj(line);
+
+        Scene.addObj(line);
+
+        // add thicker lines around the edges
+        geometry = new THREE.Geometry()
+        geometry.vertices.push(new THREE.Vector3(X + 0,               Y + 0,               1));
+        geometry.vertices.push(new THREE.Vector3(X + 0,               Y + K.QUADRANT_SIZE, 1));
+        geometry.vertices.push(new THREE.Vector3(X + K.QUADRANT_SIZE, Y + K.QUADRANT_SIZE, 1));
+        geometry.vertices.push(new THREE.Vector3(X + K.QUADRANT_SIZE, Y + 0,               1));
+        material = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.2, transparent:true});
+        line = new THREE.Line( geometry, material, THREE.LineStrip );
+
+        Scene.addObj(line);
 
         geometry = new THREE.PlaneBufferGeometry(K.QUADRANT_SIZE, K.QUADRANT_SIZE);
         material = new THREE.MeshBasicMaterial({color:0x7B84A8});

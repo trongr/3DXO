@@ -335,8 +335,9 @@ var Game = module.exports = (function(){
         })
     }
 
+    // mach todo
     Game.findEmptyQuadrant = function(done){
-
+        done(null)
     }
 
     Game.makePiece = function(data, done){
