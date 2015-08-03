@@ -9,29 +9,45 @@ var Players = module.exports = (function(){
         router: express.Router()
     }
 
+    var ERROR_GET_PLAYER = "ERROR. Can't get player info"
+
     Players.router.route("/")
         .get(function(req, res){
-            // client can provide name to query other players, otw defaults to themself
-            var name = H.param(req, "name") || req.session.player.name
+            try {
+                // client can provide name to query other players, otw defaults to themself
+                var name = H.param(req, "name") || req.session.player.name
+            } catch (e){
+                return res.send({info:ERROR_GET_PLAYER})
+            }
             Player.findOne({name:name}, function(er, player){
-                H.send(res, er, {player:player})
+                if (player){
+                    res.send({ok:true, player:player})
+                } else {
+                    res.send({info:ERROR_GET_PLAYER})
+                }
             })
         })
 
-    Players.router.route("/:id/createArmy")
+    var ERROR_BUILD_ARMY = "ERROR. Can't build army"
+
+    Players.router.route("/:id/buildArmy")
         .post(function(req, res){
             try {
                 var playerID = H.param(req, "id")
             } catch (e){
-                return res.send({info:"ERROR. Players.createArmy: invalid input"})
+                return res.send({info:ERROR_BUILD_ARMY})
             }
-            Players.createArmy(playerID, function(er){
-                H.send(res, er, {ok:true})
+            Players.buildArmy(playerID, function(er){
+                if (er){
+                    res.send({info:ERROR_BUILD_ARMY})
+                } else {
+                    res.send({ok:true})
+                }
             })
         })
 
     // mach
-    Players.createArmy = function(playerID, done){
+    Players.buildArmy = function(playerID, done){
         var player = null
         async.waterfall([
             function(done){
@@ -49,7 +65,6 @@ var Players = module.exports = (function(){
                     y: parseInt(Math.random() * (20 - -20) + -20),
                     player: player
                 }, function(er, piece){
-                    console.log("creating new army " + JSON.stringify(piece, 0, 2))
                     done(er)
                 })
             }

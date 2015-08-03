@@ -12,10 +12,13 @@ var API = (function(){
             xhrFields: {
                 withCredentials: true
             },
+            cache: false, // otw 304 routes to error callback...
             success: function(re, status, xhr){
-                done(null, re)
+                if (re.ok) done(null, re)
+                else if (re.info) done(re.info)
+                else done("ERROR. Unexpected API")
             },
-            error: function (xhr, status, er){
+            error: function (xhr, status, er){ // ...here
                 done(er)
             },
             // complete: function (xhr, status){}
@@ -31,7 +34,7 @@ var API = (function(){
             var url = API_PREFIX + "auth"
             API.req("get", url, data, function(er, re){
                 if (re && re.player) done(null, re.player)
-                else done({info:"Can't login", re:re, er:er})
+                else done(er)
             })
         }
 
@@ -39,7 +42,7 @@ var API = (function(){
             var url = API_PREFIX + "auth"
             API.req("post", url, data, function(er, re){
                 if (re && re.player) done(null, re.player)
-                else done({info:"Can't register", re:re, er:er})
+                else done(er)
             })
         }
 
@@ -53,15 +56,15 @@ var API = (function(){
             var url = API_PREFIX + "player"
             API.req("get", url, data, function(er, re){
                 if (re && re.player) done(null, re.player)
-                else done({info:"Can't get player", re:re, er:er})
+                else done(er)
             })
         }
 
-        Player.createArmy = function(playerID, done){
-            var url = API_PREFIX + "player/" + playerID + "/createArmy"
+        Player.buildArmy = function(playerID, done){
+            var url = API_PREFIX + "player/" + playerID + "/buildArmy"
             API.req("post", url, {}, function(er, re){
-                if (re && re.ok) done(null, re)
-                else done({info:"Can't create army", re:re, er:er})
+                if (re && re.ok) done(null)
+                else done(er)
             })
         }
 
@@ -76,7 +79,7 @@ var API = (function(){
             var url = API_PREFIX + "cell/" + data.x + "/" + data.y + "/" + data.r
             API.req("get", url, {}, function(er, re){
                 if (re && re.cells) done(null, re.cells)
-                else done({info:"no cells found", re:re, er:er})
+                else done(er)
             })
         }
 

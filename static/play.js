@@ -6,8 +6,6 @@ var K = (function(){
         BOARD_SIZE: 10,
         CUBE_SIZE: 1,
         QUADRANT_SIZE: 10,
-
-        INVALID_MOVE: "INVALID MOVE",
     }
     K.CUBE_GEO = new THREE.BoxGeometry(K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE)
 
@@ -224,10 +222,7 @@ var Player = (function(){
         // var name = "trong" // mach remove name query to get player's obj
         // API.Player.get({name:name}, function(er, player){
         API.Player.get({}, function(er, player){
-            if (er){
-                msg.error(er.info)
-                return done(er.info)
-            }
+            if (er) return done(er)
             _player = player
             done(null)
         })
@@ -439,7 +434,9 @@ var Map = (function(){
                 else Map.knownQuadrants[[X, Y]] = true
 
                 Map.loadQuadrant(X, Y)
-                Obj.loadQuadrant(X, Y)
+                Obj.loadQuadrant(X, Y, function(er){
+                    if (er) msg.error(er)
+                })
             }
         }
     }
@@ -810,7 +807,7 @@ var Game = (function(){
                 Map.init()
             },
         ], function(er){
-            if (er) H.log("ERROR. Game.init", er)
+            if (er) msg.error(er)
         })
     }
 
@@ -821,7 +818,7 @@ var Game = (function(){
         async.waterfall([
             function(done){
                 if (Move.isValidated(x, y, z)) done(null)
-                else done({code:K.INVALID_MOVE})
+                else done({code:"INVALID MOVE"})
             },
             function(done){
                 done(null)

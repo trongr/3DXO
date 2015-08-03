@@ -9,6 +9,8 @@ var Cells = module.exports = (function(){
         router: express.Router()
     }
 
+    var ERROR_GET_CELLS = "ERROR. Can't populate cells"
+
     Cells.router.route("/:x/:y/:r")
         .get(function(req, res){
             try {
@@ -17,24 +19,20 @@ var Cells = module.exports = (function(){
                 // var r = Sanitize.integer(H.param(req, "r"))
                 var r = K.QUADRANT_SIZE // use default quadrant size
             } catch (e){
-                return H.send(res, {info:"ERROR. Cells.get.x.y.r: " + e}, null)
+                return res.send({info:ERROR_GET_CELLS})
             }
             Cell.find({
                 x: {$gte: x, $lt: x + r},
                 y: {$gte: y, $lt: y + r},
                 piece: {$ne:null}
             }).populate("piece").exec(function(er, cells){
-                H.send(res, er, {cells:cells})
+                if (cells){
+                    res.send({ok:true, cells:cells})
+                } else {
+                    res.send({info:ERROR_GET_CELLS})
+                }
             });
         })
-
-    Cells.router.route("/:x/:y")
-        .get(function(req, res){
-
-        })
-	    .post(function(req, res) {
-
-	    })
 
     Cells.upsert = function(data, done){
         Cell.findOneAndUpdate({

@@ -49,10 +49,9 @@ app.get('/play', function(req, res){
 app.use('/api/v1/auth', Auth.router); // login and register
 
 // app.use('/api/v1/piece', Auth.authenticate, Pieces.router);
-app.use('/api/v1/piece', Pieces.router);
 app.use('/api/v1/cell', Cells.router);
 app.use('/api/v1/player', Players.router); // mach use auth
-app.use('/api/v1/team', Teams.router);
+// app.use('/api/v1/team', Teams.router);
 
 var port = process.env.PORT || 8080;
 server = http.createServer(app);

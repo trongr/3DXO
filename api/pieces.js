@@ -10,11 +10,6 @@ var Pieces = module.exports = (function(){
         router: express.Router()
     }
 
-    Pieces.router.route("/:x/:y")
-        .get(function(req, res){
-
-        })
-
     Pieces.make = function(data, done){
         var piece = null
         async.waterfall([

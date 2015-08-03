@@ -8,10 +8,7 @@ var Bind = (function(){
             name: username,
             pass: password,
         }, function(er, player){
-            if (er){
-                msg.error(er.info)
-                return H.log("ERROR. Bind.login", er)
-            }
+            if (er) return msg.error(er)
             msg.info("Login successful")
             location.href = "/play";
         })
@@ -33,15 +30,12 @@ var Bind = (function(){
             },
             function(done){
                 msg.info("Register successful")
-                API.Player.createArmy(player._id, function(er, re){
+                API.Player.buildArmy(player._id, function(er){
                     done(er)
                 })
             }
         ], function(er){
-            if (er){
-                msg.error(er.info)
-                return H.log("ERROR. Bind.register", er)
-            }
+            if (er) return msg.error(er)
             location.href = "/play";
         })
     }

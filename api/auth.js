@@ -15,24 +15,32 @@ var Auth = module.exports = (function(){
         else return res.send({info:"ERROR. Player not logged in"})
     }
 
+    var ERROR_LOGIN = "ERROR. Can't login"
+    var ERROR_INVALID_LOGIN = "ERROR. Invalid login"
+    var ERROR_REGISTER = "ERROR. Can't register"
+
     Auth.router.route("/")
-        .get(function(req, res, next){ // login
+        .get(function(req, res){ // login
             var name = H.param(req, "name")
             var pass = H.param(req, "pass")
+            // mach check password not empty on client
             Player.findOne({
                 name: name,
             }, "+pass", function(er, player){
-                if (er) return res.status(505).send({info:"ERROR. Auth.get"})
-                else if (player){
+                if (er){
+                    res.send({info:ERROR_LOGIN})
+                } else if (player){
                     player.comparePassword(pass, function(er, isMatch){
-                        if (er) return res.status(505).send({info:"ERROR. Auth.get"})
-                        else if (isMatch){
+                        if (er){ // usually cause empty password
+                            res.send({info:ERROR_LOGIN})
+                        } else if (isMatch){
                             req.session.player = player
-                            return res.send({player:player})
-                        } else return res.send({info:"ERROR. Invalid login"})
+                            res.send({ok:true, player:player})
+                        } else {
+                            res.send({info:ERROR_INVALID_LOGIN})
+                        }
                     })
-                }
-                else res.send({info:"ERROR. Invalid login"})
+                } else res.send({info:ERROR_INVALID_LOGIN})
             })
         })
         .post(function(req, res){ // register
@@ -42,8 +50,15 @@ var Auth = module.exports = (function(){
                 name: name,
                 pass: pass,
             }, function(er, player){
-                req.session.player = player
-                H.send(res, er, {player:player})
+                if (er){
+                    res.send({info:ERROR_REGISTER})
+                } else if (player){
+                    req.session.player = player
+                    res.send({ok:true, player:player})
+                } else {
+                    H.log("ERROR. Auth.post: mongoose null response")
+                    res.send({info:ERROR_REGISTER})
+                }
             })
         })
 
