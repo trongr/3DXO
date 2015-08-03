@@ -2,9 +2,12 @@ var _ = require("lodash")
 var async = require("async")
 var express = require('express');
 var H = require("../lib/h.js")
-var Piece = require("../models/piece.js")
 var Cell = require("../models/cell.js")
+var Piece = require("../models/piece.js")
+var Player = require("../models/player.js")
 var Cells = require("../api/cells.js")
+var Players = require("../api/players.js")
+var Pieces = require("../api/pieces.js")
 
 var Move = (function(){
     var Move = {}
@@ -277,7 +280,88 @@ var Move = (function(){
 }())
 
 var Game = module.exports = (function(){
-    Game = {}
+    Game = {
+        router: express.Router()
+    }
+
+    var ERROR_BUILD_ARMY = "ERROR. Can't build army"
+
+    Game.router.route("/:playerID/buildArmy")
+        .post(function(req, res){
+            try {
+                var playerID = H.param(req, "playerID")
+            } catch (e){
+                return res.send({info:ERROR_BUILD_ARMY})
+            }
+            Game.buildArmy(playerID, function(er){
+                if (er){
+                    res.send({info:ERROR_BUILD_ARMY})
+                } else {
+                    res.send({ok:true})
+                }
+            })
+        })
+
+    // mach
+    Game.buildArmy = function(playerID, done){
+        var player = null
+        async.waterfall([
+            function(done){
+                Player.findOne({
+                    _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
+                }, function(er, _player){
+                    player = _player
+                    done(er)
+                })
+            },
+            function(done){
+                // mach
+                Game.findEmptyQuadrant(function(er, re){
+                    done(er)
+                })
+            },
+            function(done){
+                Game.makePiece({
+                    kind: "pawn", // mach
+                    x: parseInt(Math.random() * (20 - -20) + -20), // mach
+                    y: parseInt(Math.random() * (20 - -20) + -20),
+                    player: player
+                }, function(er, piece){
+                    done(er)
+                })
+            }
+        ], function(er){
+            done(er)
+        })
+    }
+
+    Game.findEmptyQuadrant = function(done){
+
+    }
+
+    Game.makePiece = function(data, done){
+        var piece = null
+        async.waterfall([
+            function(done){
+                piece = new Piece(data)
+                piece.save(function(er){
+                    done(er)
+                })
+            },
+            function(done){
+                // mach game logic should check if upserting is allowed
+                Cells.upsert({
+                    piece: piece._id,
+                    x: piece.x,
+                    y: piece.y,
+                }, function(er, cell){
+                    done(er)
+                })
+            }
+        ], function(er){
+            done(er, piece)
+        })
+    }
 
     Game.move = function(data, done){
         var nPiece = null
@@ -324,6 +408,25 @@ var Test = (function(){
         var method = process.argv[2]
         var args = process.argv.slice(3)
         Test[method](args)
+    }
+
+    Test.make = function(args){
+        H.log("USAGE. node pieces.js make rook 0 1 playerID")
+        var kind = args[0]
+        var x = args[1]
+        var y = args[2]
+        var player = args[3]
+        setTimeout(function(){
+            Game.makePiece({
+                kind: kind,
+                x: x,
+                y: y,
+                player: player
+            }, function(er, piece){
+                console.log(JSON.stringify({piece:piece, er:er}, 0, 2))
+                process.exit(0)
+            })
+        }, 2000)
     }
 
     return Test

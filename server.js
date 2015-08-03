@@ -15,6 +15,7 @@ var Pieces = require("./api/pieces.js")
 var Cells = require("./api/cells.js")
 var Players = require("./api/players.js")
 var Teams = require("./api/teams.js")
+var Game = require("./api/game.js")
 
 // mach use some other session store
 app.use(session({
@@ -52,6 +53,7 @@ app.use('/api/v1/auth', Auth.router); // login and register
 app.use('/api/v1/cell', Cells.router);
 app.use('/api/v1/player', Players.router); // mach use auth
 // app.use('/api/v1/team', Teams.router);
+app.use('/api/v1/game', Game.router);
 
 var port = process.env.PORT || 8080;
 server = http.createServer(app);

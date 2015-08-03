@@ -2,7 +2,6 @@ var async = require("async")
 var express = require('express');
 var H = require("../lib/h.js")
 var Player = require("../models/player.js")
-var Pieces = require("./pieces.js")
 
 var Players = module.exports = (function(){
     Players = {
@@ -27,51 +26,6 @@ var Players = module.exports = (function(){
                 }
             })
         })
-
-    var ERROR_BUILD_ARMY = "ERROR. Can't build army"
-
-    Players.router.route("/:id/buildArmy")
-        .post(function(req, res){
-            try {
-                var playerID = H.param(req, "id")
-            } catch (e){
-                return res.send({info:ERROR_BUILD_ARMY})
-            }
-            Players.buildArmy(playerID, function(er){
-                if (er){
-                    res.send({info:ERROR_BUILD_ARMY})
-                } else {
-                    res.send({ok:true})
-                }
-            })
-        })
-
-    // mach
-    Players.buildArmy = function(playerID, done){
-        var player = null
-        async.waterfall([
-            function(done){
-                Player.findOne({
-                    _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
-                }, function(er, _player){
-                    player = _player
-                    done(er)
-                })
-            },
-            function(done){
-                Pieces.make({
-                    kind: "pawn", // mach
-                    x: parseInt(Math.random() * (20 - -20) + -20), // mach
-                    y: parseInt(Math.random() * (20 - -20) + -20),
-                    player: player
-                }, function(er, piece){
-                    done(er)
-                })
-            }
-        ], function(er){
-            done(er)
-        })
-    }
 
     return Players
 }())

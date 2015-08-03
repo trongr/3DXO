@@ -60,14 +60,6 @@ var API = (function(){
             })
         }
 
-        Player.buildArmy = function(playerID, done){
-            var url = API_PREFIX + "player/" + playerID + "/buildArmy"
-            API.req("post", url, {}, function(er, re){
-                if (re && re.ok) done(null)
-                else done(er)
-            })
-        }
-
         return Player
     }())
 
@@ -84,6 +76,20 @@ var API = (function(){
         }
 
         return Cells
+    }())
+
+    API.Game = (function(){
+        var Game = {}
+
+        Game.buildArmy = function(playerID, done){
+            var url = API_PREFIX + "game/" + playerID + "/buildArmy"
+            API.req("post", url, {}, function(er, re){
+                if (re && re.ok) done(null)
+                else done(er)
+            })
+        }
+
+        return Game
     }())
 
     return API

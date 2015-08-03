@@ -30,7 +30,7 @@ var Bind = (function(){
             },
             function(done){
                 msg.info("Register successful")
-                API.Player.buildArmy(player._id, function(er){
+                API.Game.buildArmy(player._id, function(er){
                     done(er)
                 })
             }
