@@ -3,7 +3,6 @@ var K = (function(){
 
     var K = {
         INIT_CAM_POS: 15,
-        INIT_LIGHT_POS: 10,
         BOARD_SIZE: 10,
         CUBE_SIZE: 1,
         QUADRANT_SIZE: 10,
@@ -461,6 +460,7 @@ var Map = (function(){
         material = new THREE.MeshBasicMaterial({color:0x7B84A8});
 		plane = new THREE.Mesh(geometry, material);
 		plane.visible = true;
+        plane.receiveShadow = true;
         plane.position.set(X + K.QUADRANT_SIZE / 2, Y + K.QUADRANT_SIZE / 2, 1)
 		Scene.addObj(plane);
 		Obj.addObj(plane);
@@ -694,8 +694,7 @@ var Scene = (function(){
     function initLights(){
         var ambientLight = new THREE.AmbientLight(0xB080D1);
         Scene.addObj(ambientLight);
-        Scene.addObj(createDirectionalLight(K.INIT_LIGHT_POS, 2 * K.INIT_LIGHT_POS, 3 * K.INIT_LIGHT_POS));
-        Scene.addObj(createDirectionalLight(-K.INIT_LIGHT_POS, -2 * K.INIT_LIGHT_POS, -3 * K.INIT_LIGHT_POS));
+        Scene.addObj(createDirectionalLight(0, 0, 20));
     }
 
     function initRenderer(){
@@ -703,19 +702,6 @@ var Scene = (function(){
         _renderer.setClearColor(0x02002B, 1);
         _renderer.setPixelRatio( window.devicePixelRatio );
         _renderer.setSize( window.innerWidth, window.innerHeight );
-
-        _renderer.shadowMapEnabled = true;
-        _renderer.shadowMapSoft = true;
-
-        _renderer.shadowCameraNear = 3;
-        _renderer.shadowCameraFar = Scene.camera.far;
-        _renderer.shadowCameraFov = 45;
-
-        _renderer.shadowMapType = THREE.PCFSoftShadowMap;
-        _renderer.shadowMapBias = 0.0039;
-        _renderer.shadowMapDarkness = 0.5;
-        _renderer.shadowMapWidth = 1024;
-        _renderer.shadowMapHeight = 1024;
 
         _container.appendChild( _renderer.domElement );
     }
@@ -796,13 +782,12 @@ var Scene = (function(){
         }
     }
 
+    // mach
     function createDirectionalLight(x, y, z){
-        var directionalLight = new THREE.DirectionalLight(0xFFFB87);
-        directionalLight.position.set(x, y, z);
-        directionalLight.intensity = 0.75;
-        directionalLight.castShadow = true;
-        directionalLight.shadowDarkness = 0.2
-        return directionalLight
+        var light = new THREE.DirectionalLight(0xFFFB87);
+        light.position.set(x, y, z);
+        light.intensity = 0.75;
+        return light
     }
 
     return Scene
