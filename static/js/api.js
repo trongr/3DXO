@@ -31,7 +31,7 @@ var API = (function(){
             var url = API_PREFIX + "auth"
             API.req("get", url, data, function(er, re){
                 if (re && re.player) done(null, re.player)
-                else done({info:"API.Auth.get", re:re, er:er})
+                else done({info:"Can't login", re:re, er:er})
             })
         }
 
@@ -39,7 +39,7 @@ var API = (function(){
             var url = API_PREFIX + "auth"
             API.req("post", url, data, function(er, re){
                 if (re && re.player) done(null, re.player)
-                else done({info:"API.Auth.post", re:re, er:er})
+                else done({info:"Can't register", re:re, er:er})
             })
         }
 
@@ -53,7 +53,15 @@ var API = (function(){
             var url = API_PREFIX + "player"
             API.req("get", url, data, function(er, re){
                 if (re && re.player) done(null, re.player)
-                else done({info:"API.Player.get", re:re, er:er})
+                else done({info:"Can't get player", re:re, er:er})
+            })
+        }
+
+        Player.createArmy = function(playerID, done){
+            var url = API_PREFIX + "player/" + playerID + "/createArmy"
+            API.req("post", url, {}, function(er, re){
+                if (re && re.ok) done(null, re)
+                else done({info:"Can't create army", re:re, er:er})
             })
         }
 

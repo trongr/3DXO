@@ -42,6 +42,7 @@ var Auth = module.exports = (function(){
                 name: name,
                 pass: pass,
             }, function(er, player){
+                req.session.player = player
                 H.send(res, er, {player:player})
             })
         })

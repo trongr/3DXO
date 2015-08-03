@@ -9,7 +9,7 @@ var Bind = (function(){
             pass: password,
         }, function(er, player){
             if (er){
-                msg.error("Can't load player: " + username)
+                msg.error(er.info)
                 return H.log("ERROR. Bind.login", er)
             }
             msg.info("Login successful")
@@ -20,15 +20,29 @@ var Bind = (function(){
     Bind.register = function(e){
         var username = $("#username").val()
         var password = $("#password").val()
-        API.Auth.post({
-            name: username,
-            pass: password,
-        }, function(er, player){
+        var player = null
+        async.waterfall([
+            function(done){
+                API.Auth.post({
+                    name: username,
+                    pass: password,
+                }, function(er, _player){
+                    player = _player
+                    done(er)
+                })
+            },
+            function(done){
+                msg.info("Register successful")
+                API.Player.createArmy(player._id, function(er, re){
+                    done(er)
+                })
+            }
+        ], function(er){
             if (er){
-                msg.error("Can't register player: " + username)
+                msg.error(er.info)
                 return H.log("ERROR. Bind.register", er)
             }
-            msg.info("Register successful")
+            location.href = "/play";
         })
     }
 

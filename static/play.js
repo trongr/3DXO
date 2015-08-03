@@ -221,10 +221,11 @@ var Player = (function(){
 
     Player.init = function(done){
         // for testing to bypass auth
-        var name = "trong" // mach remove name query to get player's obj
-        API.Player.get({name:name}, function(er, player){
+        // var name = "trong" // mach remove name query to get player's obj
+        // API.Player.get({name:name}, function(er, player){
+        API.Player.get({}, function(er, player){
             if (er){
-                msg.error("Can't load player: " + name)
+                msg.error(er.info)
                 return done(er.info)
             }
             _player = player
@@ -297,7 +298,7 @@ var Obj = (function(){
 
     Obj.loadQuadrant = function(x, y, done){
         API.Cells.get({x:x, y:y, r:10}, function(er, _cells){
-            if (er) return done(er.info)
+            if (er && done) return done(er)
             var cells = []
             for (var i = 0; i < _cells.length; i++){
                 var cell = _cells[i]
@@ -782,7 +783,6 @@ var Scene = (function(){
         }
     }
 
-    // mach
     function createDirectionalLight(x, y, z){
         var light = new THREE.DirectionalLight(0xFFFB87);
         light.position.set(x, y, z);

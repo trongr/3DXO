@@ -15,6 +15,14 @@ var schema = mongoose.Schema({
     //     ref: 'Team',
     //     required: true,
     // },
+    created: {
+        type: Date,
+        default: Date.now
+    },
+    modified: {
+        type: Date,
+        default: Date.now
+    },
 });
 
 module.exports = mongoose.model('Piece', schema);

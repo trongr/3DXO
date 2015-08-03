@@ -54,12 +54,6 @@ app.use('/api/v1/cell', Cells.router);
 app.use('/api/v1/player', Players.router); // mach use auth
 app.use('/api/v1/team', Teams.router);
 
-// production error handler. no stacktraces leaked to user
-app.use(function(err, req, res, next) {
-    res.status(err.status || 500);
-    res.send('error');
-});
-
 var port = process.env.PORT || 8080;
 server = http.createServer(app);
 server.listen(port);
