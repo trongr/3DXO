@@ -2,6 +2,7 @@ var _ = require("lodash")
 var async = require("async")
 var express = require('express');
 var H = require("../lib/h.js")
+var K = require("../conf/k.js")
 var Cell = require("../models/cell.js")
 var Piece = require("../models/piece.js")
 var Player = require("../models/player.js")
@@ -304,7 +305,7 @@ var Game = module.exports = (function(){
 
     // mach
     Game.buildArmy = function(playerID, done){
-        var player = null
+        var player, quadrant = null
         async.waterfall([
             function(done){
                 Player.findOne({
@@ -315,16 +316,16 @@ var Game = module.exports = (function(){
                 })
             },
             function(done){
-                // mach
-                Game.findEmptyQuadrant(function(er, re){
+                Game.findEmptyQuadrant(function(er, _quadrant){
+                    quadrant = _quadrant
                     done(er)
                 })
             },
             function(done){
                 Game.makePiece({
                     kind: "pawn", // mach
-                    x: parseInt(Math.random() * (20 - -20) + -20), // mach
-                    y: parseInt(Math.random() * (20 - -20) + -20),
+                    x: quadrant.x,
+                    y: quadrant.y,
                     player: player
                 }, function(er, piece){
                     done(er)
@@ -335,9 +336,79 @@ var Game = module.exports = (function(){
         })
     }
 
-    // mach todo
+    function randomDirection(){
+        var direction = {dx:0, dy:0}
+        while (direction.dx == 0 && direction.dy == 0){
+            direction = {
+                dx: Math.floor((Math.random() * 3) + 1) - 2,
+                dy: Math.floor((Math.random() * 3) + 1) - 2
+            }
+        }
+        return direction
+    }
+
+    // mach todo. binary search
     Game.findEmptyQuadrant = function(done){
-        done(null)
+        var pos, piece, quadrant = null
+        var direction = randomDirection()
+        async.waterfall([
+            function(done){
+                Piece.random(function(er, _piece){
+                    piece = _piece
+                    done(er)
+                })
+            },
+            function(done){
+                if (!piece){
+                    quadrant = {x:0, y:0}
+                    return done(null)
+                }
+                Game.doWhilstCheckNeighbourQuadrantEmpty(piece, direction, function(er, _quadrant){
+                    quadrant = _quadrant
+                    done(er)
+                })
+            },
+        ], function(er){
+            done(er, quadrant)
+        })
+    }
+
+    // mach limit so we don't get infinite loop?
+    // direction = {dx:+-1, dy:+-1}
+    // returns quadrant = {x:x, y:y}
+    Game.doWhilstCheckNeighbourQuadrantEmpty = function(piece, direction, done){
+        var count = 0 // mach
+        var cells = null
+        var nPiece = piece
+        var x, y
+        async.doWhilst(
+            function(done){
+                console.log(JSON.stringify(nPiece._id, 0, 2))
+                x = Math.floor(nPiece.x / K.QUADRANT_SIZE) * K.QUADRANT_SIZE + direction.dx * K.QUADRANT_SIZE // quadrant coordinates
+                y = Math.floor(nPiece.y / K.QUADRANT_SIZE) * K.QUADRANT_SIZE + direction.dy * K.QUADRANT_SIZE
+                Cell.find({
+                    x: {$gte: x, $lt: x + K.QUADRANT_SIZE},
+                    y: {$gte: y, $lt: y + K.QUADRANT_SIZE},
+                    piece: {$ne:null}
+                }).populate("piece").exec(function(er, _cells){
+                    cells = _cells
+                    done(er)
+                });
+            },
+            function(){
+                count++
+                if (cells && cells.length == 0){
+                    return false // found empty quadrant
+                } else {
+                    nPiece = cells[0].piece
+                    return true // quadrant not empty, continue
+                }
+            },
+            function(er){
+                console.log("count " + count)
+                done(er, {x:x, y:y})
+            }
+        )
     }
 
     Game.makePiece = function(data, done){
@@ -351,6 +422,7 @@ var Game = module.exports = (function(){
             },
             function(done){
                 // mach game logic should check if upserting is allowed
+                // check if cell empty
                 Cells.upsert({
                     piece: piece._id,
                     x: piece.x,
