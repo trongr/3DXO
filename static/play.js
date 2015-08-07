@@ -260,7 +260,6 @@ var Obj = (function(){
         FRIENDLY: 1,
     }
     Obj.KIND = {
-        pawn: null, // load in Obj.init
         ground0: {
             material: new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
         },
@@ -283,11 +282,15 @@ var Obj = (function(){
     }
 
     Obj.init = function(){
-        Obj.KIND.pawn = {
-            material: [
-                new THREE.MeshFaceMaterial(loadFaceTextures("p0pawn", 0xff4545)),
-                new THREE.MeshFaceMaterial(loadFaceTextures("p1pawn", 0x0060ff)),
-            ],
+        var pieces = ["pawn", "rook", "knight", "bishop", "queen", "king"]
+        for (var i = 0; i < pieces.length; i++){
+            var piece = pieces[i]
+            Obj.KIND[piece] = {
+                material: [
+                    new THREE.MeshFaceMaterial(loadFaceTextures("p0" + piece, 0xff4545)),
+                    new THREE.MeshFaceMaterial(loadFaceTextures("p1" + piece, 0x0060ff)),
+                ],
+            }
         }
     }
 
