@@ -16,6 +16,9 @@ var Move = (function(){
     Move.range = {
         pawn: 1,
         rook: 8,
+        bishop: 8,
+        queen: 8,
+        king: 1,
         knight: 1,
     }
 
@@ -44,6 +47,15 @@ var Move = (function(){
             pawn: ["ioo", "oio", "noo", "ono"],
             rook: ["ioo", "oio", "noo", "ono"],
             knight: ["i2i", "ii2", "ni2", "n2i", "n2n", "nn2", "in2", "i2n"],
+            bishop: ["iio", "ino", "nno", "nio"],
+            king: [
+                "ioo", "oio", "noo", "ono", // horizontally and vertically
+                "iio", "ino", "nno", "nio", // diagonally
+            ],
+            queen: [
+                "ioo", "oio", "noo", "ono", // horizontally and vertically
+                "iio", "ino", "nno", "nio", // diagonally
+            ],
         },
         kills: { // pawns are the only ones with different kill moves than regular moves
             pawn: ["iio", "nio", "ino", "nno"],

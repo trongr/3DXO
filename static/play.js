@@ -490,6 +490,9 @@ var Move = (function(){
     Move.range = {
         pawn: 1,
         rook: 8,
+        bishop: 8,
+        queen: 8,
+        king: 1,
         knight: 1,
     }
 
@@ -502,6 +505,15 @@ var Move = (function(){
         nio: [-1,  1,  0],
         ino: [ 1, -1,  0],
         nno: [-1, -1,  0],
+        // knight moves
+        ii2: [ 1,  2,  0],
+        i2i: [ 2,  1,  0],
+        i2n: [ 2, -1,  0],
+        in2: [ 1, -2,  0],
+        nn2: [-1, -2,  0],
+        n2n: [-2, -1,  0],
+        n2i: [-2,  1,  0],
+        ni2: [-1,  2,  0],
     }
 
     // don't allow moving in z axis
@@ -509,11 +521,31 @@ var Move = (function(){
         moves: {
             pawn: ["ioo", "oio", "noo", "ono"], // moving along axes
             rook: ["ioo", "oio", "noo", "ono"],
+            knight: ["ii2", "i2i", "i2n", "in2", "nn2", "n2n", "n2i", "ni2"],
+            bishop: ["iio", "ino", "nno", "nio"],
+            king: [
+                "ioo", "oio", "noo", "ono", // horizontally and vertically
+                "iio", "ino", "nno", "nio", // diagonally
+            ],
+            queen: [
+                "ioo", "oio", "noo", "ono", // horizontally and vertically
+                "iio", "ino", "nno", "nio", // diagonally
+            ],
         },
         kills: {
             pawn: ["iio", "nio", "ino", "nno"], // diagonal kills
             rook: ["ioo", "oio", "noo", "ono"],
-        }
+            knight: ["ii2", "i2i", "i2n", "in2", "nn2", "n2n", "n2i", "ni2"],
+            bishop: ["iio", "ino", "nno", "nio"],
+            king: [
+                "ioo", "oio", "noo", "ono", // horizontally and vertically
+                "iio", "ino", "nno", "nio", // diagonally
+            ],
+            queen: [
+                "ioo", "oio", "noo", "ono", // horizontally and vertically
+                "iio", "ino", "nno", "nio", // diagonally
+            ],
+        },
     }
 
     // Store currently available moves once player clicks a piece to
