@@ -334,12 +334,44 @@ var Game = module.exports = (function(){
                 })
             },
             function(done){
-                Game.makePiece({
-                    kind: "pawn", // mach
-                    x: quadrant.x,
-                    y: quadrant.y,
-                    player: player
-                }, function(er, piece){
+                var army = [{
+                    kind: "pawn", x: quadrant.x + 4, y: quadrant.y + 2, player: player
+                },{
+                    kind: "pawn", x: quadrant.x + 5, y: quadrant.y + 2, player: player
+                },{
+                    kind: "pawn", x: quadrant.x + 4, y: quadrant.y + 7, player: player
+                },{
+                    kind: "pawn", x: quadrant.x + 5, y: quadrant.y + 7, player: player
+                },{
+                    kind: "pawn", x: quadrant.x + 2, y: quadrant.y + 4, player: player
+                },{
+                    kind: "pawn", x: quadrant.x + 2, y: quadrant.y + 6, player: player
+                },{
+                    kind: "pawn", x: quadrant.x + 7, y: quadrant.y + 4, player: player
+                },{
+                    kind: "pawn", x: quadrant.x + 7, y: quadrant.y + 6, player: player
+                },{
+                    kind: "rook", x: quadrant.x + 3, y: quadrant.y + 5, player: player
+                },{
+                    kind: "rook", x: quadrant.x + 6, y: quadrant.y + 4, player: player
+                },{
+                    kind: "knight", x: quadrant.x + 3, y: quadrant.y + 7, player: player
+                },{
+                    kind: "knight", x: quadrant.x + 6, y: quadrant.y + 2, player: player
+                },{
+                    kind: "bishop", x: quadrant.x + 3, y: quadrant.y + 3, player: player
+                },{
+                    kind: "bishop", x: quadrant.x + 6, y: quadrant.y + 6, player: player
+                },{
+                    kind: "king", x: quadrant.x + 4, y: quadrant.y + 5, player: player
+                },{
+                    kind: "queen", x: quadrant.x + 5, y: quadrant.y + 4, player: player
+                }]
+                async.each(army, function(item, done){
+                    Game.makePiece(item, function(er, piece){
+                        done(er)
+                    })
+                }, function(er){
                     done(er)
                 })
             }
