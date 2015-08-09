@@ -490,9 +490,9 @@ var Move = (function(){
 
     Move.range = {
         pawn: 1,
-        rook: 8,
-        bishop: 8,
-        queen: 8,
+        rook: 6,
+        bishop: 6,
+        queen: 6,
         king: 1,
         knight: 1,
     }
