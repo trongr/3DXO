@@ -52,10 +52,11 @@ var API = (function(){
     API.Player = (function(){
         var Player = {}
 
+        // re = {ok:true, player:player, king:king}, king can be null
         Player.get = function(data, done){
             var url = API_PREFIX + "player"
             API.req("get", url, data, function(er, re){
-                if (re && re.player) done(null, re.player)
+                if (re && re.ok) done(null, re)
                 else done(er)
             })
         }

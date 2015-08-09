@@ -2,6 +2,7 @@ var async = require("async")
 var express = require('express');
 var H = require("../lib/h.js")
 var Player = require("../models/player.js")
+var Piece = require("../models/piece.js")
 
 var Players = module.exports = (function(){
     Players = {
@@ -15,12 +16,32 @@ var Players = module.exports = (function(){
             try {
                 // client can provide name to query other players, otw defaults to themself
                 var name = H.param(req, "name") || req.session.player.name
+                var player, king = null
             } catch (e){
                 return res.send({info:ERROR_GET_PLAYER})
             }
-            Player.findOne({name:name}, function(er, player){
+            async.waterfall([
+                function(done){
+                    Player.findOne({name:name}, function(er, _player){
+                        player = _player
+                        if (er) done(er)
+                        else if (player) done(null)
+                        else done({info:"ERROR. Players.get:player not found"})
+                    })
+                },
+                function(done){
+                    Piece.findOne({
+                        player: player._id,
+                        kind: "king"
+                    }, function(er, _king){
+                        king = _king
+                        if (er) done(er)
+                        else done(null)
+                    })
+                }
+            ], function(er){
                 if (player){
-                    res.send({ok:true, player:player})
+                    res.send({ok:true, player:player, king:king})
                 } else {
                     res.send({info:ERROR_GET_PLAYER})
                 }

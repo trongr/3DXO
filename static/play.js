@@ -217,14 +217,15 @@ var Player = (function(){
 
     var _player = null
 
+    // todo
     Player.init = function(done){
         // for testing to bypass auth
         // var name = "trong" // mach remove name query to get player's obj
         // API.Player.get({name:name}, function(er, player){
-        API.Player.get({}, function(er, player){
+        API.Player.get({}, function(er, re){
             if (er) return done(er)
-            _player = player
-            done(null)
+            _player = re.player
+            done(null, re.king)
         })
     }
 
@@ -388,13 +389,13 @@ var Map = (function(){
 
     var _map = []
 
-    Map.init = function(){
+    Map.init = function(x, y){
         Map.addMouseDragListener(function(){
-            var x = Scene.camera.position.x
-            var y = Scene.camera.position.y
-            Map.loadQuadrants(x, y)
+            var X = Scene.camera.position.x
+            var Y = Scene.camera.position.y
+            Map.loadQuadrants(X, Y)
         })
-        Map.loadQuadrants(0, 0) // mach load map wherever player spawns
+        Map.loadQuadrants(x, y) // mach load map wherever player spawns
     }
 
     // obj = {x:asdf, y:asdf, z:asdf}
@@ -679,13 +680,13 @@ var Scene = (function(){
     var _controls, _renderer;
     var _isShiftDown = false;
 
-    Scene.init = function(){
+    Scene.init = function(x, y){
         initContainer()
         initStats()
         initInfo()
         initLights()
-        initCamera()
-        initControls()
+        initCamera(x, y)
+        initControls(x, y)
         initListeners()
         initRenderer()
 
@@ -715,13 +716,19 @@ var Scene = (function(){
         document.body.appendChild(_container);
     }
 
-    function initCamera(){
+    // NOTE. Need to set TrackballControls's target to x, y, z, otw
+    // you get a weird camera lookAt bug. See
+    // initControls._controls.target
+    function initCamera(x, y){
         Scene.camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 50 );
         Scene.camera.position.z = K.INIT_CAM_POS; // for some reason you need this or track ball controls won't work properly
+        Scene.camera.position.x = x
+        Scene.camera.position.y = y
     }
 
-    function initControls(){
+    function initControls(x, y){
         _controls = new THREE.TrackballControls(Scene.camera);
+        _controls.target = new THREE.Vector3(x, y, 0)
         _controls.rotateSpeed = 2.5;
         _controls.zoomSpeed = 1.5;
         _controls.panSpeed = 1.0;
@@ -841,17 +848,24 @@ var Game = (function(){
     var Game = {}
 
     Game.init = function(done){
+        var king = null
+        var x = y = 0
         async.waterfall([
             function(done){
-                Player.init(function(er){
+                Player.init(function(er, _king){
+                    king = _king
                     done(er)
                 })
             },
             function(done){
                 done(null)
-                Scene.init()
+                if (king){
+                    x = king.x
+                    y = king.y
+                }
+                Scene.init(x, y)
                 Obj.init()
-                Map.init()
+                Map.init(x, y)
             },
         ], function(er){
             if (er) msg.error(er)
