@@ -9,6 +9,7 @@ var Player = require("../models/player.js")
 var Cells = require("../api/cells.js")
 var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
+var Turn = require("./turn.js")
 
 var Move = (function(){
     var Move = {}
@@ -315,7 +316,6 @@ var Game = module.exports = (function(){
             })
         })
 
-    // mach
     Game.buildArmy = function(playerID, done){
         var player, quadrant = null
         async.waterfall([
@@ -484,6 +484,7 @@ var Game = module.exports = (function(){
         var nPiece = null
         try {
             var player = data.player
+            var playerID = player._id
             var piece = data.piece
             var from = { // Clean coordinates and remove z axis
                 x: Math.floor(data.from.x),
@@ -498,6 +499,16 @@ var Game = module.exports = (function(){
         }
         async.waterfall([
             function(done){
+                // Can move if no enemy in range of player. Once
+                // someone comes in range player can only move if he
+                // has a turn token (at the right index)
+                Turn.validate(playerID, function(er, canMove){
+                    if (er) done(er)
+                    else if (canMove) done(null)
+                    else done({info:"NO MORE TURN"})
+                })
+            },
+            function(done){
                 Move.validateMove(player, piece, from, to, function(er){
                     done(er)
                 })
@@ -507,8 +518,16 @@ var Game = module.exports = (function(){
                     nPiece = _piece
                     done(er)
                 })
+            },
+            // todo
+            function(done){
+                Turn.update(playerID, to, function(er, _player){
+                    player = _player
+                    done(er)
+                })
             }
         ], function(er){
+            data.player = player
             data.piece = nPiece
             done(er, data)
         })

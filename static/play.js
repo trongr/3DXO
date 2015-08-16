@@ -217,7 +217,6 @@ var Player = (function(){
 
     var _player = null
 
-    // todo
     Player.init = function(done){
         // for testing to bypass auth
         // var name = "trong" // mach remove name query to get player's obj
@@ -229,8 +228,16 @@ var Player = (function(){
         })
     }
 
-    Player.getPlayer = function(){
+    Player.getPlayer = function(done){
         return _player
+    }
+
+    Player.checkTurn = function(done){
+        API.Player.get({}, function(er, re){
+            if (er) return done(er)
+            _player = re.player
+            done(null, _player.turn)
+        })
     }
 
     Player.objBelongsToPlayer = function(obj){
@@ -739,7 +746,7 @@ var Scene = (function(){
         _controls.dynamicDampingFactor = 0.3;
         _controls.keys = [ 65, 83, 68 ];
         _controls.addEventListener('change', Scene.render);
-        // todo. adding this makes moving with the mouse really slow
+        // adding this makes moving with the mouse really slow
         // document.addEventListener( 'mousemove', _controls.update.bind( _controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
     }
 
@@ -877,6 +884,13 @@ var Game = (function(){
         var y = Math.floor(pos.y)
         var z = 1 // height of every game piece
         async.waterfall([
+            function(done){
+                Player.checkTurn(function(er, canMove){
+                    if (er) done(er)
+                    else if (canMove) done(null)
+                    else done({code:"NO MORE TURNS"})
+                })
+            },
             function(done){
                 if (Move.isValidated(x, y, z)) done(null)
                 else done({code:"INVALID MOVE"})

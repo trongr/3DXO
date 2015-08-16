@@ -7,19 +7,22 @@ var SALT_WORK_FACTOR = 10;
 var schema = mongoose.Schema({
     name: {type: String, required: true, index: {unique:true}},
     pass: {type: String, required: true, select: false},
-    // pass: {type: String, required: true},
     // team: {
     //     type: mongoose.Schema.Types.ObjectId,
     //     ref: 'Team'
     // },
-    created: {
-        type: Date,
-        default: Date.now
-    },
-    modified: {
-        type: Date,
-        default: Date.now
-    },
+    created: {type: Date, default: Date.now},
+    modified: {type: Date, default: Date.now},
+    // todo calculate this from turn_index and turn_tokens[].live
+    turn: {type: Boolean},
+    turn_index: Number, // index of the active turn token
+    turn_tokens: [{
+        player: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Player'
+        },
+        live: Boolean, // token in player possession i.e. can move if its index matches turn_index
+    }]
 });
 
 schema.pre("save", function(next) {

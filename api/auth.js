@@ -49,6 +49,7 @@ var Auth = module.exports = (function(){
             Auth.createPlayer({
                 name: name,
                 pass: pass,
+                turn: true,
             }, function(er, player){
                 if (er){
                     res.send({info:ERROR_REGISTER})
