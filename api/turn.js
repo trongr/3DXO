@@ -80,7 +80,6 @@ var Turn = module.exports = (function(){
                     })
 
                     var enemy = player.turn_tokens[oldTurnIndex]
-                    console.log(JSON.stringify(enemy, 0, 2))
                     passTokenToEnemy(player, enemy.player)
                 } else { // No turn token means no enemy in range so nothing to update
                     done(null)
@@ -124,7 +123,6 @@ var Turn = module.exports = (function(){
                 nEnemy.save(function(er){
                     if (er) H.log("ERROR. Turn.passTokenToEnemy.enemy.save", er)
                 })
-                console.log("DEBUG. updating enemy turn tokens: " + JSON.stringify(nEnemy, 0, 2))
                 done(null)
             }
         ], function(er){

@@ -28,6 +28,7 @@ var Sock = (function(){
             clearTimeout(_socketAutoReconnectTimeout)
         };
 
+        // todo separate users into grids
         _sock.onmessage = function(re){
             try {
                 var data = JSON.parse(re.data)
@@ -52,6 +53,8 @@ var Sock = (function(){
             Obj.move(sel, data.to)
 
             Scene.render()
+
+            Hud.update(data.player)
         };
 
         _sock.onclose = function() {
@@ -224,7 +227,7 @@ var Player = (function(){
         API.Player.get({}, function(er, re){
             if (er) return done(er)
             _player = re.player
-            done(null, re.king)
+            done(null, re)
         })
     }
 
@@ -847,12 +850,15 @@ var Game = (function(){
     var Game = {}
 
     Game.init = function(done){
-        var king = null
+        var player, king = null
         var x = y = 0
         async.waterfall([
             function(done){
-                Player.init(function(er, _king){
-                    king = _king
+                Player.init(function(er, re){
+                    if (re){
+                        king = re.king
+                        player = re.player
+                    }
                     done(er)
                 })
             },
@@ -865,6 +871,7 @@ var Game = (function(){
                 Scene.init(x, y)
                 Obj.init()
                 Map.init(x, y)
+                Hud.init(player)
             },
         ], function(er){
             if (er) msg.error(er)
