@@ -13,9 +13,7 @@ var schema = mongoose.Schema({
     // },
     created: {type: Date, default: Date.now},
     modified: {type: Date, default: Date.now},
-    // todo calculate this from turn_index and turn_tokens[].live
-    turn: {type: Boolean},
-    turn_index: Number, // index of the active turn token
+    turn_index: {type: Number, default: 0}, // index of the active turn token
     turn_tokens: [{
         player: {
             type: mongoose.Schema.Types.ObjectId,

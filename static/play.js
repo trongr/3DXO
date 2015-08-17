@@ -232,14 +232,6 @@ var Player = (function(){
         return _player
     }
 
-    Player.checkTurn = function(done){
-        API.Player.get({}, function(er, re){
-            if (er) return done(er)
-            _player = re.player
-            done(null, _player.turn)
-        })
-    }
-
     Player.objBelongsToPlayer = function(obj){
         if (!obj.game || !obj.game.piece) return false
         else return Player.isFriendly(obj.game.piece)
@@ -884,13 +876,6 @@ var Game = (function(){
         var y = Math.floor(pos.y)
         var z = 1 // height of every game piece
         async.waterfall([
-            function(done){
-                Player.checkTurn(function(er, canMove){
-                    if (er) done(er)
-                    else if (canMove) done(null)
-                    else done({code:"NO MORE TURNS"})
-                })
-            },
             function(done){
                 if (Move.isValidated(x, y, z)) done(null)
                 else done({code:"INVALID MOVE"})

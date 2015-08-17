@@ -13,7 +13,12 @@ var Turn = module.exports = (function(){
         }, function(er, _player){
             if (er) done(er)
             else if (_player){
-                done(null, _player.turn)
+                if (_player.turn_tokens.length){
+                    var hasTurn = _player.turn_tokens[_player.turn_index].live
+                } else {
+                    var hasTurn = true
+                }
+                done(null, hasTurn)
             } else done({info:"Player does not exist"})
         })
     }
@@ -31,15 +36,14 @@ var Turn = module.exports = (function(){
                     else done({info:"Player does not exist"})
                 })
             },
-            // function(done){
-            //     updateTurnTokens({
-            //         _id: playerID
-            //     }, function(er, _player){
-            //         player = _player
-            //         done(er)
-            //     })
-            // },
-            // todo
+            function(done){
+                updateTurnTokens({
+                    _id: playerID
+                }, function(er, _player){
+                    player = _player
+                    done(er)
+                })
+            },
             function(done){
                 findNewTurnTokens(player, to, function(er){
                     done(er)
@@ -71,15 +75,13 @@ var Turn = module.exports = (function(){
 
                     player.turn_tokens[oldTurnIndex].live = false
                     player.turn_index = newTurnIndex
-                    player.turn = player.turn_tokens[newTurnIndex].live // todo don't keep this variable. derive from the other two
-
                     player.save(function(er){
                         done(er)
                     })
 
                     var enemy = player.turn_tokens[oldTurnIndex]
                     console.log(JSON.stringify(enemy, 0, 2))
-                    passTokenToEnemy(player, enemy)
+                    passTokenToEnemy(player, enemy.player)
                 } else { // No turn token means no enemy in range so nothing to update
                     done(null)
                 }
@@ -90,12 +92,13 @@ var Turn = module.exports = (function(){
     }
 
     // todo update modified on save
-    function passTokenToEnemy(player, enemy){
+    //
+    function passTokenToEnemy(player, enemyID){
         var nEnemy = null
         async.waterfall([
             function(done){
                 Player.findOne({
-                    _id: enemy._id
+                    _id: enemyID
                 }, function(er, _enemy){
                     nEnemy = _enemy
                     if (er) done(er)
@@ -131,8 +134,9 @@ var Turn = module.exports = (function(){
 
     var NO_NEW_TURN_TOKENS = "NO_NEW_TURN_TOKENS"
 
-    // Find new enemies near pos (within RANGE) and add them to
-    // player.turn_tokens
+    // If you're moving into their range, they get a turn token but
+    // you don't get one. Only once they use theirs does the token get
+    // passed to you, by updateTurnTokens.
     //
     // todo. clear enemy tokens once they or you move away
     function findNewTurnTokens(player, pos, done){
@@ -153,9 +157,9 @@ var Turn = module.exports = (function(){
                 });
             },
             function(done){
-                var found = false
                 var knownEnemies = {}
                 for (var i = 0; i < pieces.length; i++){
+                    var found = false
                     var newEnemy = pieces[i].player
                     // Check if we already have this enemy's token
                     if (knownEnemies[newEnemy]){
@@ -173,8 +177,10 @@ var Turn = module.exports = (function(){
                     // New enemy. Passing token to enemy so it's their
                     // turn, cause you just moved into their range
                     if (!found && !newEnemy._id.equals(player._id)){
-                        console.log(newEnemy._id, player._id)
-                        passTokenToEnemy(player, newEnemy)
+                        // todo has to add live:false turn token to
+                        // player too. otw you can move around freely
+                        // while in range of new enemy
+                        passTokenToEnemy(player, newEnemy._id)
                     }
                 }
                 done(null)
