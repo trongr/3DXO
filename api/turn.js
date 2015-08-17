@@ -154,8 +154,15 @@ var Turn = module.exports = (function(){
             },
             function(done){
                 var found = false
+                var knownEnemies = {}
                 for (var i = 0; i < pieces.length; i++){
                     var newEnemy = pieces[i].player
+                    // Check if we already have this enemy's token
+                    if (knownEnemies[newEnemy]){
+                        continue
+                    } else {
+                        knownEnemies[newEnemy] = true
+                    }
                     for (var j = 0; j < player.turn_tokens.length; j++){
                         var knownEnemy = player.turn_tokens[j]
                         if (newEnemy._id.equals(knownEnemy.player)){
