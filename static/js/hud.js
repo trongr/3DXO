@@ -37,8 +37,8 @@ var Hud = (function(){
             var token = turns[i]
             var active_turn = (i == turn_index ? "active_turn" : "")
             var ready_turn = (token.live ? "ready_turn" : "")
-            html += "<div class='turn_box " + active_turn + "'>"
-                +      "<div class='player_name " + ready_turn + "'>" + token.player_name + "</div>"
+            html += "<div class='turn_box " + active_turn + " " + ready_turn + "'>"
+                +      "<div class='player_name'>" + token.player_name + "</div>"
                 +   "</div>"
         }
         $("#hud_turns").html(html)

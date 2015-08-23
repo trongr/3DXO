@@ -8,16 +8,17 @@
     font-family: arial;
 }
 
-#hud_turns .turn_box .player_name {
-    background-color: #858585;
+#hud_turns .turn_box {
+    background-color: #779677;
     padding: 10px 15px 10px 15px;
 }
 
 #hud_turns .turn_box.active_turn {
-    background-color: #FF5C5C;
-    padding: 2px;
+    border-style: solid;
+    border-width: 0 0 0 10px;
+    border-left-color: #00FF00;
 }
 
-#hud_turns .turn_box .player_name.ready_turn {
-    background-color: #00BA41;
+#hud_turns .turn_box.ready_turn {
+    background-color: #50BA2D;
 }
