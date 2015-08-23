@@ -5,23 +5,39 @@ var Hud = (function(){
 
     }
 
+    // player is you
     Hud.init = function(player){
         var html = "<div id='hud_box'>"
-            +           "<div id='hud_info'></div>"
+            +           "<div id='hud_turns'></div>"
             +      "</div>"
         $("body").append(html)
-        Hud.update(player)
+        Hud.init_turns(player)
     }
 
-    Hud.update = function(player){
+    Hud.init_turns = function(player){
+        Hud.render_turns(player.turn_tokens)
+    }
+
+    Hud.update_turns = function(){
+        API.Player.get({}, function(er, re){
+            if (er) return done(er)
+            Hud.render_turns(re.player.turn_tokens)
+        })
+    }
+
+    // player is the player that just moved
+    //
+    // For now assuming player is already in the hud list
+    Hud.render_turns = function(turns){
         var html = ""
-        for (var i = 0; i < player.turn_tokens.length; i++){
-            var token = player.turn_tokens[i]
-            html += "<div>" + token.player + "</div>"
-                +   "<div>" + token.live + "</div>"
+        for (var i = 0; i < turns.length; i++){
+            var token = turns[i]
+            html += "<div class='turn_box'>"
+                +      "<div>" + token.player_name + "</div>"
+                +      "<div>" + token.live + "</div>"
+                +   "</div>"
         }
-        $("#hud_info").html(html)
-        // Hud.info(JSON.stringify(player.turn_tokens, 0, 2))
+        $("#hud_turns").html(html)
     }
 
     return Hud

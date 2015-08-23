@@ -118,6 +118,7 @@ var Turn = module.exports = (function(){
                 // Enemy hasn't been in range of player yet
                 if (!found) nEnemy.turn_tokens.push({
                     player: player._id,
+                    player_name: player.name,
                     live: true
                 })
                 nEnemy.save(function(er){

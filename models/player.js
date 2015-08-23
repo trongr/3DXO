@@ -19,6 +19,7 @@ var schema = mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Player'
         },
+        player_name: {type: String},
         live: Boolean, // token in player possession i.e. can move if its index matches turn_index
     }]
 });

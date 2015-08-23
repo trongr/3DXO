@@ -7,7 +7,7 @@
     bottom: 0;
 }
 
-#hud_info div {
+#hud_turns div {
     background-color: green;
     padding: 10px 15px 10px 15px;
 }

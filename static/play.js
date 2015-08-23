@@ -54,7 +54,7 @@ var Sock = (function(){
 
             Scene.render()
 
-            Hud.update(data.player)
+            Hud.update_turns()
         };
 
         _sock.onclose = function() {
