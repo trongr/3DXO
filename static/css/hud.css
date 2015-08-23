@@ -5,9 +5,19 @@
     position: fixed;
     left: 0;
     bottom: 0;
+    font-family: arial;
 }
 
-#hud_turns div {
-    background-color: green;
+#hud_turns .turn_box .player_name {
+    background-color: #858585;
     padding: 10px 15px 10px 15px;
+}
+
+#hud_turns .turn_box.active_turn {
+    background-color: #FF5C5C;
+    padding: 2px;
+}
+
+#hud_turns .turn_box .player_name.ready_turn {
+    background-color: #00BA41;
 }
