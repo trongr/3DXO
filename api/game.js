@@ -519,7 +519,6 @@ var Game = module.exports = (function(){
                     done(er)
                 })
             },
-            // todo
             function(done){
                 Turn.update(playerID, to, function(er, _player){
                     player = _player

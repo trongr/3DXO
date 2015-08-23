@@ -133,10 +133,6 @@ var Turn = module.exports = (function(){
 
     var NO_NEW_TURN_TOKENS = "NO_NEW_TURN_TOKENS"
 
-    // If you're moving into their range, they get a turn token but
-    // you don't get one. Only once they use theirs does the token get
-    // passed to you, by updateTurnTokens.
-    //
     // todo. clear enemy tokens once they or you move away
     function findNewTurnTokens(player, pos, done){
         var pieces = null
@@ -176,10 +172,8 @@ var Turn = module.exports = (function(){
                     // New enemy. Passing token to enemy so it's their
                     // turn, cause you just moved into their range
                     if (!found && !newEnemy._id.equals(player._id)){
-                        // todo has to add live:false turn token to
-                        // player too. otw you can move around freely
-                        // while in range of new enemy
                         passTokenToEnemy(player, newEnemy._id)
+                        addNewEnemyToken(player, newEnemy)
                     }
                 }
                 done(null)
@@ -189,6 +183,31 @@ var Turn = module.exports = (function(){
             else if (er) done(er)
             else done(null)
         })
+    }
+
+    function addNewEnemyToken(player, enemy){
+        Player.update({
+            _id: player._id
+        }, {
+            $push: {
+                "turn_tokens": {
+                    player: enemy._id,
+                    player_name: enemy.name,
+                    live: false,
+                }
+            }
+        }, {}, function(er, re){
+            if (er) H.log("ERROR. Turn.addNewEnemyToken", er)
+        })
+        // NOTE. This creates duplicates for some reason: do not use
+        // player.turn_tokens.push({
+        //     player: enemy._id,
+        //     player_name: enemy.name,
+        //     live: false,
+        // })
+        // player.save(function(er){
+        //     if (er) H.log("ERROR. Turn.addNewEnemyToken", er)
+        // })
     }
 
     return Turn
