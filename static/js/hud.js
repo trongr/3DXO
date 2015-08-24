@@ -16,20 +16,13 @@ var Hud = (function(){
 
     // player is you
     Hud.init_turns = function(player){
-        render_turns(player)
-    }
-
-    Hud.update_turns = function(){
-        API.Player.get({}, function(er, re){
-            if (er) return done(er)
-            render_turns(re.player)
-        })
+        Hud.renderTurns(player)
     }
 
     // player is the player that just moved
     //
     // For now assuming player is already in the hud list
-    function render_turns(player){
+    Hud.renderTurns = function(player){
         var turns = player.turn_tokens
         var turn_index = player.turn_index
         var html = ""

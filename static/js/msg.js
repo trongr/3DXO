@@ -3,7 +3,7 @@ var msg = (function(){
 
     msg.k = {
         default_hide_timeout: 5,
-        default_info_hide_timeout: 1,
+        default_info_hide_timeout: 5,
         default_warning_hide_timeout: 5,
         default_error_hide_timeout: 10,
         ready: false,

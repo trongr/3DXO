@@ -316,6 +316,41 @@ var Game = module.exports = (function(){
             })
         })
 
+    // todo
+    // Passes turn from enemy back to player
+    Game.router.route("/:playerID/:enemyID/re_turn")
+        .post(function(req, res){
+            // todo validate ids
+            var playerID = req.params.playerID
+            var enemyID = req.params.enemyID
+            var player = null
+            // validate that the timeout actually happened
+            // notify enemy that their turn has been taken away
+            async.waterfall([
+                function(done){
+                    Turn.passTokenToEnemy(enemyID, playerID, function(er, _enemy){
+                        done(er)
+                    })
+                },
+                function(done){
+                    Turn.unsetPlayerToken(enemyID, playerID, function(er, _enemy){
+                        done(er)
+                    })
+                },
+                function(done){
+                    Player.findOne({
+                        _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
+                    }, function(er, _player){
+                        player = _player
+                        done(er)
+                    })
+                }
+            ], function(er){
+                if (er) res.send({info:"ERROR. Couldn't request token from enemy"})
+                else res.send({ok:true, player:player})
+            })
+        })
+
     Game.buildArmy = function(playerID, done){
         var player, quadrant = null
         async.waterfall([

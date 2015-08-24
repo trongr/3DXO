@@ -80,7 +80,7 @@ var Turn = module.exports = (function(){
                     })
 
                     var enemy = player.turn_tokens[oldTurnIndex]
-                    passTokenToEnemy(player, enemy.player)
+                    Turn.passTokenToEnemy(player._id, enemy.player)
                 } else { // No turn token means no enemy in range so nothing to update
                     done(null)
                 }
@@ -90,11 +90,52 @@ var Turn = module.exports = (function(){
         })
     }
 
-    // todo update modified on save
-    //
-    function passTokenToEnemy(player, enemyID){
-        var nEnemy = null
+    Turn.unsetPlayerToken = function(playerID, enemyID, done){
+        var nPlayer = null
         async.waterfall([
+            function(done){
+                Player.findOne({
+                    _id: playerID
+                }, function(er, _player){
+                    nPlayer = _player
+                    if (er) done(er)
+                    else if (nPlayer){
+                        done(null)
+                    } else done({info:"Player does not exist"})
+                })
+            },
+            function(done){
+                for (var i = 0; i < nPlayer.turn_tokens.length; i++){
+                    if (nPlayer.turn_tokens[i].player == enemyID){
+                        nPlayer.turn_tokens[i].live = false
+                    }
+                }
+                nPlayer.save(function(er){
+                    done(er)
+                })
+            }
+        ], function(er){
+            if (er) H.log("ERROR. Turn.unsetPlayerToken", er)
+            if (done) done(er, nPlayer)
+        })
+    }
+
+    // todo update modified on save
+    // Passes token from player to enemy
+    Turn.passTokenToEnemy = function(playerID, enemyID, done){
+        var nPlayer, nEnemy = null
+        async.waterfall([
+            function(done){
+                Player.findOne({
+                    _id: playerID
+                }, function(er, _player){
+                    nPlayer = _player
+                    if (er) done(er)
+                    else if (nPlayer){
+                        done(null)
+                    } else done({info:"Player does not exist"})
+                })
+            },
             function(done){
                 Player.findOne({
                     _id: enemyID
@@ -110,24 +151,24 @@ var Turn = module.exports = (function(){
                 var found = false
                 // Check if enemy already has player in their turn_tokens
                 for (var i = 0; i < nEnemy.turn_tokens.length; i++){
-                    if (nEnemy.turn_tokens[i].player.equals(player._id)){
+                    if (nEnemy.turn_tokens[i].player.equals(nPlayer._id)){
                         nEnemy.turn_tokens[i].live = true
                         found = true
                     }
                 }
                 // Enemy hasn't been in range of player yet
                 if (!found) nEnemy.turn_tokens.push({
-                    player: player._id,
-                    player_name: player.name,
+                    player: nPlayer._id,
+                    player_name: nPlayer.name,
                     live: true
                 })
                 nEnemy.save(function(er){
-                    if (er) H.log("ERROR. Turn.passTokenToEnemy.enemy.save", er)
+                    done(er)
                 })
-                done(null)
             }
         ], function(er){
             if (er) H.log("ERROR. Turn.passTokenToEnemy", er)
+            if (done) done(er, nEnemy)
         })
     }
 
@@ -172,7 +213,7 @@ var Turn = module.exports = (function(){
                     // New enemy. Passing token to enemy so it's their
                     // turn, cause you just moved into their range
                     if (!found && !newEnemy._id.equals(player._id)){
-                        passTokenToEnemy(player, newEnemy._id)
+                        Turn.passTokenToEnemy(player._id, newEnemy._id)
                         addNewEnemyToken(player, newEnemy)
                     }
                 }

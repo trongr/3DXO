@@ -12,6 +12,41 @@ var K = (function(){
     return K
 }())
 
+var Turns = (function(){
+    var Turns = {}
+
+    var TURN_TIMEOUT = 30000
+    var _timeouts = {} // keyed by enemy._id
+
+    Turns.update = function(mover){
+        API.Player.get({}, function(er, re){
+            if (er) return done(er)
+            var you = re.player
+            if (mover._id == you._id){
+                var moverEnemy = mover.turn_tokens[(mover.turn_index - 1 + mover.turn_tokens.length) % mover.turn_tokens.length]
+                msg.info("Setting turn timeout against: " + moverEnemy.player_name)
+                var to = setTimeout(function(){
+                    msg.info("Requesting turn from: " + moverEnemy.player_name)
+                    API.Game.re_turn(you._id, moverEnemy.player, function(er, you){
+                        if (er) return msg.error(er)
+                        Hud.renderTurns(you)
+                    })
+                }, TURN_TIMEOUT)
+                _timeouts[moverEnemy.player] = to // player is the _id of the player stored in turn_tokens
+            } else {
+                var moverEnemy = mover.turn_tokens[(mover.turn_index - 1 + mover.turn_tokens.length) % mover.turn_tokens.length]
+                if (moverEnemy.player == you._id){
+                    msg.info("Clearing turn timeout against: " + mover.name)
+                    clearTimeout(_timeouts[mover._id])
+                }
+            }
+            Hud.renderTurns(you)
+        })
+    }
+
+    return Turns
+}())
+
 // todo rename sock
 var Sock = (function(){
     var Sock = {}
@@ -36,6 +71,7 @@ var Sock = (function(){
                 if (re) return msg.error(re.data)
                 else return msg.error("ERROR. Can't parse server response")
             }
+
             msg.info("Move confirmed")
             H.log("INFO. Sock.onmessage", data)
 
@@ -54,7 +90,7 @@ var Sock = (function(){
 
             Scene.render()
 
-            Hud.update_turns()
+            Turns.update(data.player)
         };
 
         _sock.onclose = function() {
@@ -164,7 +200,7 @@ var Highlight = (function(){
     var Highlight = {}
 
     var HIGHLIGHT_MATERIALS = {
-        red: new THREE.MeshLambertMaterial({color:0xff0000, shading:THREE.FlatShading, opacity:0.3, transparent:true}),
+        red: new THREE.MeshLambertMaterial({color:0xFF4D4D, shading:THREE.FlatShading, opacity:0.7, transparent:true}),
         green: new THREE.MeshLambertMaterial({color:0x00ff00, shading:THREE.FlatShading, opacity:0.3, transparent:true}),
     }
     var HIGHLIGHT_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, 0.01)
