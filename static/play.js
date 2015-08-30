@@ -18,14 +18,13 @@ var Turns = (function(){
     // var TURN_TIMEOUT = 30000
     var TURN_TIMEOUT = 10000 // todo toggle
     var _timeouts = {} // keyed by enemy._id
-    var you = null
 
     // todo
     // Calls whenever someone moves
     Turns.update = function(mover){
         API.Player.get({}, function(er, re){
             if (er) return done(er)
-            you = re.player
+            var you = re.player
             if (mover._id == you._id){
                 var moverEnemy = mover.turn_tokens[(mover.turn_index - 1 + mover.turn_tokens.length) % mover.turn_tokens.length]
                 Turns.setTimeout(moverEnemy.player)
@@ -40,6 +39,8 @@ var Turns = (function(){
     }
 
     Turns.setTimeout = function(enemyID){
+        Turns.clearTimeout(enemyID)
+        var you = Player.getPlayer()
         var to = setTimeout(function(){
             Sock.turn({
                 playerID: you._id,
