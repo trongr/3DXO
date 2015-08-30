@@ -544,12 +544,11 @@ var Game = module.exports = (function(){
             // todo validate ids
             var playerID = data.playerID
             var enemyID = data.enemyID
-            var player = null
+            var player, enemy = null
         } catch (e){
             return done({info:"Turn invalid input"})
         }
         // validate that the timeout actually happened
-        // notify enemy that their turn has been taken away
         async.waterfall([
             function(done){
                 Turn.passTokenToEnemy(enemyID, playerID, function(er, _enemy){
@@ -558,6 +557,7 @@ var Game = module.exports = (function(){
             },
             function(done){
                 Turn.unsetPlayerToken(enemyID, playerID, function(er, _enemy){
+                    enemy = _enemy
                     done(er)
                 })
             },
@@ -572,11 +572,19 @@ var Game = module.exports = (function(){
         ], function(er){
             if (er) done("ERROR. Can't request new turn: " + er.info)
             else if (data){
-                // data already has channel, but should make it
-                // explicit just in case
-                data.channel = "turn"
-                data.player = player
-                done(null, data)
+                // todo implement private channel / room so only
+                // specific users can get those pubs
+                done(null, { // update player hud
+                    channel: "turn",
+                    player: player,
+                })
+                done(null, { // update enemy hud
+                    channel: "turn",
+                    player: enemy,
+                    enemy: player, // so that this guy can set timeout
+                                   // to get his turn back in case
+                                   // player doesn't move in 30s
+                })
             } else done("FATAL ERROR. Game turn: unexpected response")
         })
     }

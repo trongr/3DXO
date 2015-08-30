@@ -18,38 +18,44 @@ var Turns = (function(){
     // var TURN_TIMEOUT = 30000
     var TURN_TIMEOUT = 10000 // todo toggle
     var _timeouts = {} // keyed by enemy._id
+    var you = null
 
+    // todo
     // Calls whenever someone moves
     Turns.update = function(mover){
         API.Player.get({}, function(er, re){
             if (er) return done(er)
-            var you = re.player
+            you = re.player
             if (mover._id == you._id){
                 var moverEnemy = mover.turn_tokens[(mover.turn_index - 1 + mover.turn_tokens.length) % mover.turn_tokens.length]
-                msg.info("Setting turn timeout against: " + moverEnemy.player_name)
-                var to = setTimeout(function(){
-                    msg.info("Requesting turn from: " + moverEnemy.player_name)
-                    Sock.turn({
-                        playerID: you._id,
-                        enemyID: moverEnemy.player,
-                    })
-                }, TURN_TIMEOUT)
-                _timeouts[moverEnemy.player] = to // player is the _id of the player stored in turn_tokens
+                Turns.setTimeout(moverEnemy.player)
             } else {
                 var moverEnemy = mover.turn_tokens[(mover.turn_index - 1 + mover.turn_tokens.length) % mover.turn_tokens.length]
                 if (moverEnemy.player == you._id){
-                    msg.info("Clearing turn timeout against: " + mover.name)
-                    clearTimeout(_timeouts[mover._id])
+                    Turns.clearTimeout(mover._id)
                 }
             }
             Hud.renderTurns(you)
         })
     }
 
+    Turns.setTimeout = function(enemyID){
+        var to = setTimeout(function(){
+            Sock.turn({
+                playerID: you._id,
+                enemyID: enemyID,
+            })
+        }, TURN_TIMEOUT)
+        _timeouts[enemyID] = to
+    }
+
+    Turns.clearTimeout = function(enemyID){
+        clearTimeout(_timeouts[enemyID])
+    }
+
     return Turns
 }())
 
-// todo rename sock
 var Sock = (function(){
     var Sock = {}
 
@@ -964,9 +970,14 @@ var Game = (function(){
             Turns.update(data.player)
         }
 
+        // todo. set turn timeout when user first starts up
         on.turn = function(data){
             var player = Player.getPlayer()
-            if (player._id == data.player._id) Hud.renderTurns(data.player)
+            var enemy = data.enemy
+            if (player._id == data.player._id){
+                Hud.renderTurns(data.player)
+                if (enemy) Turns.setTimeout(enemy._id)
+            }
         }
 
         return on
