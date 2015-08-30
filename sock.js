@@ -16,30 +16,49 @@ var Sock = module.exports = (function(){
             disconnect_delay: 60000, // default 5 seconds
         });
         _server.on('connection', onConnection);
-        _server.installHandlers(server, {prefix:'/move'});
+        _server.installHandlers(server, {
+            prefix: '/sock'
+        });
     }
 
-    // todo. how to scale pubsub? encode channel names with coordinates?
+    // todo. how to scale pubsub? encode channel names with
+    // coordinates?
+    //
+    // One connection from client to server. Multiple channels to
+    // publish and subscribe to.
     function onConnection(conn){
         H.log("INFO. Sock.onConnection.opening socket")
 
         var client = redis.createClient();
+
         client.subscribe('move');
+        client.subscribe('turn');
+
+        // Server just published data to this channel, to be sent to
+        // client. Client has to check channel encoded in msg
         client.on("message", function(channel, msg){
+            // can decide what to do with msg based on channel,
+            // e.g. sometimes you might not want to publish to client
             conn.write(msg);
         });
 
+        // Client sending data to server: don't know what type /
+        // "channel" this msg is for. todo have to make client tell
+        // you
         conn.on('data', function(msg) {
             try {
                 var data = JSON.parse(msg)
             } catch (e){
+                // todo send an error back to client
                 return H.log("ERROR. Sock.onConnection.conn.data.JSON.parse", msg)
             }
             H.log("INFO. Sock.onConnection.conn.data")
-            Game.move(data, function(er, re){
-                if (er) conn.write("ERROR. Can't move there: " + er.info)
-                else if (re) _publisher.publish("move", JSON.stringify(re))
-                else conn.write("FATAL ERROR. Game.move:null")
+            Game.sock(data, function(er, re){
+                if (er) conn.write(er)
+                else if (re){
+                    _publisher.publish(re.channel, JSON.stringify(re))
+                }
+                else conn.write("FATAL ERROR: unexpected game socket response")
             })
         });
 

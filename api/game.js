@@ -316,41 +316,6 @@ var Game = module.exports = (function(){
             })
         })
 
-    // todo
-    // Passes turn from enemy back to player
-    Game.router.route("/:playerID/:enemyID/re_turn")
-        .post(function(req, res){
-            // todo validate ids
-            var playerID = req.params.playerID
-            var enemyID = req.params.enemyID
-            var player = null
-            // validate that the timeout actually happened
-            // notify enemy that their turn has been taken away
-            async.waterfall([
-                function(done){
-                    Turn.passTokenToEnemy(enemyID, playerID, function(er, _enemy){
-                        done(er)
-                    })
-                },
-                function(done){
-                    Turn.unsetPlayerToken(enemyID, playerID, function(er, _enemy){
-                        done(er)
-                    })
-                },
-                function(done){
-                    Player.findOne({
-                        _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
-                    }, function(er, _player){
-                        player = _player
-                        done(er)
-                    })
-                }
-            ], function(er){
-                if (er) res.send({info:"ERROR. Couldn't request token from enemy"})
-                else res.send({ok:true, player:player})
-            })
-        })
-
     Game.buildArmy = function(playerID, done){
         var player, quadrant = null
         async.waterfall([
@@ -563,8 +528,66 @@ var Game = module.exports = (function(){
         ], function(er){
             data.player = player
             data.piece = nPiece
-            done(er, data)
+            if (er) done("ERROR. Can't move there: " + er.info)
+            else if (data){
+                // data already has channel, but should make it
+                // explicit just in case
+                data.channel = "move"
+                done(null, data)
+            } else done("FATAL ERROR. Game move: unexpected response")
         })
+    }
+
+    // Passes turn from enemy back to player
+    Game.turn = function(data, done){
+        try {
+            // todo validate ids
+            var playerID = data.playerID
+            var enemyID = data.enemyID
+            var player = null
+        } catch (e){
+            return done({info:"Turn invalid input"})
+        }
+        // validate that the timeout actually happened
+        // notify enemy that their turn has been taken away
+        async.waterfall([
+            function(done){
+                Turn.passTokenToEnemy(enemyID, playerID, function(er, _enemy){
+                    done(er)
+                })
+            },
+            function(done){
+                Turn.unsetPlayerToken(enemyID, playerID, function(er, _enemy){
+                    done(er)
+                })
+            },
+            function(done){
+                Player.findOne({
+                    _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
+                }, function(er, _player){
+                    player = _player
+                    done(er)
+                })
+            }
+        ], function(er){
+            if (er) done("ERROR. Can't request new turn: " + er.info)
+            else if (data){
+                // data already has channel, but should make it
+                // explicit just in case
+                data.channel = "turn"
+                data.player = player
+                done(null, data)
+            } else done("FATAL ERROR. Game turn: unexpected response")
+        })
+    }
+
+    Game.sock = function(data, done){
+        var channel = data.channel
+        if (["move", "turn"].indexOf(channel) < 0){
+            return done("ERROR. Unknown channel: " + channel)
+        }
+        // should be careful with names
+        Game[channel](data, done)
     }
 
     return Game

@@ -15,9 +15,11 @@ var K = (function(){
 var Turns = (function(){
     var Turns = {}
 
-    var TURN_TIMEOUT = 30000
+    // var TURN_TIMEOUT = 30000
+    var TURN_TIMEOUT = 10000 // todo toggle
     var _timeouts = {} // keyed by enemy._id
 
+    // Calls whenever someone moves
     Turns.update = function(mover){
         API.Player.get({}, function(er, re){
             if (er) return done(er)
@@ -27,9 +29,9 @@ var Turns = (function(){
                 msg.info("Setting turn timeout against: " + moverEnemy.player_name)
                 var to = setTimeout(function(){
                     msg.info("Requesting turn from: " + moverEnemy.player_name)
-                    API.Game.re_turn(you._id, moverEnemy.player, function(er, you){
-                        if (er) return msg.error(er)
-                        Hud.renderTurns(you)
+                    Sock.turn({
+                        playerID: you._id,
+                        enemyID: moverEnemy.player,
                     })
                 }, TURN_TIMEOUT)
                 _timeouts[moverEnemy.player] = to // player is the _id of the player stored in turn_tokens
@@ -55,7 +57,7 @@ var Sock = (function(){
     var _socketAutoReconnectTimeout = null
 
     Sock.init = function(){
-        _sock = new SockJS('http://localhost:8080/move');
+        _sock = new SockJS('http://localhost:8080/sock');
 
         _sock.onopen = function() {
             msg.info("Opening socket connection")
@@ -67,30 +69,16 @@ var Sock = (function(){
         _sock.onmessage = function(re){
             try {
                 var data = JSON.parse(re.data)
+                var channel = data.channel
             } catch (e){
                 if (re) return msg.error(re.data)
                 else return msg.error("ERROR. Can't parse server response")
             }
-
-            msg.info("Move confirmed")
-            H.log("INFO. Sock.onmessage", data)
-
-            // remove any piece already at dst
-            var dstObj = Obj.findObjAtPosition(Math.floor(data.to.x), Math.floor(data.to.y), 1)
-            if (dstObj && dstObj.game){
-                Scene.getScene().remove(dstObj);
-                Obj.getObjects().splice(Obj.getObjects().indexOf(dstObj), 1);
-            }
-
-            // move selected
-            var sel = Obj.findObjAtPosition(Math.floor(data.from.x), Math.floor(data.from.y), 1)
-            sel.game.piece = data.piece // update piece with new position data
-            data.to.z = 1.5
-            Obj.move(sel, data.to)
-
-            Scene.render()
-
-            Turns.update(data.player)
+            // try {
+                Game.on[channel](data)
+            // } catch (e){
+                // msg.error("FATAL ERROR. Unknown channel")
+            // }
         };
 
         _sock.onclose = function() {
@@ -102,8 +90,17 @@ var Sock = (function(){
         };
     }
 
+    // todo. can make a generic method with channel names
+
     Sock.move = function(data){
         msg.info("Moving")
+        data.channel = "move"
+        _sock.send(JSON.stringify(data))
+    }
+
+    Sock.turn = function(data){
+        msg.info("Requesting turn")
+        data.channel = "turn"
         _sock.send(JSON.stringify(data))
     }
 
@@ -939,6 +936,41 @@ var Game = (function(){
             Scene.render()
         })
     }
+
+    Game.on = (function(){
+        var on = {}
+
+        // todo
+        on.move = function(data){
+            msg.info("Move confirmed")
+            H.log("INFO. Sock.onmessage", data)
+
+            // remove any piece already at dst
+            var dstObj = Obj.findObjAtPosition(Math.floor(data.to.x), Math.floor(data.to.y), 1)
+            if (dstObj && dstObj.game){
+                Scene.getScene().remove(dstObj);
+                Obj.getObjects().splice(Obj.getObjects().indexOf(dstObj), 1);
+            }
+
+            // move selected
+            var sel = Obj.findObjAtPosition(Math.floor(data.from.x), Math.floor(data.from.y), 1)
+            sel.game.piece = data.piece // update piece with new position data
+            data.to.z = 1.5
+            Obj.move(sel, data.to)
+
+            Scene.render()
+
+            Turns.update(data.player)
+        }
+
+        // todo the same turn event is sent to everyone, regardless of
+        // whose turn it is
+        on.turn = function(data){
+            Hud.renderTurns(data.player)
+        }
+
+        return on
+    }())
 
     return Game
 }())
