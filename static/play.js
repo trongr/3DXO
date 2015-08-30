@@ -264,7 +264,7 @@ var Player = (function(){
         })
     }
 
-    Player.getPlayer = function(done){
+    Player.getPlayer = function(){
         return _player
     }
 
@@ -942,8 +942,9 @@ var Game = (function(){
 
         // todo
         on.move = function(data){
-            msg.info("Move confirmed")
-            H.log("INFO. Sock.onmessage", data)
+            var playerName = data.player.name
+            msg.info("New move by " + playerName)
+            H.log("INFO. Game.on.move", data)
 
             // remove any piece already at dst
             var dstObj = Obj.findObjAtPosition(Math.floor(data.to.x), Math.floor(data.to.y), 1)
@@ -963,10 +964,9 @@ var Game = (function(){
             Turns.update(data.player)
         }
 
-        // todo the same turn event is sent to everyone, regardless of
-        // whose turn it is
         on.turn = function(data){
-            Hud.renderTurns(data.player)
+            var player = Player.getPlayer()
+            if (player._id == data.player._id) Hud.renderTurns(data.player)
         }
 
         return on
