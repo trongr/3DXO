@@ -28,7 +28,7 @@ var Hud = (function(){
                 active_player_id = token.player
             }
             var elmt = $("#" + token.player + ".turn_box")
-            if (elmt.length){ // token exists, re-render
+            if (elmt.length){ // token exists, re-render if changed
                 if (JSON.stringify(_tokens[token.player]) != JSON.stringify(token)){
                     elmt.replaceWith(tokenBox(token))
                 }

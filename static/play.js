@@ -17,9 +17,20 @@ var Turns = (function(){
 
     var TURN_TIMEOUT = 30000
     var TURN_TIMEOUT_S = TURN_TIMEOUT / 1000
-    var _timeouts = {} // keyed by enemy._id. Time til sending new turn request
-    var _countdowns = {} // keyed by enemy._id. Time til new turn
-    var _countups = {} // keyed by enemy._id. Time til turn expires
+    var _timersForNewTurnRequest = {} // keyed by enemy._id. Time til sending new turn request
+    var _timersForNewTurn = {} // keyed by enemy._id. Time til new turn
+    var _timersForTurnExpire = {} // keyed by enemy._id. Time til turn expires
+
+    Turns.init = function(player){
+        var tokens = player.turn_tokens
+        for (var i = 0; i < tokens.length; i++){
+            var token = tokens[i]
+            if (!token.live){
+                Turns.startTimerForNewTurnRequest(token.player)
+                Turns.startTimerForNewTurn(token.player)
+            }
+        }
+    }
 
     // Calls whenever someone moves
     Turns.update = function(mover){
@@ -29,22 +40,24 @@ var Turns = (function(){
             if (mover._id == you._id){ // you just moved
                 var moverEnemy = mover.turn_tokens[(mover.turn_index - 1 + mover.turn_tokens.length) % mover.turn_tokens.length]
                 var enemyID = moverEnemy.player
-                Turns.clearTimeout(enemyID)
-                Turns.setTimeout(enemyID)
-            } else { // someone else just moved...
+                Turns.startTimerForNewTurnRequest(enemyID)
+                Turns.clearTimerForTurnExpire(enemyID)
+                Turns.startTimerForNewTurn(enemyID)
+            } else { // someone else just moved.......
                 var moverEnemy = mover.turn_tokens[(mover.turn_index - 1 + mover.turn_tokens.length) % mover.turn_tokens.length]
                 var enemyID = mover._id
-                if (moverEnemy.player == you._id){ // ...using your token
-                    Turns.clearTimeout(enemyID)
-                    Turns.clearCountdown(enemyID)
-                    Turns.startCountup(enemyID)
+                if (moverEnemy.player == you._id){ // ......using your token
+                    Turns.clearTimerForNewTurnRequest(enemyID)
+                    Turns.clearTimerForNewTurn(enemyID)
+                    Turns.startTimerForTurnExpire(enemyID)
                 }
             }
             Hud.renderTurns(you)
         })
     }
 
-    Turns.setTimeout = function(enemyID){
+    Turns.startTimerForNewTurnRequest = function(enemyID){
+        Turns.clearTimerForNewTurnRequest(enemyID)
         var you = Player.getPlayer()
         var to = setTimeout(function(){
             Sock.turn({
@@ -52,19 +65,15 @@ var Turns = (function(){
                 enemyID: enemyID,
             })
         }, TURN_TIMEOUT)
-        _timeouts[enemyID] = to
-
-        Turns.clearCountup(enemyID)
-        Turns.startCountdown(enemyID)
+        _timersForNewTurnRequest[enemyID] = to
     }
 
-    Turns.clearTimeout = function(enemyID){
-        clearTimeout(_timeouts[enemyID])
+    Turns.clearTimerForNewTurnRequest = function(enemyID){
+        clearTimeout(_timersForNewTurnRequest[enemyID])
     }
 
-    Turns.startCountdown = function(enemyID){
-        Turns.clearCountdown(enemyID)
-
+    Turns.startTimerForNewTurn = function(enemyID){
+        Turns.clearTimerForNewTurn(enemyID)
         var time = TURN_TIMEOUT_S, minutes, seconds;
         var interval = setInterval(function(){
             minutes = parseInt(time / 60, 10);
@@ -75,19 +84,18 @@ var Turns = (function(){
 
             $("#" + enemyID + " .player_countdown").html(minutes + ":" + seconds + " til new turn")
             if (--time < 0){
-                Turns.clearCountdown(enemyID);
+                Turns.clearTimerForNewTurn(enemyID);
             }
         }, 1000);
-        _countdowns[enemyID] = interval
+        _timersForNewTurn[enemyID] = interval
     }
 
-    Turns.clearCountdown = function(enemyID){
-        clearInterval(_countdowns[enemyID])
+    Turns.clearTimerForNewTurn = function(enemyID){
+        clearInterval(_timersForNewTurn[enemyID])
     }
 
-    Turns.startCountup = function(enemyID){
-        Turns.clearCountup(enemyID);
-
+    Turns.startTimerForTurnExpire = function(enemyID){
+        Turns.clearTimerForTurnExpire(enemyID);
         var time = TURN_TIMEOUT_S, minutes, seconds;
         var interval = setInterval(function(){
             minutes = parseInt(time / 60, 10);
@@ -98,14 +106,14 @@ var Turns = (function(){
 
             $("#" + enemyID + " .player_countdown").html(minutes + ":" + seconds + " til turn expires")
             if (--time < 0){
-                Turns.clearCountup(enemyID);
+                Turns.clearTimerForTurnExpire(enemyID);
             }
         }, 1000);
-        _countups[enemyID] = interval
+        _timersForTurnExpire[enemyID] = interval
     }
 
-    Turns.clearCountup = function(enemyID){
-        clearInterval(_countups[enemyID])
+    Turns.clearTimerForTurnExpire = function(enemyID){
+        clearInterval(_timersForTurnExpire[enemyID])
     }
 
     return Turns
@@ -122,7 +130,6 @@ var Sock = (function(){
 
         _sock.onopen = function() {
             msg.info("Opening socket connection")
-            H.log("INFO. opening socket connection")
             clearTimeout(_socketAutoReconnectTimeout)
         };
 
@@ -133,17 +140,12 @@ var Sock = (function(){
                 var channel = data.channel
             } catch (e){
                 if (re) return msg.error(re.data)
-                else return msg.error("ERROR. Can't parse server response")
+                else return msg.error("FATAL ERROR. Server socket response")
             }
-            // try {
-                Game.on[channel](data)
-            // } catch (e){
-                // msg.error("FATAL ERROR. Unknown channel")
-            // }
+            Game.on[channel](data)
         };
 
         _sock.onclose = function() {
-            H.log("WARNING. closing socket")
             msg.warning("Losing socket connection. Retrying in 5s...")
             setTimeout(function(){
                 Sock.init()
@@ -943,6 +945,7 @@ var Scene = (function(){
 var Game = (function(){
     var Game = {}
 
+    // todo
     Game.init = function(done){
         var player, king = null
         var x = y = 0
@@ -966,6 +969,7 @@ var Game = (function(){
                 Obj.init()
                 Map.init(x, y)
                 Hud.init(player)
+                Turns.init(player)
             },
         ], function(er){
             if (er) msg.error(er)
@@ -1005,7 +1009,6 @@ var Game = (function(){
         on.move = function(data){
             var playerName = data.player.name
             msg.info("New move by " + playerName)
-            H.log("INFO. Game.on.move", data)
 
             // remove any piece already at dst
             var dstObj = Obj.findObjAtPosition(Math.floor(data.to.x), Math.floor(data.to.y), 1)
@@ -1025,18 +1028,19 @@ var Game = (function(){
             Turns.update(data.player)
         }
 
-        // todo. set turn timeout when user first starts up
         on.turn = function(data){
             var player = Player.getPlayer()
-            var enemy = data.enemy
+            var enemyID = data.enemy._id
             var your_turn = data.your_turn
             if (player._id == data.player._id){
                 Hud.renderTurns(data.player)
-                if (your_turn){ // count up til your turn expires
-                    Turns.clearCountdown(enemy._id)
-                    Turns.startCountup(enemy._id)
-                } else { // count down til you get a new turn
-                    Turns.setTimeout(enemy._id)
+                if (your_turn){ // new turn: count up til your turn expires
+                    Turns.clearTimerForNewTurn(enemyID)
+                    Turns.startTimerForTurnExpire(enemyID)
+                } else { // lost turn: count down til you get a new turn
+                    Turns.startTimerForNewTurnRequest(enemyID)
+                    Turns.clearTimerForTurnExpire(enemyID)
+                    Turns.startTimerForNewTurn(enemyID)
                 }
             }
         }
