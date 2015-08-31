@@ -15,11 +15,10 @@ var K = (function(){
 var Turns = (function(){
     var Turns = {}
 
-    // var TURN_TIMEOUT = 30000
-    var TURN_TIMEOUT = 10000 // todo toggle
+    var TURN_TIMEOUT = 30000
     var _timeouts = {} // keyed by enemy._id
+    var _countdowns = {} // keyed by enemy._id
 
-    // todo
     // Calls whenever someone moves
     Turns.update = function(mover){
         API.Player.get({}, function(er, re){
@@ -40,6 +39,9 @@ var Turns = (function(){
 
     Turns.setTimeout = function(enemyID){
         Turns.clearTimeout(enemyID)
+
+        startCountdown(TURN_TIMEOUT / 1000, enemyID)
+
         var you = Player.getPlayer()
         var to = setTimeout(function(){
             Sock.turn({
@@ -48,10 +50,33 @@ var Turns = (function(){
             })
         }, TURN_TIMEOUT)
         _timeouts[enemyID] = to
+
     }
 
     Turns.clearTimeout = function(enemyID){
         clearTimeout(_timeouts[enemyID])
+        clearCountdown(enemyID)
+    }
+
+    function startCountdown(duration, enemyID){
+        var time = duration, minutes, seconds;
+        var interval = setInterval(function(){
+            minutes = parseInt(time / 60, 10);
+            seconds = parseInt(time % 60, 10);
+
+            minutes = minutes < 10 ? "0" + minutes : minutes;
+            seconds = seconds < 10 ? "0" + seconds : seconds;
+
+            $("#" + enemyID + " .player_countdown").html(minutes + ":" + seconds + " til new turn")
+            if (--time < 0){
+                clearCountdown(enemyID);
+            }
+        }, 1000);
+        _countdowns[enemyID] = interval
+    }
+
+    function clearCountdown(enemyID){
+        clearInterval(_countdowns[enemyID])
     }
 
     return Turns
@@ -977,7 +1002,9 @@ var Game = (function(){
             var enemy = data.enemy
             if (player._id == data.player._id){
                 Hud.renderTurns(data.player)
-                if (enemy) Turns.setTimeout(enemy._id)
+                if (enemy){ // enemy just requested token from you
+                    Turns.setTimeout(enemy._id)
+                }
             }
         }
 

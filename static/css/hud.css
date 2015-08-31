@@ -8,17 +8,35 @@
     font-family: arial;
 }
 
+#hud_turns {
+    display: table;
+    border-collapse: separate;
+    border-spacing: 1px;
+}
+
 #hud_turns .turn_box {
-    background-color: #779677;
+    display: table-row;
+}
+
+#hud_turns .turn_box div {
+    display: table-cell;
     padding: 10px 15px 10px 15px;
 }
 
-#hud_turns .turn_box.active_turn {
+#hud_turns .turn_box .player_name {
+    background-color: #779677;
+}
+
+#hud_turns .turn_box .player_name.active_turn {
     border-style: solid;
     border-width: 0 0 0 10px;
     border-left-color: #00FF00;
 }
 
-#hud_turns .turn_box.ready_turn {
+#hud_turns .turn_box .player_name.ready_turn {
     background-color: #50BA2D;
+}
+
+#hud_turns .turn_box .player_countdown {
+
 }
