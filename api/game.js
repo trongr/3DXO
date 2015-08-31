@@ -577,13 +577,13 @@ var Game = module.exports = (function(){
                 done(null, { // update player hud
                     channel: "turn",
                     player: player,
+                    enemy: enemy,
+                    your_turn: true, // to distinguish whose turn it is
                 })
                 done(null, { // update enemy hud
                     channel: "turn",
                     player: enemy,
-                    enemy: player, // so that this guy can set timeout
-                                   // to get his turn back in case
-                                   // player doesn't move in 30s
+                    enemy: player,
                 })
             } else done("FATAL ERROR. Game turn: unexpected response")
         })
