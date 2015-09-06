@@ -1,3 +1,4 @@
+// you can't move the same piece twice in the same round
 
 var K = (function(){
 

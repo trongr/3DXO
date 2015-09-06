@@ -11,7 +11,7 @@
 #hud_turns {
     display: table;
     border-collapse: separate;
-    /* border-spacing: 1px; */
+    border-spacing: 0px 1px;
 }
 
 #hud_turns .turn_box {
@@ -20,26 +20,28 @@
 
 #hud_turns .turn_box div {
     display: table-cell;
-    padding: 10px 15px 10px 15px;
+}
+
+#hud_turns .turn_box .player_turn {
+    background-color: transparent;
+    width: 10px;
+}
+
+#hud_turns .turn_box .player_turn.active_turn {
+    background-color: #00FF00;
+    width: 10px;
 }
 
 #hud_turns .turn_box .player_name {
+    padding: 10px 15px 10px 15px;
     background-color: #779677;
-    border-style: solid;
-    border-width: 0 0 0 10px;
-    border-left-color: #779677;
-}
-
-#hud_turns .turn_box .player_name.active_turn {
-    border-style: solid;
-    border-width: 0 0 0 10px;
-    border-left-color: #00FF00;
 }
 
 #hud_turns .turn_box .player_name.ready_turn {
-    background-color: #50BA2D;
+    background-color: #41B81A;
 }
 
 #hud_turns .turn_box .player_countdown {
+    padding: 10px 15px 10px 15px;
     background-color: #607360;
 }

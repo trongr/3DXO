@@ -37,13 +37,14 @@ var Hud = (function(){
             }
             _tokens[token.player] = token
         }
-        $("#hud_turns .player_name.active_turn").removeClass("active_turn")
-        $("#" + active_player_id + ".turn_box .player_name").addClass("active_turn")
+        $("#hud_turns .player_turn.active_turn").removeClass("active_turn")
+        $("#" + active_player_id + ".turn_box .player_turn").addClass("active_turn")
     }
 
     function tokenBox(token){
         var ready_turn = (token.live ? "ready_turn" : "")
         return "<div id='" + token.player + "' class='turn_box'>"
+            +     "<div class='player_turn'></div>"
             +     "<div class='player_name " + ready_turn + "'>" + token.player_name + "</div>"
             +     "<div class='player_countdown'></div>"
             +  "</div>"
