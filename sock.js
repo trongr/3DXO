@@ -33,10 +33,13 @@ var Sock = module.exports = (function(){
 
         client.subscribe('move');
         client.subscribe('turn');
+        client.subscribe('gameover');
 
         // Server just published data to this channel, to be sent to
         // client. Client has to check channel encoded in msg, which
-        // is a string (obj has to be JSON.stringify'd)
+        // is a string (obj has to be JSON.stringify'd). In case of an
+        // error, msg will just be a plain string with no channel, and
+        // the client will fail and display the string.
         client.on("message", function(channel, msg){
             // todo. can decide what to do with msg based on channel,
             // e.g. sometimes you might not want to publish to client

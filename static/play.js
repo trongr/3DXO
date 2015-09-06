@@ -46,6 +46,8 @@ var Turns = (function(){
             } else { // someone else just moved.......
                 var moverEnemy = mover.turn_tokens[(mover.turn_index - 1 + mover.turn_tokens.length) % mover.turn_tokens.length]
                 var enemyID = mover._id
+                // todo there's some bug here when a new user
+                // registers / new enemy comes in
                 if (moverEnemy.player == you._id){ // ......using your token
                     Turns.clearTimerForNewTurnRequest(enemyID)
                     Turns.clearTimerForNewTurn(enemyID)
@@ -1029,6 +1031,13 @@ var Game = (function(){
                     Turns.clearTimerForTurnExpire(enemyID)
                     Turns.startTimerForNewTurn(enemyID)
                 }
+            }
+        }
+
+        on.gameover = function(data){
+            var player = Player.getPlayer()
+            if (player._id == data.player._id){ // bad news:
+                msg.error("GAME OVER")
             }
         }
 

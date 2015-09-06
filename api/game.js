@@ -1,6 +1,7 @@
 var _ = require("lodash")
 var async = require("async")
 var express = require('express');
+var redis   = require('redis');
 var H = require("../lib/h.js")
 var K = require("../conf/k.js")
 var Cell = require("../models/cell.js")
@@ -224,6 +225,7 @@ var Move = (function(){
     // Actually making the move
     Move.move = function(player, piece, from, to, done){
         var nPiece, dstCell = null
+        var enemyKing = null
         async.waterfall([
             function(done){ // update origin cell
                 Cell.update({
@@ -256,14 +258,18 @@ var Move = (function(){
                     Piece.findOne(dstCell.piece, function(er, piece){
                         if (piece) piece.remove(function(er, _piece){
                             if (er) H.log("ERROR. Game.Move.move.remove dst piece", er)
+                            if (piece.kind == "king"){
+                                enemyKing = piece
+                            }
+                            done(er)
                         })
-                        done(er)
+                        else done({info:"Game.Move: dst piece not found"})
                     })
                 } else { // do nothing
                     done(null)
                 }
             },
-            function(done){ // update destination cell
+            function(done){ // update destination cell with new piece
                 Cells.upsert({
                     piece: piece._id,
                     x: to.x,
@@ -273,7 +279,7 @@ var Move = (function(){
                 })
             },
             function(done){
-                Piece.findOneAndUpdate(piece, { // update piece data
+                Piece.findOneAndUpdate(piece, { // update moving piece data
                     $set: {
                         x: to.x,
                         y: to.y
@@ -287,7 +293,8 @@ var Move = (function(){
                 })
             },
         ], function(er){
-            done(er, nPiece)
+            // returns enemyKing if you're killing their king
+            done(er, nPiece, enemyKing)
         })
     }
 
@@ -298,6 +305,8 @@ var Game = module.exports = (function(){
     Game = {
         router: express.Router()
     }
+
+    var _publisher = redis.createClient();
 
     var ERROR_BUILD_ARMY = "ERROR. Can't build army"
 
@@ -527,9 +536,10 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Move.move(player, piece, from, to, function(er, _piece){
+                    Move.move(player, piece, from, to, function(er, _piece, enemyKing){
                         nPiece = _piece
                         done(er)
+                        if (enemyKing) Game.on["gameover"](enemyKing.player, playerID)
                     })
                 },
                 function(done){
@@ -563,7 +573,7 @@ var Game = module.exports = (function(){
             } catch (e){
                 return done("Turn invalid input: " + e)
             }
-            // validate that the timeout actually happened
+            // todo. validate that the timeout actually happened
             async.waterfall([
                 function(done){
                     Turn.passTokenToEnemy(enemyID, playerID, function(er, _enemy){
@@ -601,6 +611,40 @@ var Game = module.exports = (function(){
                         enemy: player,
                     })
                 } else done("FATAL ERROR. Game turn: unexpected response")
+            })
+        }
+
+        // mach game over for player. A fraction (half?) of pieces
+        // convert to enemy, remaining pieces die (maybe later give
+        // them AI to roam the world).
+        on.gameover = function(playerID, enemyID){
+            try {
+                var player = null
+            } catch (e){
+                return done("gameover invalid input: " + e)
+            }
+            async.waterfall([
+                function(done){
+                    Player.findOne({
+                        _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
+                    }, function(er, _player){
+                        player = _player
+                        done(er)
+                    })
+                },
+                // mach mark user as dead: so they can't control their pieces anymore
+                // process remaining pieces
+                // tell enemy they've defeated player
+            ], function(er){
+                if (er){
+                    re = "ERROR. Can't execute game over"
+                } else {
+                    re = {
+                        channel: "gameover",
+                        player: player
+                    }
+                }
+                _publisher.publish("gameover", JSON.stringify(re))
             })
         }
 
