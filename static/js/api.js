@@ -90,15 +90,6 @@ var API = (function(){
             })
         }
 
-        // todo
-        Game.re_turn = function(playerID, enemyID, done){
-            var url = API_PREFIX + "game/" + playerID + "/" + enemyID + "/re_turn"
-            API.req("post", url, {}, function(er, re){
-                if (re && re.ok) done(null, re.player)
-                else done(er)
-            })
-        }
-
         return Game
     }())
 

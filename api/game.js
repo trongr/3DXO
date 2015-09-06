@@ -10,6 +10,7 @@ var Cells = require("../api/cells.js")
 var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
 var Turn = require("./turn.js")
+var DB = require("../db.js")
 
 var Move = (function(){
     var Move = {}
@@ -542,12 +543,14 @@ var Game = module.exports = (function(){
     // Passes turn from enemy back to player
     Game.turn = function(data, done){
         try {
-            // todo validate ids
             var playerID = data.playerID
             var enemyID = data.enemyID
             var player, enemy = null
+            if (!DB.isValidIDs([playerID, enemyID])){
+                throw "Invalid player IDs"
+            }
         } catch (e){
-            return done({info:"Turn invalid input"})
+            return done("Turn invalid input: " + e)
         }
         // validate that the timeout actually happened
         async.waterfall([
@@ -595,7 +598,7 @@ var Game = module.exports = (function(){
         if (["move", "turn"].indexOf(channel) < 0){
             return done("ERROR. Unknown channel: " + channel)
         }
-        // should be careful with names
+        // todo. should be careful with names
         Game[channel](data, done)
     }
 

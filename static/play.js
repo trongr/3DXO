@@ -137,11 +137,11 @@ var Sock = (function(){
             try {
                 var data = JSON.parse(re.data)
                 var channel = data.channel
+                Game.on[channel](data)
             } catch (e){
                 if (re) return msg.error(re.data)
                 else return msg.error("FATAL ERROR. Server socket response")
             }
-            Game.on[channel](data)
         };
 
         _sock.onclose = function() {

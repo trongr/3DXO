@@ -35,9 +35,10 @@ var Sock = module.exports = (function(){
         client.subscribe('turn');
 
         // Server just published data to this channel, to be sent to
-        // client. Client has to check channel encoded in msg
+        // client. Client has to check channel encoded in msg, which
+        // is a string (obj has to be JSON.stringify'd)
         client.on("message", function(channel, msg){
-            // can decide what to do with msg based on channel,
+            // todo. can decide what to do with msg based on channel,
             // e.g. sometimes you might not want to publish to client
             conn.write(msg);
         });

@@ -16,6 +16,18 @@ var DB = module.exports = (function(){
         });
     }
 
+    DB.isValidID = function(id){
+        return mongoose.Types.ObjectId.isValid(id);
+    }
+
+    DB.isValidIDs = function(ids){
+        for (var i = 0; i < ids.length; i++){
+            if (!DB.isValidID(ids[i]))
+                return false
+        }
+        return true
+    }
+
     return DB
 }())
 
