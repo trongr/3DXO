@@ -391,7 +391,7 @@ var Game = module.exports = (function(){
         return direction
     }
 
-    // mach todo. binary search
+    // todo. binary search
     Game.findEmptyQuadrant = function(done){
         var pos, piece, quadrant = null
         var direction = randomDirection()
@@ -417,11 +417,11 @@ var Game = module.exports = (function(){
         })
     }
 
-    // mach limit so we don't get infinite loop?
+    // todo limit so we don't get infinite loop?
     // direction = {dx:+-1, dy:+-1}
     // returns quadrant = {x:x, y:y}
     Game.doWhilstCheckNeighbourQuadrantEmpty = function(piece, direction, done){
-        var count = 0 // mach
+        var count = 0
         var cells = null
         var nPiece = piece
         var x, y
@@ -441,6 +441,7 @@ var Game = module.exports = (function(){
             },
             function(){
                 count++
+                if (count > 100) H.log("WARNING. Game.doWhilstCheckNeighbourQuadrantEmpty: big count", count)
                 if (cells && cells.length == 0){
                     return false // found empty quadrant
                 } else {
@@ -465,7 +466,7 @@ var Game = module.exports = (function(){
                 })
             },
             function(done){
-                // mach game logic should check if upserting is allowed
+                // todo game logic should check if upserting is allowed
                 // check if cell empty
                 Cells.upsert({
                     piece: piece._id,

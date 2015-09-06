@@ -60,7 +60,7 @@ var Turns = (function(){
         Turns.clearTimerForNewTurnRequest(enemyID)
         var you = Player.getPlayer()
         var to = setTimeout(function(){
-            Sock.turn({
+            Sock.send("turn", {
                 playerID: you._id,
                 enemyID: enemyID,
             })
@@ -133,7 +133,6 @@ var Sock = (function(){
             clearTimeout(_socketAutoReconnectTimeout)
         };
 
-        // todo separate users into grids
         _sock.onmessage = function(re){
             try {
                 var data = JSON.parse(re.data)
@@ -153,17 +152,8 @@ var Sock = (function(){
         };
     }
 
-    // todo. can make a generic method with channel names
-
-    Sock.move = function(data){
-        msg.info("Moving")
-        data.channel = "move"
-        _sock.send(JSON.stringify(data))
-    }
-
-    Sock.turn = function(data){
-        msg.info("Requesting turn")
-        data.channel = "turn"
+    Sock.send = function(channel, data){
+        data.channel = channel
         _sock.send(JSON.stringify(data))
     }
 
@@ -255,7 +245,6 @@ var Rollover = (function(){
     return Rollover
 }())
 
-// todo. make Rollover part of Highlight
 var Highlight = (function(){
     var Highlight = {}
 
@@ -318,7 +307,7 @@ var Player = (function(){
 
     Player.init = function(done){
         // for testing to bypass auth
-        // var name = "trong" // mach remove name query to get player's obj
+        // var name = "trong" // todo remove name query to get player's obj
         // API.Player.get({name:name}, function(er, player){
         API.Player.get({}, function(er, re){
             if (er) return done(er)
@@ -453,7 +442,7 @@ var Obj = (function(){
         return box
     }
 
-    // todo. store things in a db for faster obj location
+    // todo. Store objs in dictionary for faster get
     Obj.findObjAtPosition = function(x, y, z){
         for (var i = 0; i < _objects.length; i++){
             var obj = _objects[i]
@@ -493,7 +482,7 @@ var Map = (function(){
             var Y = Scene.camera.position.y
             Map.loadQuadrants(X, Y)
         })
-        Map.loadQuadrants(x, y) // mach load map wherever player spawns
+        Map.loadQuadrants(x, y) // load map wherever player spawns
     }
 
     // obj = {x:asdf, y:asdf, z:asdf}
@@ -945,7 +934,6 @@ var Scene = (function(){
 var Game = (function(){
     var Game = {}
 
-    // todo
     Game.init = function(done){
         var player, king = null
         var x = y = 0
@@ -987,7 +975,7 @@ var Game = (function(){
             },
             function(done){
                 done(null)
-                Sock.move({
+                Sock.send("move", {
                     player: Player.getPlayer(),
                     piece: selected.game.piece,
                     from: selected.position, // most likely fractions, so need to floor on server:
@@ -1005,7 +993,6 @@ var Game = (function(){
     Game.on = (function(){
         var on = {}
 
-        // todo
         on.move = function(data){
             var playerName = data.player.name
             msg.info("New move by " + playerName)
