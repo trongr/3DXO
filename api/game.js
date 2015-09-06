@@ -482,125 +482,130 @@ var Game = module.exports = (function(){
         })
     }
 
-    Game.move = function(data, done){
-        var nPiece = null
-        try {
-            var player = data.player
-            var playerID = player._id
-            var piece = data.piece
-            var from = { // Clean coordinates and remove z axis
-                x: Math.floor(data.from.x),
-                y: Math.floor(data.from.y),
-            }
-            var to = {
-                x: Math.floor(data.to.x),
-                y: Math.floor(data.to.y),
-            }
-        } catch (e){
-            return done({info:"Move invalid input"})
-        }
-        async.waterfall([
-            function(done){
-                // Can move if no enemy in range of player. Once
-                // someone comes in range player can only move if he
-                // has a turn token (at the right index)
-                Turn.validate(playerID, function(er, canMove){
-                    if (er) done(er)
-                    else if (canMove) done(null)
-                    else done({info:"NO MORE TURN"})
-                })
-            },
-            function(done){
-                Move.validateMove(player, piece, from, to, function(er){
-                    done(er)
-                })
-            },
-            function(done){
-                Move.move(player, piece, from, to, function(er, _piece){
-                    nPiece = _piece
-                    done(er)
-                })
-            },
-            function(done){
-                Turn.update(playerID, to, function(er, _player){
-                    player = _player
-                    done(er)
-                })
-            }
-        ], function(er){
-            data.player = player
-            data.piece = nPiece
-            if (er) done("ERROR. Can't move there: " + er.info)
-            else if (data){
-                // data already has channel, but should make it
-                // explicit just in case
-                data.channel = "move"
-                done(null, data)
-            } else done("FATAL ERROR. Game move: unexpected response")
-        })
-    }
-
-    // Passes turn from enemy back to player
-    Game.turn = function(data, done){
-        try {
-            var playerID = data.playerID
-            var enemyID = data.enemyID
-            var player, enemy = null
-            if (!DB.isValidIDs([playerID, enemyID])){
-                throw "Invalid player IDs"
-            }
-        } catch (e){
-            return done("Turn invalid input: " + e)
-        }
-        // validate that the timeout actually happened
-        async.waterfall([
-            function(done){
-                Turn.passTokenToEnemy(enemyID, playerID, function(er, _enemy){
-                    done(er)
-                })
-            },
-            function(done){
-                Turn.unsetPlayerToken(enemyID, playerID, function(er, _enemy){
-                    enemy = _enemy
-                    done(er)
-                })
-            },
-            function(done){
-                Player.findOne({
-                    _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
-                }, function(er, _player){
-                    player = _player
-                    done(er)
-                })
-            }
-        ], function(er){
-            if (er) done("ERROR. Can't request new turn: " + er.info)
-            else if (data){
-                // todo implement private channel / room so only
-                // specific users can get those pubs
-                done(null, { // update player hud
-                    channel: "turn",
-                    player: player,
-                    enemy: enemy,
-                    your_turn: true, // to distinguish whose turn it is
-                })
-                done(null, { // update enemy hud
-                    channel: "turn",
-                    player: enemy,
-                    enemy: player,
-                })
-            } else done("FATAL ERROR. Game turn: unexpected response")
-        })
-    }
-
     Game.sock = function(data, done){
         var channel = data.channel
         if (["move", "turn"].indexOf(channel) < 0){
             return done("ERROR. Unknown channel: " + channel)
         }
-        // todo. should be careful with names
-        Game[channel](data, done)
+        Game.on[channel](data, done)
     }
+
+    Game.on = (function(){
+        var on = {}
+
+        on.move = function(data, done){
+            var nPiece = null
+            try {
+                var player = data.player
+                var playerID = player._id
+                var piece = data.piece
+                var from = { // Clean coordinates and remove z axis
+                    x: Math.floor(data.from.x),
+                    y: Math.floor(data.from.y),
+                }
+                var to = {
+                    x: Math.floor(data.to.x),
+                    y: Math.floor(data.to.y),
+                }
+            } catch (e){
+                return done({info:"Move invalid input"})
+            }
+            async.waterfall([
+                function(done){
+                    // Can move if no enemy in range of player. Once
+                    // someone comes in range player can only move if he
+                    // has a turn token (at the right index)
+                    Turn.validate(playerID, function(er, canMove){
+                        if (er) done(er)
+                        else if (canMove) done(null)
+                        else done({info:"NO MORE TURN"})
+                    })
+                },
+                function(done){
+                    Move.validateMove(player, piece, from, to, function(er){
+                        done(er)
+                    })
+                },
+                function(done){
+                    Move.move(player, piece, from, to, function(er, _piece){
+                        nPiece = _piece
+                        done(er)
+                    })
+                },
+                function(done){
+                    Turn.update(playerID, to, function(er, _player){
+                        player = _player
+                        done(er)
+                    })
+                }
+            ], function(er){
+                data.player = player
+                data.piece = nPiece
+                if (er) done("ERROR. Can't move there: " + er.info)
+                else if (data){
+                    // data already has channel, but should make it
+                    // explicit just in case
+                    data.channel = "move"
+                    done(null, data)
+                } else done("FATAL ERROR. Game move: unexpected response")
+            })
+        }
+
+        // Passes turn from enemy back to player
+        on.turn = function(data, done){
+            try {
+                var playerID = data.playerID
+                var enemyID = data.enemyID
+                var player, enemy = null
+                if (!DB.isValidIDs([playerID, enemyID])){
+                    throw "Invalid player IDs"
+                }
+            } catch (e){
+                return done("Turn invalid input: " + e)
+            }
+            // validate that the timeout actually happened
+            async.waterfall([
+                function(done){
+                    Turn.passTokenToEnemy(enemyID, playerID, function(er, _enemy){
+                        done(er)
+                    })
+                },
+                function(done){
+                    Turn.unsetPlayerToken(enemyID, playerID, function(er, _enemy){
+                        enemy = _enemy
+                        done(er)
+                    })
+                },
+                function(done){
+                    Player.findOne({
+                        _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
+                    }, function(er, _player){
+                        player = _player
+                        done(er)
+                    })
+                }
+            ], function(er){
+                if (er) done("ERROR. Can't request new turn: " + er.info)
+                else if (data){
+                    // todo implement private channel / room so only
+                    // specific users can get those pubs
+                    done(null, { // update player hud
+                        channel: "turn",
+                        player: player,
+                        enemy: enemy,
+                        your_turn: true, // to distinguish whose turn it is
+                    })
+                    done(null, { // update enemy hud
+                        channel: "turn",
+                        player: enemy,
+                        enemy: player,
+                    })
+                } else done("FATAL ERROR. Game turn: unexpected response")
+            })
+        }
+
+        return on
+    }())
 
     return Game
 }())
