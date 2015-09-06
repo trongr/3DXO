@@ -2,12 +2,12 @@ var sockjs  = require('sockjs');
 var redis   = require('redis');
 var H = require("./lib/h.js")
 var Game = require("./api/game.js")
+var Publisher = require("./api/publisher.js")
 
 var Sock = module.exports = (function(){
     var Sock = {}
 
     var _server = null
-    var _publisher = redis.createClient();
 
     Sock.init = function(server){
         _server = sockjs.createServer({
@@ -29,6 +29,7 @@ var Sock = module.exports = (function(){
     function onConnection(conn){
         H.log("INFO. Sock.onConnection.opening socket")
 
+        // mach subscriber module
         var client = redis.createClient();
 
         client.subscribe('move');
@@ -60,7 +61,7 @@ var Sock = module.exports = (function(){
             Game.sock(data, function(er, re){
                 if (er) conn.write(er)
                 else if (re){
-                    _publisher.publish(re.channel, JSON.stringify(re))
+                    Publisher.publish(re.channel, re)
                 }
                 else conn.write("FATAL ERROR: unexpected game socket response")
             })
@@ -82,20 +83,6 @@ var Test = (function(){
         var method = process.argv[2]
         var args = process.argv.slice(3)
         Test[method](args)
-    }
-
-    // QUESTION. why is this redis db empty? aren't there supposed to
-    // be published messages there?
-    Test.getAllRedisKeys = function(args){
-        H.log("USAGE. node sock.js getAllRedisKeys")
-        client = redis.createClient();
-        client.keys('*', function (err, keys) {
-            if (err) return console.log(err);
-            for(var i = 0, len = keys.length; i < len; i++) {
-                console.log(keys[i]);
-            }
-            process.exit(0)
-        });
     }
 
     return Test

@@ -1,12 +1,12 @@
 var _ = require("lodash")
 var async = require("async")
 var express = require('express');
-var redis   = require('redis');
 var H = require("../lib/h.js")
 var K = require("../conf/k.js")
 var Cell = require("../models/cell.js")
 var Piece = require("../models/piece.js")
 var Player = require("../models/player.js")
+var Publisher = require("../api/publisher.js")
 var Cells = require("../api/cells.js")
 var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
@@ -305,8 +305,6 @@ var Game = module.exports = (function(){
     Game = {
         router: express.Router()
     }
-
-    var _publisher = redis.createClient();
 
     var ERROR_BUILD_ARMY = "ERROR. Can't build army"
 
@@ -619,7 +617,7 @@ var Game = module.exports = (function(){
         // them AI to roam the world).
         on.gameover = function(playerID, enemyID){
             try {
-                var player = null
+                var player, enemy = null
             } catch (e){
                 return done("gameover invalid input: " + e)
             }
@@ -641,10 +639,11 @@ var Game = module.exports = (function(){
                 } else {
                     re = {
                         channel: "gameover",
-                        player: player
+                        player: player,
+                        enemy: enemy,
                     }
                 }
-                _publisher.publish("gameover", JSON.stringify(re))
+                Publisher.publish("gameover", re)
             })
         }
 
