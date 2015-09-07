@@ -7,6 +7,7 @@ var SALT_WORK_FACTOR = 10;
 var schema = mongoose.Schema({
     name: {type: String, required: true, index: {unique:true}},
     pass: {type: String, required: true, select: false},
+    // todo
     // team: {
     //     type: mongoose.Schema.Types.ObjectId,
     //     ref: 'Team'
@@ -22,6 +23,8 @@ var schema = mongoose.Schema({
         },
         player_name: {type: String},
         live: Boolean, // token in player possession i.e. can move if its index matches turn_index
+        // todo: what happens when you scale and have multiple servers with diff clocks?
+        t: {type: Date, default: Date.now}, // when this token was last turned on, to validate timeout requests
     }]
 });
 

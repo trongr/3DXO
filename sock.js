@@ -21,6 +21,8 @@ var Sock = module.exports = (function(){
         });
     }
 
+    // todo. authenticate client
+    //
     // todo. how to scale pubsub? encode channel names with
     // coordinates?
     //

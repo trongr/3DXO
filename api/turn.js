@@ -150,27 +150,38 @@ var Turn = module.exports = (function(){
                 })
             },
             function(done){
-                var found = false
-                // Check if enemy already has player in their turn_tokens
-                for (var i = 0; i < nEnemy.turn_tokens.length; i++){
-                    if (nEnemy.turn_tokens[i].player.equals(nPlayer._id)){
-                        nEnemy.turn_tokens[i].live = true
-                        found = true
-                    }
-                }
-                // Enemy hasn't been in range of player yet
-                if (!found) nEnemy.turn_tokens.push({
-                    player: nPlayer._id,
-                    player_name: nPlayer.name,
-                    live: true
-                })
-                nEnemy.save(function(er){
+                enemyAddPlayerToken(nEnemy, nPlayer, function(er){
                     done(er)
                 })
             }
         ], function(er){
             if (er) H.log("ERROR. Turn.passTokenToEnemy", er)
             if (done) done(er, nEnemy)
+        })
+    }
+
+    function enemyAddPlayerToken(enemy, player, done){
+        var token = null
+        // Check if enemy already has player in their turn_tokens
+        for (var i = 0; i < enemy.turn_tokens.length; i++){
+            if (enemy.turn_tokens[i].player.equals(player._id)){
+                token = enemy.turn_tokens[i]
+            }
+        }
+        // New player
+        if (!token){
+            token = {
+                player: player._id,
+                player_name: player.name,
+            }
+            enemy.turn_tokens.push(token)
+        }
+        // Turn player token on
+        token.live = true
+        token.t = new Date()
+
+        enemy.save(function(er){
+            done(er)
         })
     }
 
