@@ -7,20 +7,16 @@ var Piece = require("../models/piece.js")
 var Turn = module.exports = (function(){
     Turn = {}
 
-    Turn.validate = function(playerID, done){
-        Player.findOne({
-            _id: playerID
-        }, function(er, _player){
-            if (er) done(er)
-            else if (_player){
-                if (_player.turn_tokens.length){
-                    var hasTurn = _player.turn_tokens[_player.turn_index].live
-                } else {
-                    var hasTurn = true
-                }
-                done(null, hasTurn)
-            } else done({info:"Player does not exist"})
-        })
+    // Can move if no enemy in range of player. Once someone comes in
+    // range player can only move if he has a turn token (at the right
+    // index)
+    Turn.hasTurn = function(player, done){
+        if (player.turn_tokens.length){
+            var hasTurn = player.turn_tokens[player.turn_index].live
+        } else {
+            var hasTurn = true
+        }
+        return hasTurn
     }
 
     Turn.update = function(playerID, to, done){

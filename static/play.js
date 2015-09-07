@@ -1008,7 +1008,7 @@ var Game = (function(){
 
         // Generic error handler
         on.error = function(data){
-            msg.error(data.er)
+            if (data.playerID == Player.getPlayer()._id) msg.error(data.er)
         }
 
         on.move = function(data){

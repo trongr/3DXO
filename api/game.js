@@ -519,14 +519,21 @@ var Game = module.exports = (function(){
             }
             async.waterfall([
                 function(done){
-                    // Can move if no enemy in range of player. Once
-                    // someone comes in range player can only move if he
-                    // has a turn token (at the right index)
-                    Turn.validate(playerID, function(er, canMove){
-                        if (er) done(er)
-                        else if (canMove) done(null)
-                        else done({info:"NO MORE TURN"})
+                    Player.findOne({
+                        _id: playerID
+                    }, function(er, _player){
+                        player = _player
+                        if (player) done(null)
+                        else done({info:"Player does not exist", er:er})
                     })
+                },
+                function(done){
+                    if (player.alive) done(null)
+                    else done({info:"Alas! The battle is lost"})
+                },
+                function(done){
+                    if (Turn.hasTurn(player)) done(null)
+                    else done({info:"No more turn"})
                 },
                 function(done){
                     Move.validateMove(player, piece, from, to, function(er){
@@ -549,7 +556,7 @@ var Game = module.exports = (function(){
             ], function(er){
                 data.player = player
                 data.piece = nPiece
-                if (er) done("ERROR. Can't move there: " + er.info)
+                if (er) done("ERROR. " + er.info)
                 else if (data){
                     // data already has channel, but should make it
                     // explicit just in case

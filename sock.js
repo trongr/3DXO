@@ -35,6 +35,7 @@ var Sock = module.exports = (function(){
         client.subscribe('move');
         client.subscribe('turn');
         client.subscribe('gameover');
+        client.subscribe('error');
 
         // Server just published data to this channel, to be sent to
         // client. Client has to check channel encoded in data
@@ -49,10 +50,11 @@ var Sock = module.exports = (function(){
             try {
                 // data always has playerID and chan
                 var data = JSON.parse(msg)
+                var playerID = data.playerID
             } catch (e){
                 return H.log("ERROR. Sock.onConnection.conn.data.JSON.parse", msg)
             }
-            H.log("INFO. Sock.data:", data.chan, data.playerID)
+            H.log("INFO. Sock.data:", data.chan, playerID)
             Game.sock(data, function(er, re){
                 // todo refactor cause Publisher.publish will push
                 // everything to everyone
@@ -66,6 +68,8 @@ var Sock = module.exports = (function(){
                     var chan = "error"
                     var data = {er:"FATAL ERROR: unexpected game socket response"}
                 }
+                data.chan = chan
+                data.playerID = playerID
                 Publisher.publish(chan, data)
             })
         });
