@@ -136,11 +136,12 @@ var Sock = (function(){
             clearTimeout(_socketAutoReconnectTimeout)
         };
 
+        // re.data should always be an obj and contain a channel
+        // (e.g. move, turn, er)
         _sock.onmessage = function(re){
             try {
                 var data = JSON.parse(re.data)
-                var chan = data.chan
-                Game.on[chan](data)
+                Game.on[data.chan](data)
             } catch (e){
                 if (re) return msg.error(re.data)
                 else return msg.error("FATAL ERROR. Server socket response")
@@ -978,6 +979,7 @@ var Game = (function(){
         var x = Math.floor(pos.x)
         var y = Math.floor(pos.y)
         var z = 1 // height of every game piece
+        var player = Player.getPlayer()
         async.waterfall([
             function(done){
                 if (Move.isValidated(x, y, z)) done(null)
@@ -986,7 +988,8 @@ var Game = (function(){
             function(done){
                 done(null)
                 Sock.send("move", {
-                    player: Player.getPlayer(),
+                    playerID: player._id,
+                    player: player,
                     piece: selected.game.piece,
                     from: selected.position, // most likely fractions, so need to floor on server:
                     to: pos,
@@ -1002,6 +1005,11 @@ var Game = (function(){
 
     Game.on = (function(){
         var on = {}
+
+        // Generic error handler
+        on.error = function(data){
+            msg.error(data.er)
+        }
 
         on.move = function(data){
             var playerName = data.player.name
@@ -1042,9 +1050,13 @@ var Game = (function(){
             }
         }
 
+        // mach big splash screen and menu for loser
         on.gameover = function(data){
             var player = Player.getPlayer()
-            if (player._id == data.player._id){ // bad news:
+            var you_win = data.you_win
+            if (player._id == data.player._id && you_win){
+                msg.info("YOU WIN!")
+            } else if (player._id == data.player._id){
                 msg.error("GAME OVER")
             }
         }

@@ -11,6 +11,7 @@ var schema = mongoose.Schema({
     //     type: mongoose.Schema.Types.ObjectId,
     //     ref: 'Team'
     // },
+    alive: {type: Boolean, default: true}, // alive false means player lost and has no control of his army
     created: {type: Date, default: Date.now},
     modified: {type: Date, default: Date.now},
     turn_index: {type: Number, default: 0}, // index of the active turn token

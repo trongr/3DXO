@@ -48,6 +48,20 @@ var Players = module.exports = (function(){
             })
         })
 
+    Players.lose = function(playerID, done){
+        Player.update({
+            _id: playerID
+        }, {
+            $set: {
+                modified: new Date(), // update bypasses mongoose's pre save middleware
+                alive: false,
+            }
+        }, {}, function(er, re){
+            if (er) H.log("ERROR. Players.lose", er)
+            if (done) done(er)
+        })
+    }
+
     return Players
 }())
 

@@ -37,30 +37,36 @@ var Sock = module.exports = (function(){
         client.subscribe('gameover');
 
         // Server just published data to this channel, to be sent to
-        // client. Client has to check channel encoded in msg, which
-        // is a string (obj has to be JSON.stringify'd). In case of an
-        // error, msg will just be a plain string with no channel, and
-        // the client will fail and display the string.
-        client.on("message", function(chan, msg){
-            // todo. can decide what to do with msg based on channel,
+        // client. Client has to check channel encoded in data
+        client.on("message", function(chan, data){
+            // todo. can decide what to do with data based on channel,
             // e.g. sometimes you might not want to publish to client
-            conn.write(msg);
+            conn.write(data);
         });
 
-        // Receiving data from
+        // Receiving data from client
         conn.on('data', function(msg) {
             try {
+                // data always has playerID and chan
                 var data = JSON.parse(msg)
             } catch (e){
                 return H.log("ERROR. Sock.onConnection.conn.data.JSON.parse", msg)
             }
-            H.log("INFO. Sock.data", data.chan)
+            H.log("INFO. Sock.data:", data.chan, data.playerID)
             Game.sock(data, function(er, re){
-                if (er) conn.write(er)
-                else if (re){
-                    Publisher.publish(re.chan, re)
+                // todo refactor cause Publisher.publish will push
+                // everything to everyone
+                if (er){
+                    var chan = "error"
+                    var data = {er:er}
+                } else if (re){
+                    var chan = re.chan
+                    var data = re
+                } else {
+                    var chan = "error"
+                    var data = {er:"FATAL ERROR: unexpected game socket response"}
                 }
-                else conn.write("FATAL ERROR: unexpected game socket response")
+                Publisher.publish(chan, data)
             })
         });
 

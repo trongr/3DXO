@@ -630,20 +630,41 @@ var Game = module.exports = (function(){
                         done(er)
                     })
                 },
-                // mach mark user as dead: so they can't control their pieces anymore
+                function(done){
+                    Player.findOne({
+                        _id: enemyID, // apparently you don't need to convert _id to mongo ObjectID
+                    }, function(er, _enemy){
+                        enemy = _enemy
+                        done(er)
+                    })
+                },
+                function(done){
+                    Players.lose(playerID)
+                    done(null)
+                },
                 // process remaining pieces
-                // tell enemy they've defeated player
             ], function(er){
                 if (er){
-                    re = "ERROR. Can't execute game over"
+                    var chan = "error"
+                    var data = {er:"ERROR. Can't execute game over"}
+                    Publisher.publish(chan, data)
                 } else {
-                    re = {
+                    var chan = "gameover"
+                    var loser = {
                         chan: "gameover",
                         player: player,
                         enemy: enemy,
+                        you_win: false,
                     }
+                    var winner = {
+                        chan: "gameover",
+                        player: enemy,
+                        enemy: player,
+                        you_win: true,
+                    }
+                    Publisher.publish(chan, winner)
+                    Publisher.publish(chan, loser)
                 }
-                Publisher.publish("gameover", re)
             })
         }
 
