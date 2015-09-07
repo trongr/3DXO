@@ -120,7 +120,6 @@ var Turn = module.exports = (function(){
         })
     }
 
-    // todo update modified on save
     // Passes token from player to enemy
     Turn.passTokenToEnemy = function(playerID, enemyID, done){
         var nPlayer, nEnemy = null

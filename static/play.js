@@ -139,8 +139,8 @@ var Sock = (function(){
         _sock.onmessage = function(re){
             try {
                 var data = JSON.parse(re.data)
-                var channel = data.channel
-                Game.on[channel](data)
+                var chan = data.chan
+                Game.on[chan](data)
             } catch (e){
                 if (re) return msg.error(re.data)
                 else return msg.error("FATAL ERROR. Server socket response")
@@ -155,8 +155,8 @@ var Sock = (function(){
         };
     }
 
-    Sock.send = function(channel, data){
-        data.channel = channel
+    Sock.send = function(chan, data){
+        data.chan = chan
         _sock.send(JSON.stringify(data))
     }
 

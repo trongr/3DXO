@@ -490,11 +490,11 @@ var Game = module.exports = (function(){
     }
 
     Game.sock = function(data, done){
-        var channel = data.channel
-        if (["move", "turn"].indexOf(channel) < 0){
-            return done("ERROR. Unknown channel: " + channel)
+        var chan = data.chan
+        if (["move", "turn"].indexOf(chan) < 0){
+            return done("ERROR. Unknown channel: " + chan)
         }
-        Game.on[channel](data, done)
+        Game.on[chan](data, done)
     }
 
     Game.on = (function(){
@@ -553,7 +553,7 @@ var Game = module.exports = (function(){
                 else if (data){
                     // data already has channel, but should make it
                     // explicit just in case
-                    data.channel = "move"
+                    data.chan = "move"
                     done(null, data)
                 } else done("FATAL ERROR. Game move: unexpected response")
             })
@@ -598,13 +598,13 @@ var Game = module.exports = (function(){
                     // todo implement private channel / room so only
                     // specific users can get those pubs
                     done(null, { // update player hud
-                        channel: "turn",
+                        chan: "turn",
                         player: player,
                         enemy: enemy,
                         your_turn: true, // to distinguish whose turn it is
                     })
                     done(null, { // update enemy hud
-                        channel: "turn",
+                        chan: "turn",
                         player: enemy,
                         enemy: player,
                     })
@@ -638,7 +638,7 @@ var Game = module.exports = (function(){
                     re = "ERROR. Can't execute game over"
                 } else {
                     re = {
-                        channel: "gameover",
+                        chan: "gameover",
                         player: player,
                         enemy: enemy,
                     }

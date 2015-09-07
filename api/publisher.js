@@ -8,11 +8,11 @@ var Publisher = module.exports = (function(){
 
     var _publisher = redis.createClient();
 
-    Publisher.pubblish = function(chan, data){
+    Publisher.publish = function(chan, data){
         _publisher.publish(chan, JSON.stringify(data))
     }
 
-    Publisher.createClient
+    // Publisher.createClient
 
     return Publisher
 }())

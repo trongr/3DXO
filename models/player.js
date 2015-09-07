@@ -27,6 +27,9 @@ var schema = mongoose.Schema({
 schema.pre("save", function(next) {
     var user = this;
 
+    // Update default values:
+    user.modified = new Date()
+
     // only hash the password if it has been modified (or is new)
     if (!user.isModified('pass')) return next();
 
