@@ -38,26 +38,37 @@ var Turns = (function(){
         API.Player.get({}, function(er, re){
             if (er) return done(er)
             var you = re.player
-            if (mover._id == you._id){ // you just moved
-                console.log("mover", JSON.stringify(mover, 0, 2))
-                var moverEnemy = mover.turn_tokens[(mover.turn_index - 1 + mover.turn_tokens.length) % mover.turn_tokens.length]
-                var enemyID = moverEnemy.player
-                Turns.startTimerForNewTurnRequest(enemyID)
-                Turns.clearTimerForTurnExpire(enemyID)
-                Turns.startTimerForNewTurn(enemyID)
-            } else { // someone else just moved.......
-                var moverEnemy = mover.turn_tokens[(mover.turn_index - 1 + mover.turn_tokens.length) % mover.turn_tokens.length]
-                var enemyID = mover._id
-                // todo there's some bug here when a new user
-                // registers / new enemy comes in
-                if (moverEnemy.player == you._id){ // ......using your token
-                    Turns.clearTimerForNewTurnRequest(enemyID)
-                    Turns.clearTimerForNewTurn(enemyID)
-                    Turns.startTimerForTurnExpire(enemyID)
-                }
+            if (mover._id == you._id){
+                updatePlayerTurns(mover)
+            } else {
+                updateEnemyTurns(you, mover)
             }
             Hud.renderTurns(you)
         })
+    }
+
+    function updatePlayerTurns(you){
+        if (you.turn_tokens.length){
+            var enemy = you.turn_tokens[(you.turn_index - 1 + you.turn_tokens.length) % you.turn_tokens.length]
+            var enemyID = enemy.player
+            Turns.startTimerForNewTurnRequest(enemyID)
+            Turns.clearTimerForTurnExpire(enemyID)
+            Turns.startTimerForNewTurn(enemyID)
+        } else {
+            msg.info("Free roaming")
+        }
+    }
+
+    function updateEnemyTurns(you, enemy){
+        if (enemy.turn_tokens.length){
+            var enemyEnemy = enemy.turn_tokens[(enemy.turn_index - 1 + enemy.turn_tokens.length) % enemy.turn_tokens.length]
+            var enemyID = enemy._id
+            if (enemyEnemy.player == you._id){ // the enemy of my enemy might be me lol
+                Turns.clearTimerForNewTurnRequest(enemyID)
+                Turns.clearTimerForNewTurn(enemyID)
+                Turns.startTimerForTurnExpire(enemyID)
+            }
+        } // otw enemy is free roaming
     }
 
     Turns.startTimerForNewTurnRequest = function(enemyID){
@@ -1011,7 +1022,6 @@ var Game = (function(){
 
         on.move = function(data){
             var playerName = data.player.name
-            msg.info("New move by " + playerName)
 
             // remove any piece already at dst
             var dstObj = Obj.findObjAtPosition(Math.floor(data.to.x), Math.floor(data.to.y), 1)
