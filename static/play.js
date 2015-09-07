@@ -39,6 +39,7 @@ var Turns = (function(){
             if (er) return done(er)
             var you = re.player
             if (mover._id == you._id){ // you just moved
+                console.log("mover", JSON.stringify(mover, 0, 2))
                 var moverEnemy = mover.turn_tokens[(mover.turn_index - 1 + mover.turn_tokens.length) % mover.turn_tokens.length]
                 var enemyID = moverEnemy.player
                 Turns.startTimerForNewTurnRequest(enemyID)
@@ -316,9 +317,6 @@ var Player = (function(){
     var _player = null
 
     Player.init = function(done){
-        // for testing to bypass auth
-        // var name = "trong" // todo remove name query to get player's obj
-        // API.Player.get({name:name}, function(er, player){
         API.Player.get({}, function(er, re){
             if (er) return done(er)
             _player = re.player

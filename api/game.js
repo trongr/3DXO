@@ -692,7 +692,7 @@ var Test = (function(){
     }
 
     Test.make = function(args){
-        H.log("USAGE. node pieces.js make rook 0 1 playerID")
+        H.log("USAGE. node game.js make rook 0 1 playerID")
         var kind = args[0]
         var x = args[1]
         var y = args[2]
@@ -705,6 +705,32 @@ var Test = (function(){
                 player: player
             }, function(er, piece){
                 console.log(JSON.stringify({piece:piece, er:er}, 0, 2))
+                process.exit(0)
+            })
+        }, 2000)
+    }
+
+    Test.clean = function(args){
+        H.log("USAGE. node game.js clean")
+        setTimeout(function(){
+            async.waterfall([
+                function(done){
+                    Player.remove({}, function(er) {
+                        done(er)
+                    });
+                },
+                function(done){
+                    Piece.remove({}, function(er) {
+                        done(er)
+                    });
+                },
+                function(done){
+                    Cell.remove({}, function(er) {
+                        done(er)
+                    });
+                }
+            ], function(er){
+                console.log(JSON.stringify(er, 0, 2))
                 process.exit(0)
             })
         }, 2000)

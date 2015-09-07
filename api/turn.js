@@ -41,7 +41,8 @@ var Turn = module.exports = (function(){
                 })
             },
             function(done){
-                findNewTurnTokens(player, to, function(er){
+                findNewEnemies(player, to, function(er, _player){
+                    player = _player
                     done(er)
                 })
             }
@@ -116,6 +117,12 @@ var Turn = module.exports = (function(){
         })
     }
 
+    Turn.passTokenToEnemies = function(playerID, enemies){
+        enemies.map(function(enemy, i){
+            Turn.passTokenToEnemy(playerID, enemy._id)
+        })
+    }
+
     // Passes token from player to enemy
     Turn.passTokenToEnemy = function(playerID, enemyID, done){
         var nPlayer, nEnemy = null
@@ -170,7 +177,7 @@ var Turn = module.exports = (function(){
     var NO_NEW_TURN_TOKENS = "NO_NEW_TURN_TOKENS"
 
     // todo. clear enemy tokens once they or you move away
-    function findNewTurnTokens(player, pos, done){
+    function findNewEnemies(player, pos, done){
         var pieces = null
         var RANGE = 6 // This should (?) be bigger than max range so
                       // you can't capture as the first move into
@@ -188,62 +195,60 @@ var Turn = module.exports = (function(){
                 });
             },
             function(done){
-                var knownEnemies = {}
-                for (var i = 0; i < pieces.length; i++){
-                    var found = false
-                    var newEnemy = pieces[i].player
-                    // Check if we already have this enemy's token
-                    if (knownEnemies[newEnemy]){
-                        continue
-                    } else {
-                        knownEnemies[newEnemy] = true
-                    }
-                    for (var j = 0; j < player.turn_tokens.length; j++){
-                        var knownEnemy = player.turn_tokens[j]
-                        if (newEnemy._id.equals(knownEnemy.player)){
-                            // enemy already in combat with player
-                            found = true
-                        }
-                    }
-                    // New enemy. Passing token to enemy so it's their
-                    // turn, cause you just moved into their range
-                    if (!found && !newEnemy._id.equals(player._id)){
-                        Turn.passTokenToEnemy(player._id, newEnemy._id)
-                        addNewEnemyToken(player, newEnemy)
-                    }
-                }
-                done(null)
+                var enemies = findNewEnemiesNearby(player, pieces)
+                if (enemies.length){
+                    Turn.passTokenToEnemies(player._id, enemies)
+                    addNewEnemyTokens(player, enemies, function(er, _player){
+                        player = _player
+                        done(er)
+                    })
+                } else done(null)
             }
         ], function(er){
             if (er && er.code) done(null)
             else if (er) done(er)
-            else done(null)
+            else done(null, player)
         })
     }
 
-    function addNewEnemyToken(player, enemy){
-        Player.update({
-            _id: player._id
-        }, {
-            $push: {
-                "turn_tokens": {
-                    player: enemy._id,
-                    player_name: enemy.name,
-                    live: false,
+    function findNewEnemiesNearby(player, pieces){
+        var enemies = []
+        var knownEnemies = {}
+        for (var i = 0; i < pieces.length; i++){
+            var found = false
+            var newEnemy = pieces[i].player
+            // Check if we already have this enemy's token
+            if (knownEnemies[newEnemy]){
+                continue
+            } else {
+                knownEnemies[newEnemy] = true
+            }
+            for (var j = 0; j < player.turn_tokens.length; j++){
+                var knownEnemy = player.turn_tokens[j]
+                if (newEnemy._id.equals(knownEnemy.player)){
+                    found = true // enemy already in combat with player
                 }
             }
-        }, {}, function(er, re){
-            if (er) H.log("ERROR. Turn.addNewEnemyToken", er)
+            // New enemy. Passing token to enemy so it's their
+            // turn, cause you just moved into their range
+            if (!found && !newEnemy._id.equals(player._id)){
+                enemies.push(newEnemy)
+            }
+        }
+        return enemies
+    }
+
+    function addNewEnemyTokens(player, enemies, done){
+        enemies.map(function(enemy, i){
+            player.turn_tokens.push({
+                player: enemy._id,
+                player_name: enemy.name,
+                live: false,
+            })
         })
-        // NOTE. This creates duplicates for some reason: do not use
-        // player.turn_tokens.push({
-        //     player: enemy._id,
-        //     player_name: enemy.name,
-        //     live: false,
-        // })
-        // player.save(function(er){
-        //     if (er) H.log("ERROR. Turn.addNewEnemyToken", er)
-        // })
+        player.save(function(er){
+            done(er, player)
+        })
     }
 
     return Turn
