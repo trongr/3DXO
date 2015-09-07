@@ -21,7 +21,8 @@ var Sock = module.exports = (function(){
         });
     }
 
-    // todo. authenticate client
+    // todo. authenticate client. right now there's no way to know if
+    // a client is who they say they are
     //
     // todo. how to scale pubsub? encode channel names with
     // coordinates?

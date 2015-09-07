@@ -1,11 +1,34 @@
 var async = require("async")
 var express = require('express');
 var H = require("../lib/h.js")
+var K = require("../conf/k.js")
 var Player = require("../models/player.js")
 var Piece = require("../models/piece.js")
 
 var Turn = module.exports = (function(){
     Turn = {}
+
+    // Loop over player.turn_tokens for enemyID's token and check that
+    // token.t was over K.TURN_TIMEOUT ms ago
+    Turn.validateTimeout = function(player, enemyID){
+        for (var i = 0; i < player.turn_tokens.length; i++){
+            var token = player.turn_tokens[i]
+            if (token.player == enemyID){
+                var elapsed = new Date().getTime() - token.t.getTime()
+                // Need to check token.live so enemy can't keep
+                // requesting new turns even though player's token is
+                // dead
+                if (token.live && elapsed > K.TURN_TIMEOUT){
+                    return true
+                } else {
+                    // todo. check how big this can get and adjust K.TURN_TIMEOUT
+                    H.log("WARNING. Turn request early by ms:", elapsed)
+                    return false
+                }
+            }
+        }
+        return true
+    }
 
     // Can move if no enemy in range of player. Once someone comes in
     // range player can only move if he has a turn token (at the right
@@ -87,33 +110,38 @@ var Turn = module.exports = (function(){
         })
     }
 
+    // Does opposite of unsetPlayerToken
+    Turn.unsetEnemyToken = function(playerID, enemyID, done){
+        Turn.unsetPlayerToken(enemyID, playerID, done)
+    }
+
     Turn.unsetPlayerToken = function(playerID, enemyID, done){
-        var nPlayer = null
+        var player = null
         async.waterfall([
             function(done){
                 Player.findOne({
                     _id: playerID
                 }, function(er, _player){
-                    nPlayer = _player
+                    player = _player
                     if (er) done(er)
-                    else if (nPlayer){
+                    else if (player){
                         done(null)
                     } else done({info:"Player does not exist"})
                 })
             },
             function(done){
-                for (var i = 0; i < nPlayer.turn_tokens.length; i++){
-                    if (nPlayer.turn_tokens[i].player == enemyID){
-                        nPlayer.turn_tokens[i].live = false
+                for (var i = 0; i < player.turn_tokens.length; i++){
+                    if (player.turn_tokens[i].player == enemyID){
+                        player.turn_tokens[i].live = false
                     }
                 }
-                nPlayer.save(function(er){
+                player.save(function(er){
                     done(er)
                 })
             }
         ], function(er){
             if (er) H.log("ERROR. Turn.unsetPlayerToken", er)
-            if (done) done(er, nPlayer)
+            if (done) done(er, player)
         })
     }
 
@@ -123,17 +151,22 @@ var Turn = module.exports = (function(){
         })
     }
 
+    // Does the opposite of passTokenToEnemy
+    Turn.getTokenFromEnemy = function(playerID, enemyID, done){
+        Turn.passTokenToEnemy(enemyID, playerID, done)
+    }
+
     // Passes token from player to enemy
     Turn.passTokenToEnemy = function(playerID, enemyID, done){
-        var nPlayer, nEnemy = null
+        var player, enemy = null
         async.waterfall([
             function(done){
                 Player.findOne({
                     _id: playerID
                 }, function(er, _player){
-                    nPlayer = _player
+                    player = _player
                     if (er) done(er)
-                    else if (nPlayer){
+                    else if (player){
                         done(null)
                     } else done({info:"Player does not exist"})
                 })
@@ -142,21 +175,22 @@ var Turn = module.exports = (function(){
                 Player.findOne({
                     _id: enemyID
                 }, function(er, _enemy){
-                    nEnemy = _enemy
+                    enemy = _enemy
                     if (er) done(er)
-                    else if (nEnemy){
+                    else if (enemy){
                         done(null)
                     } else done({info:"Player does not exist"})
                 })
             },
             function(done){
-                enemyAddPlayerToken(nEnemy, nPlayer, function(er){
+                enemyAddPlayerToken(enemy, player, function(er, _enemy){
+                    enemy = _enemy
                     done(er)
                 })
             }
         ], function(er){
             if (er) H.log("ERROR. Turn.passTokenToEnemy", er)
-            if (done) done(er, nEnemy)
+            if (done) done(er, enemy)
         })
     }
 
@@ -181,7 +215,7 @@ var Turn = module.exports = (function(){
         token.t = new Date()
 
         enemy.save(function(er){
-            done(er)
+            done(er, enemy)
         })
     }
 

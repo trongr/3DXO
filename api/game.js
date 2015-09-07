@@ -566,7 +566,7 @@ var Game = module.exports = (function(){
             })
         }
 
-        // Passes turn from enemy back to player
+        // player requesting token from enemy
         on.turn = function(data, done){
             try {
                 var playerID = data.playerID
@@ -578,27 +578,31 @@ var Game = module.exports = (function(){
             } catch (e){
                 return done("Turn invalid input: " + e)
             }
-            // todo. validate that the timeout actually happened
             async.waterfall([
                 function(done){
-                    Turn.passTokenToEnemy(enemyID, playerID, function(er, _enemy){
-                        done(er)
-                    })
-                },
-                function(done){
-                    Turn.unsetPlayerToken(enemyID, playerID, function(er, _enemy){
+                    Player.findOne({
+                        _id: enemyID, // apparently you don't need to convert _id to mongo ObjectID
+                    }, function(er, _enemy){
                         enemy = _enemy
                         done(er)
                     })
                 },
                 function(done){
-                    Player.findOne({
-                        _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
-                    }, function(er, _player){
+                    if (Turn.validateTimeout(enemy, playerID)) done(null)
+                    else done({info:"turn requested too early"})
+                },
+                function(done){
+                    Turn.getTokenFromEnemy(playerID, enemyID, function(er, _player){
                         player = _player
                         done(er)
                     })
-                }
+                },
+                function(done){
+                    Turn.unsetEnemyToken(playerID, enemyID, function(er, _enemy){
+                        enemy = _enemy
+                        done(er)
+                    })
+                },
             ], function(er){
                 if (er) done("ERROR. Can't request new turn: " + er.info)
                 else if (data){
@@ -622,6 +626,8 @@ var Game = module.exports = (function(){
         // mach game over for player. A fraction (half?) of pieces
         // convert to enemy, remaining pieces die (maybe later give
         // them AI to roam the world).
+        //
+        // remove player's token from his enemies
         on.gameover = function(playerID, enemyID){
             try {
                 var player, enemy = null

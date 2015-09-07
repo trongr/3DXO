@@ -576,6 +576,7 @@ var Map = (function(){
 
         Scene.addObj(line);
 
+        // todo. checker board pattern so you can see better
         geometry = new THREE.PlaneBufferGeometry(K.QUADRANT_SIZE, K.QUADRANT_SIZE);
         material = new THREE.MeshBasicMaterial({color:0x7B84A8});
         // material = new THREE.MeshBasicMaterial({color:0x7B84A8, transparent:true, opacity:0.5});
@@ -1041,6 +1042,9 @@ var Game = (function(){
             Turns.update(data.player)
         }
 
+        // todo. if a turn request gets rejected cause it's too early,
+        // nothing will happen: need to send another request every 2
+        // seconds
         on.turn = function(data){
             var player = Player.getPlayer()
             var enemyID = data.enemy._id
