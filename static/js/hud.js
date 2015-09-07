@@ -1,25 +1,26 @@
+// todo gradient color code the counters to make it more obvious
+// and make a big counter for the active token
+
 var Hud = (function(){
     var Hud = {}
 
     var _tokens = {} // cache of previous states
 
-    // player is you
-    Hud.init = function(player){
+    Hud.init = function(you){
         var html = "<div id='hud_box'>"
             +           "<div id='hud_turns'></div>"
             +      "</div>"
         $("body").append(html)
-        Hud.init_turns(player)
+        Hud.init_turns(you)
     }
 
-    // player is you
-    Hud.init_turns = function(player){
-        Hud.renderTurns(player)
+    Hud.init_turns = function(you){
+        Hud.renderTurns(you)
     }
 
-    Hud.renderTurns = function(player){
-        var turns = player.turn_tokens
-        var turn_index = player.turn_index
+    Hud.renderTurns = function(you){
+        var turns = you.turn_tokens
+        var turn_index = you.turn_index
         var active_player_id = null
         var html = ""
         for (var i = 0; i < turns.length; i++){

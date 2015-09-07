@@ -183,7 +183,7 @@ var Turn = module.exports = (function(){
                 })
             },
             function(done){
-                enemyAddPlayerToken(enemy, player, function(er, _enemy){
+                enemyAddPlayerLiveToken(enemy, player, function(er, _enemy){
                     enemy = _enemy
                     done(er)
                 })
@@ -194,25 +194,25 @@ var Turn = module.exports = (function(){
         })
     }
 
-    function enemyAddPlayerToken(enemy, player, done){
-        var token = null
+    function enemyAddPlayerLiveToken(enemy, player, done){
+        var found = false
         // Check if enemy already has player in their turn_tokens
         for (var i = 0; i < enemy.turn_tokens.length; i++){
             if (enemy.turn_tokens[i].player.equals(player._id)){
-                token = enemy.turn_tokens[i]
+                enemy.turn_tokens[i].live = true
+                enemy.turn_tokens[i].t = new Date()
+                found = true
             }
         }
-        // New player
-        if (!token){
-            token = {
+
+        if (!found){ // new token
+            enemy.turn_tokens.push({
                 player: player._id,
                 player_name: player.name,
-            }
-            enemy.turn_tokens.push(token)
+                live: true,
+                t: new Date(),
+            })
         }
-        // Turn player token on
-        token.live = true
-        token.t = new Date()
 
         enemy.save(function(er){
             done(er, enemy)

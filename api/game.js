@@ -529,7 +529,7 @@ var Game = module.exports = (function(){
                 },
                 function(done){
                     if (player.alive) done(null)
-                    else done({info:"Alas! The battle is lost"})
+                    else done({info:"Alas! The battle is lost :("})
                 },
                 function(done){
                     if (Turn.hasTurn(player)) done(null)
