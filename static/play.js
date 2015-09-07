@@ -219,15 +219,20 @@ var Rollover = (function(){
 
     var ROLLOVER_MATERIAL = new THREE.MeshLambertMaterial({color:0xffffff, shading:THREE.FlatShading, opacity:0.3, transparent:true})
     var ROLLOVER_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01) // 0.01 extra to prevent highlight from clipping with cube surface
-    var _rollover
+    var _rollover = null
 
     Rollover.init = function(){
         _rollover = new THREE.Mesh(ROLLOVER_GEOMETRY, ROLLOVER_MATERIAL);
+        Rollover.hide()
         Scene.addObj(_rollover)
     }
 
     Rollover.getMesh = function(){
         return _rollover
+    }
+
+    Rollover.hide = function(){
+        Obj.move(_rollover, new THREE.Vector3(0, 0, -1000)) // just move the rollover out of sight
     }
 
     // ref.
@@ -252,8 +257,9 @@ var Highlight = (function(){
     var Highlight = {}
 
     var HIGHLIGHT_MATERIALS = {
-        red: new THREE.MeshLambertMaterial({color:0xFF4D4D, shading:THREE.FlatShading, opacity:0.7, transparent:true}),
-        green: new THREE.MeshLambertMaterial({color:0x00ff00, shading:THREE.FlatShading, opacity:0.3, transparent:true}),
+        red: new THREE.MeshLambertMaterial({color:0xFF4D4D, shading:THREE.FlatShading, opacity:0.8, transparent:true}),
+        // green: new THREE.MeshLambertMaterial({color:0x00ff00, shading:THREE.FlatShading, opacity:0.5, transparent:true}),
+        green: new THREE.MeshLambertMaterial({color:0x66FF66, shading:THREE.FlatShading, opacity:0.7, transparent:true}),
     }
     var HIGHLIGHT_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, 0.01)
 
@@ -433,7 +439,7 @@ var Obj = (function(){
     Obj.highlight = function(obj, isHigh){
         if (!obj) return
         if (isHigh) Obj.move(Rollover.getMesh(), obj.position)
-        else Obj.move(Rollover.getMesh(), new THREE.Vector3(0, 0, -1)) // just move the rollover out of sight
+        else Rollover.hide()
     }
 
     Obj.makeBox = function(position, material){
@@ -562,6 +568,7 @@ var Map = (function(){
 
         geometry = new THREE.PlaneBufferGeometry(K.QUADRANT_SIZE, K.QUADRANT_SIZE);
         material = new THREE.MeshBasicMaterial({color:0x7B84A8});
+        // material = new THREE.MeshBasicMaterial({color:0x7B84A8, transparent:true, opacity:0.5});
 		plane = new THREE.Mesh(geometry, material);
 		plane.visible = true;
         plane.receiveShadow = true;
