@@ -9,6 +9,19 @@ var Pieces = module.exports = (function(){
         router: express.Router()
     }
 
+    // Converts player's pieces to enemy's side
+    Pieces.defect = function(playerID, enemyID, done){
+        Piece.update({
+            player: playerID,
+        }, {
+            $set: {
+                player: enemyID,
+            }
+        }, {}, function(er, re){
+            if (done) done(er)
+        })
+    }
+
     return Pieces
 }())
 

@@ -46,13 +46,12 @@ app.get('/play', function(req, res){
     res.sendFile(path.join(__dirname + '/static/play.html'))
 });
 
-// mach Auth.authenticate for all routes
+// todo Auth.authenticate for all routes
 app.use('/api/v1/auth', Auth.router); // login and register
-
-// app.use('/api/v1/piece', Auth.authenticate, Pieces.router);
+app.use('/api/v1/piece', Auth.authenticate, Pieces.router);
 app.use('/api/v1/cell', Cells.router);
-app.use('/api/v1/player', Players.router); // mach use auth
-// app.use('/api/v1/team', Teams.router);
+app.use('/api/v1/player', Players.router);
+app.use('/api/v1/team', Teams.router);
 app.use('/api/v1/game', Game.router);
 
 var port = process.env.PORT || 8080;

@@ -23,7 +23,7 @@ var Auth = module.exports = (function(){
         .get(function(req, res){ // login
             var name = H.param(req, "name")
             var pass = H.param(req, "pass")
-            // mach check password not empty on client
+            // todo check password not empty on client
             Player.findOne({
                 name: name,
             }, "+pass", function(er, player){

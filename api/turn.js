@@ -18,11 +18,14 @@ var Turn = module.exports = (function(){
                 // Need to check token.live so enemy can't keep
                 // requesting new turns even though player's token is
                 // dead
-                if (token.live && elapsed > K.TURN_TIMEOUT){
+                //
+                // + 2000 ms extra buffer
+                if (token.live && elapsed + 2000 > K.TURN_TIMEOUT){
                     return true
                 } else {
                     // todo. check how big this can get and adjust K.TURN_TIMEOUT
-                    H.log("WARNING. Turn request early by ms:", elapsed)
+                    // todo. retry request if rejected
+                    H.log("WARNING. Turn request early by ms:", K.TURN_TIMEOUT - elapsed)
                     return false
                 }
             }
@@ -293,6 +296,69 @@ var Turn = module.exports = (function(){
         })
         player.save(function(er){
             done(er, player)
+        })
+    }
+
+    // mach
+    // Player lost: removes his token from enemies
+    Turn.clearTokens = function(playerID, done){
+        var player = null, enemies = []
+        async.waterfall([
+            function(done){
+                Player.findOneByID(playerID, function(er, _player){
+                    player = _player
+                    done(er)
+                })
+            },
+            function(done){
+                async.each(player.turn_tokens, function(token){
+                    clearToken(playerID, token.player, function(er, enemy){
+                        if (enemy) enemies.push(enemy)
+                        else if (er) H.log("ERROR. Turn.clearToken", playerID, token.player)
+                        done(null) // Ignore errors so you can clear the rest
+                    })
+                }, function(er){
+                    done(er)
+                })
+            },
+            function(done){
+                clearPlayerTokens(playerID, function(er, _player){
+                    player = _player
+                    done(er)
+                })
+            }
+        ], function(er){
+            done(er, player, enemies)
+        })
+    }
+
+    function clearPlayerTokens(playerID, done){
+        Player.findOneAndUpdate({
+            _id: playerID
+        }, {
+            $set: {
+                turn_tokens: []
+            }
+        }, {
+            new: true,
+        }, function(er, player){
+            done(er, player)
+        })
+    }
+
+    function clearToken(playerID, enemyID, done){
+        Player.findOneAndUpdate({
+            _id: enemyID
+        }, {
+            $pull: {
+                turn_tokens: {
+                    player: playerID
+                }
+            }
+        }, {
+            new: true,
+        }, function(er, enemy){
+            done(er, enemy)
         })
     }
 

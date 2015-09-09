@@ -48,7 +48,7 @@ var Players = module.exports = (function(){
             })
         })
 
-    Players.lose = function(playerID, done){
+    Players.die = function(playerID, done){
         Player.update({
             _id: playerID
         }, {

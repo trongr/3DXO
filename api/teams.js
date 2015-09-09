@@ -7,18 +7,6 @@ var Teams = module.exports = (function(){
         router: express.Router()
     }
 
-    Teams.router.route("/")
-	    .post(function(req, res) {
-
-	    })
-
-    Teams.make = function(data, done){
-        var team = new Team(data)
-        team.save(function(er){
-            done(er, team)
-        })
-    }
-
     return Teams
 }())
 

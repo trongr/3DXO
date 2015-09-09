@@ -623,7 +623,7 @@ var Game = module.exports = (function(){
             })
         }
 
-        // mach game over for player. A fraction (half?) of pieces
+        // game over for player. A fraction (half?) of pieces
         // convert to enemy, remaining pieces die (maybe later give
         // them AI to roam the world).
         //
@@ -652,10 +652,19 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Players.lose(playerID)
+                    Players.die(playerID)
+                    Turn.clearTokens(playerID, function(er, player, enemies){
+                        // mach make sure dead players can't request
+                        // or receive turn updates
+                        //
+                        // mach publish token changes to enemies and player
+                        // mach set player turn_tokens: [] too
+                    })
+                    Pieces.defect(playerID, enemyID, function(er){
+                        // mach publish to players so they can see pieces change colors
+                    })
                     done(null)
                 },
-                // process remaining pieces
             ], function(er){
                 if (er){
                     var chan = "error"

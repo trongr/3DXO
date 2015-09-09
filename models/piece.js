@@ -25,7 +25,7 @@ var schema = mongoose.Schema({
     },
 });
 
-// mach time this for performance
+// todo time this for performance
 schema.statics.random = function(callback) {
     this.count(function(err, count) {
         if (err) {
