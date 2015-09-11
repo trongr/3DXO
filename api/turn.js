@@ -8,9 +8,9 @@ var Piece = require("../models/piece.js")
 var Turn = module.exports = (function(){
     Turn = {}
 
-    // Loop over player.turn_tokens for enemyID's token and check that
-    // token.t was over K.TURN_TIMEOUT ms ago
     Turn.validateTimeout = function(player, enemyID){
+        // Loop over player.turn_tokens for enemyID's token and check that
+        // token.t was over K.TURN_TIMEOUT ms ago
         for (var i = 0; i < player.turn_tokens.length; i++){
             var token = player.turn_tokens[i]
             if (token.player == enemyID){
@@ -30,7 +30,8 @@ var Turn = module.exports = (function(){
                 }
             }
         }
-        return true
+        // enemy's not in player's tokens list: invalid turn request
+        return false
     }
 
     // Can move if no enemy in range of player. Once someone comes in
@@ -77,6 +78,7 @@ var Turn = module.exports = (function(){
         })
     }
 
+    // Does nothing if player has no turn tokens
     function updateTurnTokens(playerID, done){
         var player = null
         async.waterfall([
@@ -245,6 +247,8 @@ var Turn = module.exports = (function(){
             function(done){
                 var enemies = findNewEnemiesNearby(player, pieces)
                 if (enemies.length){
+                    // Ignore dead enemies so we don't add their tokens to player:
+                    enemies = removeDeadEnemies(enemies)
                     Turn.passTokenToEnemies(player._id, enemies)
                     addNewEnemyTokens(player, enemies, function(er, _player){
                         player = _player
@@ -256,6 +260,12 @@ var Turn = module.exports = (function(){
             if (er && er.code) done(null)
             else if (er) done(er)
             else done(null, player)
+        })
+    }
+
+    function removeDeadEnemies(enemies){
+        return enemies.filter(function(e, i){
+            return e.alive
         })
     }
 
@@ -299,7 +309,6 @@ var Turn = module.exports = (function(){
         })
     }
 
-    // mach
     // Player lost: removes his token from enemies
     Turn.clearTokens = function(playerID, done){
         var player = null, enemies = []

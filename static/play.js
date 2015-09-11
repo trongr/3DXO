@@ -36,7 +36,7 @@ var Turns = (function(){
     // Calls whenever someone moves
     Turns.update = function(mover){
         API.Player.get({}, function(er, re){
-            if (er) return done(er)
+            if (er) return console.log("ERROR. API.Player.get", er)
             var you = re.player
             if (mover._id == you._id){
                 updatePlayerTurns(mover)

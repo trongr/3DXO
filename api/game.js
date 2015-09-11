@@ -529,7 +529,7 @@ var Game = module.exports = (function(){
                 },
                 function(done){
                     if (player.alive) done(null)
-                    else done({info:"Alas! The battle is lost :("})
+                    else done({info:"Alas! The battle is lost"})
                 },
                 function(done){
                     if (Turn.hasTurn(player)) done(null)
@@ -581,6 +581,14 @@ var Game = module.exports = (function(){
             async.waterfall([
                 function(done){
                     Player.findOne({
+                        _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
+                    }, function(er, _player){
+                        player = _player
+                        done(er)
+                    })
+                },
+                function(done){
+                    Player.findOne({
                         _id: enemyID, // apparently you don't need to convert _id to mongo ObjectID
                     }, function(er, _enemy){
                         enemy = _enemy
@@ -588,6 +596,14 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
+                    // mach. when you implement retry, check
+                    // player.alive and stop retrying if false
+                    if (player.alive && enemy.alive) done(null)
+                    else if (player.alive) done({info:"enemy dead"})
+                    else done({info:"game over"})
+                },
+                function(done){
+                    // This also checks if player and enemy are in combat
                     if (Turn.validateTimeout(enemy, playerID)) done(null)
                     else done({info:"turn requested too early"})
                 },
@@ -654,9 +670,6 @@ var Game = module.exports = (function(){
                 function(done){
                     Players.die(playerID)
                     Turn.clearTokens(playerID, function(er, player, enemies){
-                        // mach make sure dead players can't request
-                        // or receive turn updates
-                        //
                         // mach publish token changes to enemies and player
                         // mach set player turn_tokens: [] too
                     })
