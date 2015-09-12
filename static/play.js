@@ -1,5 +1,8 @@
 // you can't move the same piece twice in the same round
 
+// free roaming lets you move any piece to a neighbouring grid, but no
+// farther
+
 var K = (function(){
 
     var K = {
@@ -1044,7 +1047,7 @@ var Game = (function(){
 
         // todo. if a turn request gets rejected cause it's too early,
         // nothing will happen: need to send another request every 2
-        // seconds
+        // seconds (unless player.alive is false)
         on.turn = function(data){
             var player = Player.getPlayer()
             var enemyID = data.enemy._id
@@ -1059,6 +1062,16 @@ var Game = (function(){
                     Turns.clearTimerForTurnExpire(enemyID)
                     Turns.startTimerForNewTurn(enemyID)
                 }
+            }
+        }
+
+        // mach
+        on.turn_refresh = function(data){
+            var you = Player.getPlayer()
+            var player = data.player
+            if (you._id == player._id){
+                Hud.clearTurns()
+                Hud.renderTurns(player)
             }
         }
 

@@ -33,11 +33,12 @@ var Sock = module.exports = (function(){
     function onConnection(conn){
         H.log("INFO. Sock.onConnection.opening socket")
 
-        // mach subscriber module
+        // todo subscriber module
         var client = redis.createClient();
 
         client.subscribe('move');
         client.subscribe('turn');
+        client.subscribe('turn_refresh');
         client.subscribe('gameover');
         client.subscribe('error');
 

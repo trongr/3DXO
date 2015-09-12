@@ -14,6 +14,10 @@ var Hud = (function(){
         Hud.init_turns(you)
     }
 
+    Hud.clearTurns = function(){
+        $("#hud_turns").html("")
+    }
+
     Hud.init_turns = function(you){
         Hud.renderTurns(you)
     }

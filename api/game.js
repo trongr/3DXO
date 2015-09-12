@@ -670,8 +670,7 @@ var Game = module.exports = (function(){
                 function(done){
                     Players.die(playerID)
                     Turn.clearTokens(playerID, function(er, player, enemies){
-                        // mach publish token changes to enemies and player
-                        // mach set player turn_tokens: [] too
+                        publishPlayersTokenRefresh(enemies.concat([player]))
                     })
                     Pieces.defect(playerID, enemyID, function(er){
                         // mach publish to players so they can see pieces change colors
@@ -686,13 +685,11 @@ var Game = module.exports = (function(){
                 } else {
                     var chan = "gameover"
                     var loser = {
-                        chan: "gameover",
                         player: player,
                         enemy: enemy,
                         you_win: false,
                     }
                     var winner = {
-                        chan: "gameover",
                         player: enemy,
                         enemy: player,
                         you_win: true,
@@ -700,6 +697,16 @@ var Game = module.exports = (function(){
                     Publisher.publish(chan, winner)
                     Publisher.publish(chan, loser)
                 }
+            })
+        }
+
+        // mach
+        function publishPlayersTokenRefresh(players){
+            var chan = "turn_refresh"
+            players.forEach(function(player, i){
+                Publisher.publish(chan, {
+                    player: player
+                })
             })
         }
 
