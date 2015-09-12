@@ -196,7 +196,7 @@ var Select = (function(){
     Select.getIntersect = function(clientX, clientY){
         _mouse.set( ( clientX / window.innerWidth ) * 2 - 1, - ( clientY / window.innerHeight ) * 2 + 1 );
         _raycaster.setFromCamera(_mouse, Scene.camera);
-        return _raycaster.intersectObjects(Obj.getObjects())[0];
+        return _raycaster.intersectObjects(Obj.getAll())[0];
     }
 
     Select.select = function(clientX, clientY){
@@ -240,7 +240,7 @@ var Rollover = (function(){
     Rollover.init = function(){
         _rollover = new THREE.Mesh(ROLLOVER_GEOMETRY, ROLLOVER_MATERIAL);
         Rollover.hide()
-        Scene.addObj(_rollover)
+        Scene.add(_rollover)
     }
 
     Rollover.getMesh = function(){
@@ -303,7 +303,7 @@ var Highlight = (function(){
 
     Highlight.makeHighlight = function(color){
         var highlight = new THREE.Mesh(HIGHLIGHT_GEOMETRY, HIGHLIGHT_MATERIALS[color]);
-        Scene.addObj(highlight)
+        Scene.add(highlight)
         _highlights[color].push(highlight)
         return highlight
     }
@@ -349,8 +349,8 @@ var Player = (function(){
 
     // Object materials are indexed by 0:ENEMY 1:FRIENDLY
     Player.isFriendly = function(piece){
-        if (piece.player == _player._id) return Obj.STANCE.FRIENDLY
-        else return Obj.STANCE.ENEMY
+        if (piece.player == _player._id) return 1
+        else return 0
     }
 
     return Player
@@ -365,10 +365,6 @@ var Obj = (function(){
     var _groundRaycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(), 0, 1)
     var _objects = []
 
-    Obj.STANCE = {
-        ENEMY: 0,
-        FRIENDLY: 1,
-    }
     Obj.KIND = {
         ground0: {
             material: new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
@@ -405,36 +401,22 @@ var Obj = (function(){
     }
 
     Obj.loadQuadrant = function(x, y, done){
-        API.Cells.get({x:x, y:y, r:10}, function(er, _cells){
+        API.Pieces.get({x:x, y:y, r:10}, function(er, _pieces){
             if (er && done) return done(er)
-            var cells = []
-            for (var i = 0; i < _cells.length; i++){
-                var cell = _cells[i]
-                if (cell && cell.piece){
-                    cells.push(Obj.make(cell.piece, cell.piece.kind, cell.x, cell.y, 1))
-                }
-            }
-            for (var i = 0; i < cells.length; i++){
-                Obj.addObj(cells[i])
-                Scene.addObj(cells[i])
-            }
+            Game.loadPieces(_pieces)
             Scene.render()
             if (done) done(null)
         })
     }
 
-    // Right now isFriendly is either null, or 0 or 1, to distinguish
-    // non-player, or friendly or enemy pieces.
-    Obj.getMaterial = function(isFriendly, kind){
-        if (isFriendly == null) return Obj.KIND[kind].material // non player materials are unique
-        else return Obj.KIND[kind].material[isFriendly]
+    Obj.getMaterial = function(piece){
+        var isFriendly = Player.isFriendly(piece)
+        return Obj.KIND[piece.kind].material[isFriendly]
     }
 
-    Obj.make = function(piece, kind, x, y, z){
-        if (piece) var isFriendly = Player.isFriendly(piece)
-        else var isFriendly = null
-        var mat = Obj.getMaterial(isFriendly, kind)
-        var obj = Obj.makeBox(new THREE.Vector3(x, y, z), mat)
+    Obj.make = function(piece){
+        var mat = Obj.getMaterial(piece)
+        var obj = Obj.makeBox(new THREE.Vector3(piece.x, piece.y, 1), mat)
         obj.game = {
             piece: piece,
         }
@@ -478,15 +460,27 @@ var Obj = (function(){
         return null
     }
 
-    Obj.getObjects = function(){
+    // mach
+    Obj.findObjsByPlayerID = function(playerID){
+        return _objects.filter(function(obj){
+            return (obj.game && obj.game.piece &&
+                    obj.game.piece.player == playerID)
+        })
+    }
+
+    Obj.getAll = function(){
         return _objects
     }
 
-    Obj.addObj = function(obj){
+    Obj.add = function(obj){
         _objects.push(obj)
     }
 
-    Obj.getObj = function(index){
+    Obj.remove = function(obj){
+        _objects.splice(_objects.indexOf(obj), 1);
+    }
+
+    Obj.get = function(index){
         return _objects[index]
     }
 
@@ -566,7 +560,7 @@ var Map = (function(){
 		var material = new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.2, transparent: true } );
 		var line = new THREE.Line( geometry, material, THREE.LinePieces );
 
-        Scene.addObj(line);
+        Scene.add(line);
 
         // add thicker lines around the edges
         geometry = new THREE.Geometry()
@@ -577,7 +571,7 @@ var Map = (function(){
         material = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.2, transparent:true});
         line = new THREE.Line( geometry, material, THREE.LineStrip );
 
-        Scene.addObj(line);
+        Scene.add(line);
 
         // todo. checker board pattern so you can see better
         geometry = new THREE.PlaneBufferGeometry(K.QUADRANT_SIZE, K.QUADRANT_SIZE);
@@ -587,8 +581,8 @@ var Map = (function(){
 		plane.visible = true;
         plane.receiveShadow = true;
         plane.position.set(X + K.QUADRANT_SIZE / 2, Y + K.QUADRANT_SIZE / 2, 1)
-		Scene.addObj(plane);
-		Obj.addObj(plane);
+
+        Game.addObj(plane)
 
         Scene.render()
     }
@@ -810,11 +804,11 @@ var Scene = (function(){
         Scene.render();
     }
 
-    Scene.addObj = function(obj){
+    Scene.add = function(obj){
         _scene.add(obj)
     }
 
-    Scene.removeMesh = function(mesh){
+    Scene.remove = function(mesh){
         _scene.remove(mesh)
     }
 
@@ -856,8 +850,8 @@ var Scene = (function(){
 
     function initLights(){
         var ambientLight = new THREE.AmbientLight(0xB080D1);
-        Scene.addObj(ambientLight);
-        Scene.addObj(createDirectionalLight(0, 0, 20));
+        Scene.add(ambientLight);
+        Scene.add(createDirectionalLight(0, 0, 20));
     }
 
     function initRenderer(){
@@ -1026,13 +1020,7 @@ var Game = (function(){
 
         on.move = function(data){
             var playerName = data.player.name
-
-            // remove any piece already at dst
-            var dstObj = Obj.findObjAtPosition(Math.floor(data.to.x), Math.floor(data.to.y), 1)
-            if (dstObj && dstObj.game){
-                Scene.getScene().remove(dstObj);
-                Obj.getObjects().splice(Obj.getObjects().indexOf(dstObj), 1);
-            }
+            Game.removeObjAtXY(data.to.x, data.to.y)
 
             // move selected
             var sel = Obj.findObjAtPosition(Math.floor(data.from.x), Math.floor(data.from.y), 1)
@@ -1065,7 +1053,6 @@ var Game = (function(){
             }
         }
 
-        // mach
         on.turn_refresh = function(data){
             var you = Player.getPlayer()
             var player = data.player
@@ -1075,7 +1062,7 @@ var Game = (function(){
             }
         }
 
-        // mach big splash screen and menu for loser
+        // todo big splash screen and menu for loser
         on.gameover = function(data){
             var player = Player.getPlayer()
             var you_win = data.you_win
@@ -1086,8 +1073,66 @@ var Game = (function(){
             }
         }
 
+        // mach
+        on.defect = function(data){
+            var defectorID = data.defectorID
+            var defecteeID = data.defecteeID
+            var defectors = Game.removePiecesByPlayerID(defectorID)
+            Game.defect(defectors, defecteeID)
+            Game.loadPieces(defectors)
+        }
+
         return on
     }())
+
+    // mach
+    // change pieces' playerID to defecteeID
+    Game.defect = function(pieces, defecteeID){
+        pieces.forEach(function(piece, i){
+            piece.player = defecteeID
+        })
+    }
+
+    // Load pieces
+    Game.loadPieces = function(pieces){
+        var objs = []
+        for (var i = 0; i < pieces.length; i++){
+            objs.push(Obj.make(pieces[i]))
+        }
+        Game.addObjs(objs)
+    }
+
+    Game.addObj = function(obj){
+        Scene.add(obj);
+        Obj.add(obj)
+    }
+
+    Game.addObjs = function(objs){
+        for (var i = 0; i < objs.length; i++){
+            Game.addObj(objs[i])
+        }
+    }
+
+    // Returns removed obj
+    Game.removeObjAtXY = function(x, y){
+        var obj = Obj.findObjAtPosition(Math.floor(x), Math.floor(y), 1)
+        if (obj && obj.game){
+            Scene.remove(obj);
+            Obj.remove(obj)
+        }
+        return obj
+    }
+
+    // mach
+    Game.removePiecesByPlayerID = function(playerID){
+        var objs = Obj.findObjsByPlayerID(playerID)
+        var pieces = objs.map(function(obj){
+            Scene.remove(obj);
+            Obj.remove(obj)
+            return obj.game.piece
+        })
+        return pieces
+    }
 
     return Game
 }())

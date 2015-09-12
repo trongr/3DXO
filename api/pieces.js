@@ -17,7 +17,9 @@ var Pieces = module.exports = (function(){
             $set: {
                 player: enemyID,
             }
-        }, {}, function(er, re){
+        }, {
+            multi: true,
+        }, function(er, re){
             if (done) done(er)
         })
     }
@@ -33,6 +35,17 @@ var Test = (function(){
         var method = process.argv[2]
         var args = process.argv.slice(3)
         Test[method](args)
+    }
+
+    Test.defect = function(args){
+        setTimeout(function(){
+            var playerID = args[0]
+            var enemyID = args[1]
+            Pieces.defect(playerID, enemyID, function(er){
+                console.log("Test.defect", JSON.stringify(er, 0, 2))
+                process.exit(0)
+            })
+        }, 2000)
     }
 
     return Test

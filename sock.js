@@ -40,6 +40,7 @@ var Sock = module.exports = (function(){
         client.subscribe('turn');
         client.subscribe('turn_refresh');
         client.subscribe('gameover');
+        client.subscribe('defect');
         client.subscribe('error');
 
         // Server just published data to this channel, to be sent to

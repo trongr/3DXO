@@ -79,6 +79,23 @@ var API = (function(){
         return Cells
     }())
 
+    API.Pieces = (function(){
+        var Pieces = {}
+
+        // get pieces within x, y, r
+        Pieces.get = function(data, done){
+            API.Cells.get(data, function(er, _cells){
+                if (er) return done(er)
+                var pieces = _cells.map(function(cell){
+                    return cell.piece
+                })
+                done(null, pieces)
+            })
+        }
+
+        return Pieces
+    }())
+
     API.Game = (function(){
         var Game = {}
 

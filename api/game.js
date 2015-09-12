@@ -673,7 +673,7 @@ var Game = module.exports = (function(){
                         publishPlayersTokenRefresh(enemies.concat([player]))
                     })
                     Pieces.defect(playerID, enemyID, function(er){
-                        // mach publish to players so they can see pieces change colors
+                        publishDefector(playerID, enemyID)
                     })
                     done(null)
                 },
@@ -700,13 +700,20 @@ var Game = module.exports = (function(){
             })
         }
 
-        // mach
         function publishPlayersTokenRefresh(players){
             var chan = "turn_refresh"
             players.forEach(function(player, i){
                 Publisher.publish(chan, {
                     player: player
                 })
+            })
+        }
+
+        function publishDefector(defectorID, defecteeID){
+            var chan = "defect"
+            Publisher.publish(chan, {
+                defectorID: defectorID,
+                defecteeID: defecteeID,
             })
         }
 
