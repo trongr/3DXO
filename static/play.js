@@ -16,8 +16,8 @@ var K = (function(){
     return K
 }())
 
-var Turns = (function(){
-    var Turns = {}
+var Turn = (function(){
+    var Turn = {}
 
     var TURN_TIMEOUT = 30000
     var TURN_TIMEOUT_S = TURN_TIMEOUT / 1000
@@ -25,19 +25,19 @@ var Turns = (function(){
     var _timersForNewTurn = {} // keyed by enemy._id. Time til new turn
     var _timersForTurnExpire = {} // keyed by enemy._id. Time til turn expires
 
-    Turns.init = function(player){
+    Turn.init = function(player){
         var tokens = player.turn_tokens
         for (var i = 0; i < tokens.length; i++){
             var token = tokens[i]
             if (!token.live){
-                Turns.startTimerForNewTurnRequest(token.player)
-                Turns.startTimerForNewTurn(token.player)
+                Turn.startTimerForNewTurnRequest(token.player)
+                Turn.startTimerForNewTurn(token.player)
             }
         }
     }
 
     // Calls whenever someone moves
-    Turns.update = function(mover){
+    Turn.update = function(mover){
         API.Player.get({}, function(er, re){
             if (er) return console.log("ERROR. API.Player.get", er)
             var you = re.player
@@ -54,9 +54,9 @@ var Turns = (function(){
         if (you.turn_tokens.length){
             var enemy = you.turn_tokens[(you.turn_index - 1 + you.turn_tokens.length) % you.turn_tokens.length]
             var enemyID = enemy.player
-            Turns.startTimerForNewTurnRequest(enemyID)
-            Turns.clearTimerForTurnExpire(enemyID)
-            Turns.startTimerForNewTurn(enemyID)
+            Turn.startTimerForNewTurnRequest(enemyID)
+            Turn.clearTimerForTurnExpire(enemyID)
+            Turn.startTimerForNewTurn(enemyID)
         } else {
             msg.info("Free roaming")
         }
@@ -67,15 +67,15 @@ var Turns = (function(){
             var enemyEnemy = enemy.turn_tokens[(enemy.turn_index - 1 + enemy.turn_tokens.length) % enemy.turn_tokens.length]
             var enemyID = enemy._id
             if (enemyEnemy.player == you._id){ // the enemy of my enemy might be me lol
-                Turns.clearTimerForNewTurnRequest(enemyID)
-                Turns.clearTimerForNewTurn(enemyID)
-                Turns.startTimerForTurnExpire(enemyID)
+                Turn.clearTimerForNewTurnRequest(enemyID)
+                Turn.clearTimerForNewTurn(enemyID)
+                Turn.startTimerForTurnExpire(enemyID)
             }
         } // otw enemy is free roaming
     }
 
-    Turns.startTimerForNewTurnRequest = function(enemyID){
-        Turns.clearTimerForNewTurnRequest(enemyID)
+    Turn.startTimerForNewTurnRequest = function(enemyID){
+        Turn.clearTimerForNewTurnRequest(enemyID)
         var you = Player.getPlayer()
         var to = setTimeout(function(){
             Sock.send("turn", {
@@ -86,12 +86,12 @@ var Turns = (function(){
         _timersForNewTurnRequest[enemyID] = to
     }
 
-    Turns.clearTimerForNewTurnRequest = function(enemyID){
+    Turn.clearTimerForNewTurnRequest = function(enemyID){
         clearTimeout(_timersForNewTurnRequest[enemyID])
     }
 
-    Turns.startTimerForNewTurn = function(enemyID){
-        Turns.clearTimerForNewTurn(enemyID)
+    Turn.startTimerForNewTurn = function(enemyID){
+        Turn.clearTimerForNewTurn(enemyID)
         var time = TURN_TIMEOUT_S, minutes, seconds;
         var interval = setInterval(function(){
             minutes = parseInt(time / 60, 10);
@@ -102,18 +102,18 @@ var Turns = (function(){
 
             $("#" + enemyID + " .player_countdown").html(minutes + ":" + seconds + " til new turn")
             if (--time < 0){
-                Turns.clearTimerForNewTurn(enemyID);
+                Turn.clearTimerForNewTurn(enemyID);
             }
         }, 1000);
         _timersForNewTurn[enemyID] = interval
     }
 
-    Turns.clearTimerForNewTurn = function(enemyID){
+    Turn.clearTimerForNewTurn = function(enemyID){
         clearInterval(_timersForNewTurn[enemyID])
     }
 
-    Turns.startTimerForTurnExpire = function(enemyID){
-        Turns.clearTimerForTurnExpire(enemyID);
+    Turn.startTimerForTurnExpire = function(enemyID){
+        Turn.clearTimerForTurnExpire(enemyID);
         var time = TURN_TIMEOUT_S, minutes, seconds;
         var interval = setInterval(function(){
             minutes = parseInt(time / 60, 10);
@@ -124,17 +124,17 @@ var Turns = (function(){
 
             $("#" + enemyID + " .player_countdown").html(minutes + ":" + seconds + " til turn expires")
             if (--time < 0){
-                Turns.clearTimerForTurnExpire(enemyID);
+                Turn.clearTimerForTurnExpire(enemyID);
             }
         }, 1000);
         _timersForTurnExpire[enemyID] = interval
     }
 
-    Turns.clearTimerForTurnExpire = function(enemyID){
+    Turn.clearTimerForTurnExpire = function(enemyID){
         clearInterval(_timersForTurnExpire[enemyID])
     }
 
-    return Turns
+    return Turn
 }())
 
 var Sock = (function(){
@@ -460,7 +460,6 @@ var Obj = (function(){
         return null
     }
 
-    // mach
     Obj.findObjsByPlayerID = function(playerID){
         return _objects.filter(function(obj){
             return (obj.game && obj.game.piece &&
@@ -975,7 +974,7 @@ var Game = (function(){
                 Obj.init()
                 Map.init(x, y)
                 Hud.init(player)
-                Turns.init(player)
+                Turn.init(player)
             },
         ], function(er){
             if (er) msg.error(er)
@@ -1030,7 +1029,7 @@ var Game = (function(){
 
             Scene.render()
 
-            Turns.update(data.player)
+            Turn.update(data.player)
         }
 
         // todo. if a turn request gets rejected cause it's too early,
@@ -1043,12 +1042,12 @@ var Game = (function(){
             if (player._id == data.player._id){
                 Hud.renderTurns(data.player)
                 if (your_turn){ // new turn: count up til your turn expires
-                    Turns.clearTimerForNewTurn(enemyID)
-                    Turns.startTimerForTurnExpire(enemyID)
+                    Turn.clearTimerForNewTurn(enemyID)
+                    Turn.startTimerForTurnExpire(enemyID)
                 } else { // lost turn: count down til you get a new turn
-                    Turns.startTimerForNewTurnRequest(enemyID)
-                    Turns.clearTimerForTurnExpire(enemyID)
-                    Turns.startTimerForNewTurn(enemyID)
+                    Turn.startTimerForNewTurnRequest(enemyID)
+                    Turn.clearTimerForTurnExpire(enemyID)
+                    Turn.startTimerForNewTurn(enemyID)
                 }
             }
         }
@@ -1073,7 +1072,6 @@ var Game = (function(){
             }
         }
 
-        // mach
         on.defect = function(data){
             var defectorID = data.defectorID
             var defecteeID = data.defecteeID
@@ -1085,7 +1083,6 @@ var Game = (function(){
         return on
     }())
 
-    // mach
     // change pieces' playerID to defecteeID
     Game.defect = function(pieces, defecteeID){
         pieces.forEach(function(piece, i){
@@ -1123,7 +1120,6 @@ var Game = (function(){
         return obj
     }
 
-    // mach
     Game.removePiecesByPlayerID = function(playerID){
         var objs = Obj.findObjsByPlayerID(playerID)
         var pieces = objs.map(function(obj){
