@@ -524,16 +524,22 @@ var Game = module.exports = (function(){
                     }, function(er, _player){
                         player = _player
                         if (player) done(null)
-                        else done({info:"Player does not exist", er:er})
+                        else done({er:"no such player"})
                     })
                 },
                 function(done){
                     if (player.alive) done(null)
-                    else done({info:"Alas! The battle is lost"})
+                    else done({
+                        error: K.code.move.gameover,
+                        playerID: playerID,
+                    })
                 },
                 function(done){
                     if (Turn.hasTurn(player)) done(null)
-                    else done({info:"No more turn"})
+                    else done({
+                        error: K.code.turn.none,
+                        playerID: playerID,
+                    })
                 },
                 function(done){
                     Move.validateMove(player, piece, from, to, function(er){
@@ -543,8 +549,11 @@ var Game = module.exports = (function(){
                 function(done){
                     Move.move(player, piece, from, to, function(er, _piece, enemyKing){
                         nPiece = _piece
-                        done(er)
-                        if (enemyKing) Game.on["gameover"](enemyKing.player, playerID)
+                        if (er){
+                            H.log("ERROR. Move.move", er)
+                            done(er)
+                        } else done(null)
+                        if (enemyKing) Game.on.gameover(enemyKing.player, playerID)
                     })
                 },
                 function(done){
@@ -554,15 +563,14 @@ var Game = module.exports = (function(){
                     })
                 }
             ], function(er){
+                data.playerID = playerID
                 data.player = player
                 data.piece = nPiece
-                if (er) done("ERROR. " + er.info)
-                else if (data){
-                    // data already has channel, but should make it
-                    // explicit just in case
-                    data.chan = "move"
+                if (er){
+                    done(er)
+                } else {
                     done(null, data)
-                } else done("FATAL ERROR. Game move: unexpected response")
+                }
             })
         }
 
@@ -576,7 +584,7 @@ var Game = module.exports = (function(){
                     throw "Invalid player IDs"
                 }
             } catch (e){
-                return done("Turn invalid input: " + e)
+                return done({info:"Turn invalid input"})
             }
             async.waterfall([
                 function(done){
@@ -596,16 +604,24 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    // mach. when you implement retry, check
-                    // player.alive and stop retrying if false
                     if (player.alive && enemy.alive) done(null)
-                    else if (player.alive) done({info:"enemy dead"})
-                    else done({info:"game over"})
+                    else if (player.alive) done({
+                        error: K.code.turn.enemy_dead,
+                        playerID: playerID
+                    })
+                    else done({
+                        error: K.code.turn.gameover,
+                        playerID: playerID
+                    })
                 },
                 function(done){
                     // This also checks if player and enemy are in combat
                     if (Turn.validateTimeout(enemy, playerID)) done(null)
-                    else done({info:"turn requested too early"})
+                    else done({
+                        error: K.code.turn.timeout,
+                        playerID: playerID,
+                        enemyID: enemyID,
+                    })
                 },
                 function(done){
                     Turn.getTokenFromEnemy(playerID, enemyID, function(er, _player){
@@ -620,22 +636,22 @@ var Game = module.exports = (function(){
                     })
                 },
             ], function(er){
-                if (er) done("ERROR. Can't request new turn: " + er.info)
-                else if (data){
+                if (er) done(er)
+                else {
                     // todo implement private channel / room so only
                     // specific users can get those pubs
                     done(null, { // update player hud
-                        chan: "turn",
+                        playerID: playerID,
                         player: player,
                         enemy: enemy,
                         your_turn: true, // to distinguish whose turn it is
                     })
                     done(null, { // update enemy hud
-                        chan: "turn",
+                        playerID: enemyID,
                         player: enemy,
                         enemy: player,
                     })
-                } else done("FATAL ERROR. Game turn: unexpected response")
+                }
             })
         }
 
@@ -679,17 +695,25 @@ var Game = module.exports = (function(){
                 },
             ], function(er){
                 if (er){
-                    var chan = "error"
-                    var data = {er:"ERROR. Can't execute game over"}
-                    Publisher.publish(chan, data)
+                    // todo publish error to player and enemy only
+                    Publisher.publish("error", {
+                        error: K.code.gameover.error,
+                        playerID: playerID,
+                    })
+                    Publisher.publish("error", {
+                        error: K.code.gameover.error,
+                        playerID: enemyID,
+                    })
                 } else {
                     var chan = "gameover"
                     var loser = {
+                        playerID: playerID,
                         player: player,
                         enemy: enemy,
                         you_win: false,
                     }
                     var winner = {
+                        playerID: enemyID,
                         player: enemy,
                         enemy: player,
                         you_win: true,
@@ -704,6 +728,7 @@ var Game = module.exports = (function(){
             var chan = "turn_refresh"
             players.forEach(function(player, i){
                 Publisher.publish(chan, {
+                    playerID: player._id,
                     player: player
                 })
             })
@@ -711,6 +736,7 @@ var Game = module.exports = (function(){
 
         function publishDefector(defectorID, defecteeID){
             var chan = "defect"
+            // Publishes to everyone (that listens, i.e. within range)
             Publisher.publish(chan, {
                 defectorID: defectorID,
                 defecteeID: defecteeID,

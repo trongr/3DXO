@@ -18,20 +18,19 @@ var Turn = module.exports = (function(){
                 // Need to check token.live so enemy can't keep
                 // requesting new turns even though player's token is
                 // dead
-                //
-                // + 2000 ms extra buffer
-                if (token.live && elapsed + 2000 > K.TURN_TIMEOUT){
+                if (token.live && elapsed > K.TURN_TIMEOUT){
                     return true
+                } else if (token.live && elapsed + 2000 > K.TURN_TIMEOUT){
+                    H.log("WARNING. Turn.validateTimeout: 2s buffer:", K.TURN_TIMEOUT - elapsed)
+                    return true // separate clause for debugging: still allow turn request
                 } else {
                     // todo. check how big this can get and adjust K.TURN_TIMEOUT
-                    // todo. retry request if rejected
-                    H.log("WARNING. Turn request early by ms:", K.TURN_TIMEOUT - elapsed)
+                    H.log("WARNING. Turn.validateTimeout: early ms:", K.TURN_TIMEOUT - elapsed)
                     return false
                 }
             }
         }
-        // enemy's not in player's tokens list: invalid turn request
-        return false
+        return false // enemy's not in player's tokens list: invalid turn request
     }
 
     // Can move if no enemy in range of player. Once someone comes in

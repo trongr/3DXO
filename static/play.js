@@ -10,6 +10,40 @@ var K = (function(){
         BOARD_SIZE: 10,
         CUBE_SIZE: 1,
         QUADRANT_SIZE: 10,
+
+        code: {
+            turn: {
+                timeout: {
+                    code: "timeout",
+                    info: "ERROR. Turn request too early"
+                },
+                gameover: {
+                    code: "gameover",
+                    info: "ERROR. Can't request turn: gameover"
+                },
+                enemy_dead: {
+                    code: "enemy_dead",
+                    info: "ERROR. Can't request turn: enemy dead"
+                },
+                none: {
+                    code: "none",
+                    info: "ERROR. No more turn"
+                },
+            },
+            move: {
+                gameover: {
+                    code: "gameover",
+                    info: "ERROR. Can't move: gameover"
+                },
+            },
+            gameover: {
+                error: {
+                    code: "error",
+                    info: "ERROR. Unknown gameover error"
+                }
+            }
+        }
+
     }
     K.CUBE_GEO = new THREE.BoxGeometry(K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE)
 
@@ -20,6 +54,7 @@ var Turn = (function(){
     var Turn = {}
 
     var TURN_TIMEOUT = 30000
+    // var TURN_TIMEOUT = 5000 // mach tog
     var TURN_TIMEOUT_S = TURN_TIMEOUT / 1000
     var _timersForNewTurnRequest = {} // keyed by enemy._id. Time til sending new turn request
     var _timersForNewTurn = {} // keyed by enemy._id. Time til new turn
@@ -30,8 +65,7 @@ var Turn = (function(){
         for (var i = 0; i < tokens.length; i++){
             var token = tokens[i]
             if (!token.live){
-                Turn.startTimerForNewTurnRequest(token.player)
-                Turn.startTimerForNewTurn(token.player)
+                Turn.countDownTilNewTurn(token.player)
             }
         }
     }
@@ -54,9 +88,7 @@ var Turn = (function(){
         if (you.turn_tokens.length){
             var enemy = you.turn_tokens[(you.turn_index - 1 + you.turn_tokens.length) % you.turn_tokens.length]
             var enemyID = enemy.player
-            Turn.startTimerForNewTurnRequest(enemyID)
-            Turn.clearTimerForTurnExpire(enemyID)
-            Turn.startTimerForNewTurn(enemyID)
+            Turn.countDownTilNewTurn(enemyID)
         } else {
             msg.info("Free roaming")
         }
@@ -67,14 +99,12 @@ var Turn = (function(){
             var enemyEnemy = enemy.turn_tokens[(enemy.turn_index - 1 + enemy.turn_tokens.length) % enemy.turn_tokens.length]
             var enemyID = enemy._id
             if (enemyEnemy.player == you._id){ // the enemy of my enemy might be me lol
-                Turn.clearTimerForNewTurnRequest(enemyID)
-                Turn.clearTimerForNewTurn(enemyID)
-                Turn.startTimerForTurnExpire(enemyID)
+                Turn.countDownTilTurnExpires(enemyID)
             }
         } // otw enemy is free roaming
     }
 
-    Turn.startTimerForNewTurnRequest = function(enemyID){
+    Turn.startTimerForNewTurnRequest = function(enemyID, timeout){
         Turn.clearTimerForNewTurnRequest(enemyID)
         var you = Player.getPlayer()
         var to = setTimeout(function(){
@@ -82,7 +112,7 @@ var Turn = (function(){
                 playerID: you._id,
                 enemyID: enemyID,
             })
-        }, TURN_TIMEOUT)
+        }, timeout || TURN_TIMEOUT)
         _timersForNewTurnRequest[enemyID] = to
     }
 
@@ -92,18 +122,11 @@ var Turn = (function(){
 
     Turn.startTimerForNewTurn = function(enemyID){
         Turn.clearTimerForNewTurn(enemyID)
-        var time = TURN_TIMEOUT_S, minutes, seconds;
+        var time = TURN_TIMEOUT_S;
         var interval = setInterval(function(){
-            minutes = parseInt(time / 60, 10);
-            seconds = parseInt(time % 60, 10);
-
-            minutes = minutes < 10 ? "0" + minutes : minutes;
-            seconds = seconds < 10 ? "0" + seconds : seconds;
-
-            $("#" + enemyID + " .player_countdown").html(minutes + ":" + seconds + " til new turn")
-            if (--time < 0){
-                Turn.clearTimerForNewTurn(enemyID);
-            }
+            $("#" + enemyID + " .player_countdown")
+                .html(s2mmss(time) + " til new turn")
+            time--
         }, 1000);
         _timersForNewTurn[enemyID] = interval
     }
@@ -112,26 +135,47 @@ var Turn = (function(){
         clearInterval(_timersForNewTurn[enemyID])
     }
 
+    function s2mmss(s){
+        var t = Math.abs(s)
+        var sign, mm, ss;
+        sign = (s < 0 ? "-" : "")
+        mm = parseInt(t / 60, 10);
+        ss = parseInt(t % 60, 10);
+        mm = mm < 10 ? "0" + mm : mm;
+        ss = ss < 10 ? "0" + ss : ss;
+        return sign + mm + ":" + ss
+    }
+
     Turn.startTimerForTurnExpire = function(enemyID){
         Turn.clearTimerForTurnExpire(enemyID);
-        var time = TURN_TIMEOUT_S, minutes, seconds;
+        var time = TURN_TIMEOUT_S;
         var interval = setInterval(function(){
-            minutes = parseInt(time / 60, 10);
-            seconds = parseInt(time % 60, 10);
-
-            minutes = minutes < 10 ? "0" + minutes : minutes;
-            seconds = seconds < 10 ? "0" + seconds : seconds;
-
-            $("#" + enemyID + " .player_countdown").html(minutes + ":" + seconds + " til turn expires")
-            if (--time < 0){
-                Turn.clearTimerForTurnExpire(enemyID);
-            }
+            $("#" + enemyID + " .player_countdown")
+                .html(s2mmss(time) + " til turn expires")
+            time--
         }, 1000);
         _timersForTurnExpire[enemyID] = interval
     }
 
     Turn.clearTimerForTurnExpire = function(enemyID){
         clearInterval(_timersForTurnExpire[enemyID])
+    }
+
+    Turn.extendCountDownTilNewTurn = function(enemyID, timeout){
+        Turn.clearTimerForTurnExpire(enemyID)
+        Turn.startTimerForNewTurnRequest(enemyID, timeout)
+    }
+
+    Turn.countDownTilNewTurn = function(enemyID){
+        Turn.clearTimerForTurnExpire(enemyID)
+        Turn.startTimerForNewTurnRequest(enemyID)
+        Turn.startTimerForNewTurn(enemyID)
+    }
+
+    Turn.countDownTilTurnExpires = function(enemyID){
+        Turn.clearTimerForNewTurnRequest(enemyID)
+        Turn.clearTimerForNewTurn(enemyID)
+        Turn.startTimerForTurnExpire(enemyID)
     }
 
     return Turn
@@ -156,11 +200,11 @@ var Sock = (function(){
         _sock.onmessage = function(re){
             try {
                 var data = JSON.parse(re.data)
-                Game.on[data.chan](data)
             } catch (e){
                 if (re) return msg.error(re.data)
                 else return msg.error("FATAL ERROR. Server socket response")
             }
+            Game.on[data.chan](data)
         };
 
         _sock.onclose = function() {
@@ -1018,6 +1062,13 @@ var Game = (function(){
         }
 
         on.move = function(data){
+            var you = Player.getPlayer()
+            if (isNoMoreTurns(you, data)){
+                return msg.error(data.error.info)
+            } else if (isGenericSockError(you, data)){
+                return
+            }
+
             var playerName = data.player.name
             Game.removeObjAtXY(data.to.x, data.to.y)
 
@@ -1028,34 +1079,64 @@ var Game = (function(){
             Obj.move(sel, data.to)
 
             Scene.render()
-
             Turn.update(data.player)
         }
 
-        // todo. if a turn request gets rejected cause it's too early,
-        // nothing will happen: need to send another request every 2
-        // seconds (unless player.alive is false)
         on.turn = function(data){
-            var player = Player.getPlayer()
+            var you = Player.getPlayer()
+            if (isTurnRequestEarly(you, data)){
+                return Turn.extendCountDownTilNewTurn(data.enemyID, 2000)
+            } else if (isGenericSockError(you, data)){
+                return
+            }
             var enemyID = data.enemy._id
             var your_turn = data.your_turn
-            if (player._id == data.player._id){
+            if (isYourSock(you, data)){
                 Hud.renderTurns(data.player)
-                if (your_turn){ // new turn: count up til your turn expires
-                    Turn.clearTimerForNewTurn(enemyID)
-                    Turn.startTimerForTurnExpire(enemyID)
-                } else { // lost turn: count down til you get a new turn
-                    Turn.startTimerForNewTurnRequest(enemyID)
-                    Turn.clearTimerForTurnExpire(enemyID)
-                    Turn.startTimerForNewTurn(enemyID)
+                if (your_turn){ // just got new turn: count down til turn expires
+                    Turn.countDownTilTurnExpires(enemyID)
+                } else { // just lost turn: count down til new turn
+                    Turn.countDownTilNewTurn(enemyID)
                 }
             }
+        }
+
+        function isYourSock(you, data){
+            return (you._id == data.playerID)
+        }
+
+        function isGenericSockError(you, data){
+            if (isYourOtherErrors(you, data)){
+                msg.error(data.error.info)
+                return true
+            } else if (isOtherPeoplesError(you, data)){
+                return true
+            }
+            return false
+        }
+
+        function isNoMoreTurns(you, data){
+            return (isYourSock(you, data) && data.error &&
+                data.error.code == K.code.turn.none.code)
+        }
+
+        function isTurnRequestEarly(you, data){
+            return (isYourSock(you, data) && data.error &&
+                data.error.code == K.code.turn.timeout.code)
+        }
+
+        function isYourOtherErrors(you, data){
+            return (isYourSock(you, data) && data.error)
+        }
+
+        function isOtherPeoplesError(you, data){
+            return (data.error && !isYourSock(you, data))
         }
 
         on.turn_refresh = function(data){
             var you = Player.getPlayer()
             var player = data.player
-            if (you._id == player._id){
+            if (isYourSock(you, data)){
                 Hud.clearTurns()
                 Hud.renderTurns(player)
             }
@@ -1063,11 +1144,11 @@ var Game = (function(){
 
         // todo big splash screen and menu for loser
         on.gameover = function(data){
-            var player = Player.getPlayer()
+            var you = Player.getPlayer()
             var you_win = data.you_win
-            if (player._id == data.player._id && you_win){
+            if (isYourSock(you, data) && you_win){
                 msg.info("YOU WIN!")
-            } else if (player._id == data.player._id){
+            } else if (isYourSock(you, data)){
                 msg.error("GAME OVER")
             }
         }

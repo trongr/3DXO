@@ -56,27 +56,16 @@ var Sock = module.exports = (function(){
             try {
                 // data always has playerID and chan
                 var data = JSON.parse(msg)
+                var chan = data.chan
                 var playerID = data.playerID
             } catch (e){
                 return H.log("ERROR. Sock.onConnection.conn.data.JSON.parse", msg)
             }
-            H.log("INFO. Sock.data:", data.chan, playerID)
+            H.log("INFO. Sock.data:", chan, playerID)
             Game.sock(data, function(er, re){
                 // todo refactor cause Publisher.publish will push
                 // everything to everyone
-                if (er){
-                    var chan = "error"
-                    var data = {er:er}
-                } else if (re){
-                    var chan = re.chan
-                    var data = re
-                } else {
-                    var chan = "error"
-                    var data = {er:"FATAL ERROR: unexpected game socket response"}
-                }
-                data.chan = chan
-                data.playerID = playerID
-                Publisher.publish(chan, data)
+                Publisher.publish(chan, er || re)
             })
         });
 
