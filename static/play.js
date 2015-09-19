@@ -54,7 +54,7 @@ var Turn = (function(){
     var Turn = {}
 
     var TURN_TIMEOUT = 30000
-    // var TURN_TIMEOUT = 5000 // mach tog
+    // var TURN_TIMEOUT = 5000
     var TURN_TIMEOUT_S = TURN_TIMEOUT / 1000
     var _timersForNewTurnRequest = {} // keyed by enemy._id. Time til sending new turn request
     var _timersForNewTurn = {} // keyed by enemy._id. Time til new turn
@@ -817,6 +817,27 @@ var Move = (function(){
     return Move
 }())
 
+var Statistics = (function(){
+    var Statistics = {}
+
+    var _stats;
+
+    // turn on stats include in play.html if you want to use this
+    Statistics.init = function(container){
+        _stats = new Stats();
+        _stats.domElement.style.position = 'absolute';
+        _stats.domElement.style.top = '0px';
+        _stats.domElement.style.zIndex = 100;
+        container.appendChild( _stats.domElement );
+    }
+
+    Statistics.update = function(){
+        _stats.update()
+    }
+
+    return Statistics
+}())
+
 var Scene = (function(){
     var Scene = {
         camera: null
@@ -824,14 +845,12 @@ var Scene = (function(){
 
     var _scene = new THREE.Scene();
     var _container
-    var _stats;
     var _controls, _renderer;
     var _isShiftDown = false;
 
     Scene.init = function(x, y){
         initContainer()
-        initStats()
-        initInfo()
+        initInfo
         initLights()
         initCamera(x, y)
         initControls(x, y)
@@ -840,8 +859,8 @@ var Scene = (function(){
 
         Rollover.init()
         Select.init()
-
         Sock.init()
+        // Statistics.init(_container)
 
         animate();
         Scene.render();
@@ -926,14 +945,6 @@ var Scene = (function(){
         _container.appendChild( info );
     }
 
-    function initStats(){
-        _stats = new Stats();
-        _stats.domElement.style.position = 'absolute';
-        _stats.domElement.style.top = '0px';
-        _stats.domElement.style.zIndex = 100;
-        _container.appendChild( _stats.domElement );
-    }
-
     function onDocumentMouseDown( event ) {
         event.preventDefault();
         if (event.which == 1){ // left mouse button
@@ -976,7 +987,7 @@ var Scene = (function(){
     Scene.render = function(){
         try {
             _renderer.render(_scene, Scene.camera);
-            _stats.update();
+            // Statistics.update();
         } catch (e){
             msg.warning("Renderer not ready", 2)
         }
