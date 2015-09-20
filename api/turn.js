@@ -36,13 +36,18 @@ var Turn = module.exports = (function(){
     // Can move if no enemy in range of player. Once someone comes in
     // range player can only move if he has a turn token (at the right
     // index)
-    Turn.hasTurn = function(player, done){
-        if (player.turn_tokens.length){
-            var hasTurn = player.turn_tokens[player.turn_index].live
-        } else {
-            var hasTurn = true
+    Turn.hasTurn = function(player){
+        try {
+            if (player.turn_tokens.length){
+                var hasTurn = player.turn_tokens[player.turn_index].live
+            } else {
+                var hasTurn = true
+            }
+            return hasTurn
+        } catch (e){
+            H.log("ERROR. Turn.hasTurn:catch", player.turn_tokens, player.turn_index)
+            return false
         }
-        return hasTurn
     }
 
     Turn.update = function(playerID, to, done){
@@ -354,18 +359,35 @@ var Turn = module.exports = (function(){
         })
     }
 
+    // mach
     function clearToken(playerID, enemyID, done){
-        Player.findOneAndUpdate({
-            _id: enemyID
-        }, {
-            $pull: {
-                turn_tokens: {
-                    player: playerID
+        var enemy = null
+        async.waterfall([
+            function(done){
+                Player.findOneByID(enemyID, function(er, _enemy){
+                    enemy = _enemy
+                    done(er)
+                })
+            },
+            function(done){
+                // mach
+                console.log("old tokens", enemy.turn_tokens, enemy.turn_index)
+                var player_index = 0
+                enemy.turn_tokens = enemy.turn_tokens.filter(function(token, i){
+                    if (token.player.equals(playerID)){
+                        player_index = i
+                        return false
+                    } else return true
+                })
+                if (player_index < enemy.turn_index){
+                    enemy.turn_index -= 1
                 }
+                console.log("new tokens", enemy.turn_tokens, enemy.turn_index)
+                enemy.save(function(er){
+                    done(er)
+                })
             }
-        }, {
-            new: true,
-        }, function(er, enemy){
+        ], function(er){
             done(er, enemy)
         })
     }

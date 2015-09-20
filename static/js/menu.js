@@ -17,8 +17,7 @@ var Menu = (function(){
             if (er) msg.error(er)
             else {
                 msg.info("Building new army")
-                Game.loadPieces(pieces)
-                Scene.render()
+                Game.init()
             }
         })
     }

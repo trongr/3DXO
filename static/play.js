@@ -60,6 +60,9 @@ var Turn = (function(){
     var _timersForTurnExpire = {} // keyed by enemy._id. Time til turn expires
 
     Turn.init = function(player){
+        _timersForNewTurnRequest = {}
+        _timersForNewTurn = {}
+        _timersForTurnExpire = {}
         var tokens = player.turn_tokens
         for (var i = 0; i < tokens.length; i++){
             var token = tokens[i]
@@ -406,7 +409,7 @@ var Obj = (function(){
     // dummy origin and direction, near==0, far==1 because we only
     // want to find the ground adjacent to an obj
     var _groundRaycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(), 0, 1)
-    var _objects = []
+    var _objects
 
     Obj.KIND = {
         ground0: {
@@ -431,6 +434,7 @@ var Obj = (function(){
     }
 
     Obj.init = function(){
+        _objects = []
         var pieces = ["pawn", "rook", "knight", "bishop", "queen", "king"]
         for (var i = 0; i < pieces.length; i++){
             var piece = pieces[i]
@@ -532,9 +536,10 @@ var Obj = (function(){
 var Map = (function(){
     var Map = {}
 
-    var _map = []
+    var _map
 
     Map.init = function(x, y){
+        _map = []
         Map.addMouseDragListener(function(){
             var X = Scene.camera.position.x
             var Y = Scene.camera.position.y
@@ -842,12 +847,14 @@ var Scene = (function(){
         camera: null
     }
 
-    var _scene = new THREE.Scene();
+    var _scene
     var _container
     var _controls, _renderer;
     var _isShiftDown = false;
 
     Scene.init = function(x, y){
+        _scene = new THREE.Scene();
+
         initContainer()
         initInfo()
         initLights()
@@ -1005,6 +1012,7 @@ var Scene = (function(){
 var Game = (function(){
     var Game = {}
 
+    // mach
     Game.init = function(done){
         var player, king = null
         var x = y = 0

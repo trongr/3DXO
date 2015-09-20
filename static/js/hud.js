@@ -4,9 +4,10 @@
 var Hud = (function(){
     var Hud = {}
 
-    var _tokens = {} // cache of previous states
+    var _tokens // cache of previous states
 
     Hud.init = function(you){
+        _tokens = {}
         var html = "<div id='hud_box'>"
             +           "<div id='hud_turns'></div>"
             +      "</div>"
