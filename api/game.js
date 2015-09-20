@@ -315,22 +315,33 @@ var Game = module.exports = (function(){
             } catch (e){
                 return res.send({info:ERROR_BUILD_ARMY})
             }
-            Game.buildArmy(playerID, function(er){
+            Game.buildArmy(playerID, function(er, pieces){
                 if (er){
-                    res.send({info:ERROR_BUILD_ARMY})
+                    res.send(er)
                 } else {
-                    res.send({ok:true})
+                    res.send({ok:true, pieces:pieces})
                 }
             })
         })
 
     Game.buildArmy = function(playerID, done){
         var player, quadrant = null
+        var pieces = []
         async.waterfall([
             function(done){
                 Player.findOne({
                     _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
                 }, function(er, _player){
+                    player = _player
+                    done(er)
+                })
+            },
+            function(done){
+                if (player.alive) done({info:"ERROR. Can't build new army: player still alive"})
+                else done(null)
+            },
+            function(done){
+                Players.resurrect(playerID, function(er, _player){
                     player = _player
                     done(er)
                 })
@@ -377,14 +388,19 @@ var Game = module.exports = (function(){
                 }]
                 async.each(army, function(item, done){
                     Game.makePiece(item, function(er, piece){
-                        done(er)
+                        if (piece){
+                            pieces.push(piece)
+                            done(null)
+                        } else {
+                            done(er || {info:"ERROR. Couldn't create new piece"})
+                        }
                     })
                 }, function(er){
                     done(er)
                 })
             }
         ], function(er){
-            done(er)
+            done(er, pieces)
         })
     }
 

@@ -1,7 +1,8 @@
 var K = module.exports = (function(){
 
     var K = {
-        QUADRANT_SIZE: 10,
+        // QUADRANT_SIZE determines how close together armies spawn
+        QUADRANT_SIZE: 6,
         TURN_TIMEOUT: 30000,
 
         // socket codes. update copy on client if you update this:

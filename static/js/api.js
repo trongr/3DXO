@@ -102,7 +102,7 @@ var API = (function(){
         Game.buildArmy = function(playerID, done){
             var url = API_PREFIX + "game/" + playerID + "/buildArmy"
             API.req("post", url, {}, function(er, re){
-                if (re && re.ok) done(null)
+                if (re && re.ok) done(null, re.pieces)
                 else done(er)
             })
         }

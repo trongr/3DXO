@@ -57,8 +57,25 @@ var Players = module.exports = (function(){
                 alive: false,
             }
         }, {}, function(er, re){
-            if (er) H.log("ERROR. Players.lose", er)
+            if (er) H.log("ERROR. Players.die", er)
             if (done) done(er)
+        })
+    }
+
+    Players.resurrect = function(playerID, done){
+        Player.findOneAndUpdate({
+            _id: playerID
+        }, {
+            $set: {
+                modified: new Date(), // update bypasses mongoose's pre save middleware
+                alive: true,
+            }
+        }, {
+            new: true,
+            runValidators: true,
+        }, function(er, player){
+            if (er) H.log("ERROR. Players.resurrect", er)
+            if (done) done(er, player)
         })
     }
 

@@ -7,9 +7,8 @@ var K = (function(){
 
     var K = {
         INIT_CAM_POS: 15,
-        BOARD_SIZE: 10,
         CUBE_SIZE: 1,
-        QUADRANT_SIZE: 10,
+        QUADRANT_SIZE: 6,
 
         code: {
             turn: {
@@ -575,8 +574,8 @@ var Map = (function(){
     // x and y are real game coordinates
     Map.loadQuadrants = function(x, y){
         // also load the 8 neighbouring quadrants to x, y
-        for (var i = -1; i <= 1; i++){
-            for (var j = -1; j <= 1; j++){
+        for (var i = -2; i <= 2; i++){
+            for (var j = -2; j <= 2; j++){
                 var X = Math.floor((x + i * K.QUADRANT_SIZE) / K.QUADRANT_SIZE) * K.QUADRANT_SIZE
                 var Y = Math.floor((y + j * K.QUADRANT_SIZE) / K.QUADRANT_SIZE) * K.QUADRANT_SIZE
 
@@ -850,7 +849,7 @@ var Scene = (function(){
 
     Scene.init = function(x, y){
         initContainer()
-        initInfo
+        initInfo()
         initLights()
         initCamera(x, y)
         initControls(x, y)
@@ -939,9 +938,9 @@ var Scene = (function(){
         info.style.top = '10px';
         info.style.right = "10px";
         info.style.textAlign = 'right';
-        info.innerHTML = '3DXO<br>'
-            + "<strong>mouse</strong>: navigate<br>"
-            + '<strong>click</strong>: move box<br>'
+        info.innerHTML = 'M.M.O.Chess<br>'
+            + "<strong>Right mouse drag</strong>: navigate<br>"
+            + '<strong>Left mouse</strong>: move<br>'
         _container.appendChild( info );
     }
 
@@ -1028,6 +1027,7 @@ var Game = (function(){
                 Scene.init(x, y)
                 Obj.init()
                 Map.init(x, y)
+                Menu.init(player)
                 Hud.init(player)
                 Turn.init(player)
             },
