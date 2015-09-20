@@ -359,7 +359,6 @@ var Turn = module.exports = (function(){
         })
     }
 
-    // mach
     function clearToken(playerID, enemyID, done){
         var enemy = null
         async.waterfall([
@@ -370,8 +369,6 @@ var Turn = module.exports = (function(){
                 })
             },
             function(done){
-                // mach
-                console.log("old tokens", enemy.turn_tokens, enemy.turn_index)
                 var player_index = 0
                 enemy.turn_tokens = enemy.turn_tokens.filter(function(token, i){
                     if (token.player.equals(playerID)){
@@ -382,7 +379,6 @@ var Turn = module.exports = (function(){
                 if (player_index < enemy.turn_index){
                     enemy.turn_index -= 1
                 }
-                console.log("new tokens", enemy.turn_tokens, enemy.turn_index)
                 enemy.save(function(er){
                     done(er)
                 })
