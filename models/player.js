@@ -59,15 +59,11 @@ schema.methods.comparePassword = function(candidatePassword, cb) {
     });
 };
 
-// todo time this for performance
 schema.statics.findOneByID = function(playerID, done) {
-    this.count(function(er, count) {
-        if (er) return done(er)
-        this.findById(playerID, function(er, player){
-            if (player) done(null, player)
-            else done({error:"Player.findOneByID", er:er})
-        })
-    }.bind(this));
+    this.findById(playerID, function(er, player){
+        if (player) done(null, player)
+        else done({error:"Player.findOneByID", er:er})
+    })
 };
 
 module.exports = mongoose.model('Player', schema);

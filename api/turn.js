@@ -54,13 +54,9 @@ var Turn = module.exports = (function(){
         var player = null
         async.waterfall([
             function(done){
-                Player.findOne({
-                    _id: playerID
-                }, function(er, _player){
+                Player.findOneByID(playerID, function(er, _player){
                     player = _player
-                    if (er) done(er)
-                    else if (player) done(null)
-                    else done({info:"Player does not exist"})
+                    done(er)
                 })
             },
             function(done){
@@ -87,14 +83,9 @@ var Turn = module.exports = (function(){
         var player = null
         async.waterfall([
             function(done){
-                Player.findOne({
-                    _id: playerID
-                }, function(er, _player){
+                Player.findOneByID(playerID, function(er, _player){
                     player = _player
-                    if (er) done(er)
-                    else if (player){
-                        done(null)
-                    } else done({info:"Player does not exist"})
+                    done(er)
                 })
             },
             function(done){
@@ -128,14 +119,9 @@ var Turn = module.exports = (function(){
         var player = null
         async.waterfall([
             function(done){
-                Player.findOne({
-                    _id: playerID
-                }, function(er, _player){
+                Player.findOneByID(playerID, function(er, _player){
                     player = _player
-                    if (er) done(er)
-                    else if (player){
-                        done(null)
-                    } else done({info:"Player does not exist"})
+                    done(er)
                 })
             },
             function(done){
@@ -170,25 +156,15 @@ var Turn = module.exports = (function(){
         var player, enemy = null
         async.waterfall([
             function(done){
-                Player.findOne({
-                    _id: playerID
-                }, function(er, _player){
+                Player.findOneByID(playerID, function(er, _player){
                     player = _player
-                    if (er) done(er)
-                    else if (player){
-                        done(null)
-                    } else done({info:"Player does not exist"})
+                    done(er)
                 })
             },
             function(done){
-                Player.findOne({
-                    _id: enemyID
-                }, function(er, _enemy){
+                Player.findOneByID(enemyID, function(er, _enemy){
                     enemy = _enemy
-                    if (er) done(er)
-                    else if (enemy){
-                        done(null)
-                    } else done({info:"Player does not exist"})
+                    done(er)
                 })
             },
             function(done){

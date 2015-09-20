@@ -364,9 +364,7 @@ var Game = module.exports = (function(){
         var pieces = []
         async.waterfall([
             function(done){
-                Player.findOne({
-                    _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
-                }, function(er, _player){
+                Player.findOneByID(playerID, function(er, _player){
                     player = _player
                     done(er)
                 })
@@ -553,12 +551,9 @@ var Game = module.exports = (function(){
             }
             async.waterfall([
                 function(done){
-                    Player.findOne({
-                        _id: playerID
-                    }, function(er, _player){
+                    Player.findOneByID(playerID, function(er, _player){
                         player = _player
-                        if (player) done(null)
-                        else done({er:"no such player"})
+                        done(er)
                     })
                 },
                 function(done){
@@ -581,9 +576,9 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Move.move(player, piece, from, to, function(er, _piece, enemyKing){
+                    Move.move(player, piece, from, to, function(er, _piece, _enemyKing){
                         nPiece = _piece
-                        enemyKing = enemyKing
+                        enemyKing = _enemyKing
                         if (er){
                             H.log("ERROR. Move.move", er)
                             done(er)
@@ -597,8 +592,13 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    if (enemyKing) Game.on.gameover(enemyKing.player, playerID)
-                    done(null)
+                    // mach
+                    if (enemyKing){
+                        Game.on.gameover(enemyKing.player, playerID, function(er, re){
+                            player = re.winner // player has updated turn tokens, so client can render correctly
+                            done(er)
+                        })
+                    } else done(null)
                 }
             ], function(er){
                 data.playerID = playerID
@@ -626,17 +626,13 @@ var Game = module.exports = (function(){
             }
             async.waterfall([
                 function(done){
-                    Player.findOne({
-                        _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
-                    }, function(er, _player){
+                    Player.findOneByID(playerID, function(er, _player){
                         player = _player
                         done(er)
                     })
                 },
                 function(done){
-                    Player.findOne({
-                        _id: enemyID, // apparently you don't need to convert _id to mongo ObjectID
-                    }, function(er, _enemy){
+                    Player.findOneByID(enemyID, function(er, _enemy){
                         enemy = _enemy
                         done(er)
                     })
@@ -693,12 +689,13 @@ var Game = module.exports = (function(){
             })
         }
 
-        // game over for player. A fraction (half?) of pieces
-        // convert to enemy, remaining pieces die (maybe later give
-        // them AI to roam the world).
+        // todo. A fraction (half?) of pieces convert to enemy,
+        // remaining pieces die (maybe later give them AI to roam the
+        // world).
         //
-        // remove player's token from his enemies
-        on.gameover = function(playerID, enemyID){
+        // game over for player. remove player's token from his
+        // enemies. done(er, {winner:enemy, loser:player})
+        on.gameover = function(playerID, enemyID, done){
             try {
                 var player, enemy = null
             } catch (e){
@@ -706,23 +703,19 @@ var Game = module.exports = (function(){
             }
             async.waterfall([
                 function(done){
-                    Player.findOne({
-                        _id: playerID, // apparently you don't need to convert _id to mongo ObjectID
-                    }, function(er, _player){
+                    Player.findOneByID(playerID, function(er, _player){
                         player = _player
                         done(er)
                     })
                 },
                 function(done){
-                    Player.findOne({
-                        _id: enemyID, // apparently you don't need to convert _id to mongo ObjectID
-                    }, function(er, _enemy){
+                    Player.findOneByID(enemyID, function(er, _enemy){
                         enemy = _enemy
                         done(er)
                     })
                 },
                 function(done){
-                    Players.die(playerID)
+                    Players.kill(playerID)
                     Turn.clearTokens(playerID, function(er, player, enemies){
                         publishPlayersTokenRefresh(enemies.concat([player]))
                     })
@@ -759,6 +752,7 @@ var Game = module.exports = (function(){
                     Publisher.publish(chan, winner)
                     Publisher.publish(chan, loser)
                 }
+                done(er, {winner:enemy, loser:player})
             })
         }
 

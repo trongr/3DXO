@@ -48,7 +48,7 @@ var Players = module.exports = (function(){
             })
         })
 
-    Players.die = function(playerID, done){
+    Players.kill = function(playerID, done){
         Player.update({
             _id: playerID
         }, {
@@ -57,7 +57,7 @@ var Players = module.exports = (function(){
                 alive: false,
             }
         }, {}, function(er, re){
-            if (er) H.log("ERROR. Players.die", er)
+            if (er) H.log("ERROR. Players.kill", er)
             if (done) done(er)
         })
     }

@@ -1012,7 +1012,6 @@ var Scene = (function(){
 var Game = (function(){
     var Game = {}
 
-    // mach
     Game.init = function(done){
         var player, king = null
         var x = y = 0
@@ -1105,8 +1104,10 @@ var Game = (function(){
             var you = Player.getPlayer()
             if (isTurnRequestEarly(you, data)){
                 return Turn.extendCountDownTilNewTurn(data.enemyID, 2000)
+            } else if (isEnemyDead(you, data)){
+                return // Don't show this error
             } else if (isGenericSockError(you, data)){
-                return
+                return // Alert error
             }
             var enemyID = data.enemy._id
             var your_turn = data.your_turn
@@ -1139,6 +1140,11 @@ var Game = (function(){
                 data.error.code == K.code.turn.none.code)
         }
 
+        function isEnemyDead(you, data){
+            return (isYourSock(you, data) && data.error &&
+                data.error.code == K.code.turn.enemy_dead.code)
+        }
+
         function isTurnRequestEarly(you, data){
             return (isYourSock(you, data) && data.error &&
                 data.error.code == K.code.turn.timeout.code)
@@ -1156,6 +1162,7 @@ var Game = (function(){
             var you = Player.getPlayer()
             var player = data.player
             if (isYourSock(you, data)){
+                // mach
                 Hud.clearTurns()
                 Hud.renderTurns(player)
             }
@@ -1178,6 +1185,7 @@ var Game = (function(){
             var defectors = Game.removePiecesByPlayerID(defectorID)
             Game.defect(defectors, defecteeID)
             Game.loadPieces(defectors)
+            Scene.render()
         }
 
         return on
