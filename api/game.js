@@ -324,6 +324,41 @@ var Game = module.exports = (function(){
             })
         })
 
+    var LETTER_PIECES = {
+        p: "pawn",
+        r: "rook",
+        n: "knight",
+        b: "bishop",
+        q: "queen",
+        k: "king",
+    };
+
+    // // 10 x 10 grids
+    // var ARMY_CONFIG = [
+    //     ["0", "0", "0", "0", "0", "0", "0", "0", "0", "0"],
+    //     ["0", "p", "p", "p", "0", "0", "p", "p", "p", "0"],
+    //     ["0", "p", "p", "0", "p", "p", "0", "p", "p", "0"],
+    //     ["0", "p", "0", "r", "n", "b", "r", "0", "p", "0"],
+    //     ["0", "0", "p", "b", "k", "0", "n", "p", "0", "0"],
+    //     ["0", "0", "p", "n", "0", "q", "b", "p", "0", "0"],
+    //     ["0", "p", "0", "r", "b", "n", "r", "0", "p", "0"],
+    //     ["0", "p", "p", "0", "p", "p", "0", "p", "p", "0"],
+    //     ["0", "p", "p", "p", "0", "0", "p", "p", "p", "0"],
+    //     ["0", "0", "0", "0", "0", "0", "0", "0", "0", "0"],
+    // ];
+
+    // 8 x 8
+    var ARMY_CONFIG = [
+        ["0", "0", "0", "0", "0", "0", "0", "0"],
+        ["0", "p", "p", "p", "p", "p", "p", "0"],
+        ["0", "p", "b", "n", "r", "b", "p", "0"],
+        ["0", "p", "r", "k", "0", "n", "p", "0"],
+        ["0", "p", "n", "0", "q", "r", "p", "0"],
+        ["0", "p", "b", "r", "n", "b", "p", "0"],
+        ["0", "p", "p", "p", "p", "p", "p", "0"],
+        ["0", "0", "0", "0", "0", "0", "0", "0"],
+    ];
+
     Game.buildArmy = function(playerID, done){
         var player, quadrant = null
         var pieces = []
@@ -353,39 +388,21 @@ var Game = module.exports = (function(){
                 })
             },
             function(done){
-                var army = [{
-                    kind: "pawn", x: quadrant.x + 4, y: quadrant.y + 2, player: player
-                },{
-                    kind: "pawn", x: quadrant.x + 5, y: quadrant.y + 2, player: player
-                },{
-                    kind: "pawn", x: quadrant.x + 4, y: quadrant.y + 7, player: player
-                },{
-                    kind: "pawn", x: quadrant.x + 5, y: quadrant.y + 7, player: player
-                },{
-                    kind: "pawn", x: quadrant.x + 2, y: quadrant.y + 4, player: player
-                },{
-                    kind: "pawn", x: quadrant.x + 2, y: quadrant.y + 6, player: player
-                },{
-                    kind: "pawn", x: quadrant.x + 7, y: quadrant.y + 4, player: player
-                },{
-                    kind: "pawn", x: quadrant.x + 7, y: quadrant.y + 6, player: player
-                },{
-                    kind: "rook", x: quadrant.x + 3, y: quadrant.y + 5, player: player
-                },{
-                    kind: "rook", x: quadrant.x + 6, y: quadrant.y + 4, player: player
-                },{
-                    kind: "knight", x: quadrant.x + 3, y: quadrant.y + 7, player: player
-                },{
-                    kind: "knight", x: quadrant.x + 6, y: quadrant.y + 2, player: player
-                },{
-                    kind: "bishop", x: quadrant.x + 3, y: quadrant.y + 3, player: player
-                },{
-                    kind: "bishop", x: quadrant.x + 6, y: quadrant.y + 6, player: player
-                },{
-                    kind: "king", x: quadrant.x + 4, y: quadrant.y + 5, player: player
-                },{
-                    kind: "queen", x: quadrant.x + 5, y: quadrant.y + 4, player: player
-                }]
+                var army = ARMY_CONFIG.map(function(row, i){
+                    return row.map(function(p, j){
+                        if (p == LETTER_PIECES[0]){
+                            return null
+                        } else {
+                            return {
+                                kind: LETTER_PIECES[p],
+                                x: quadrant.x + j,
+                                y: quadrant.y + i,
+                                player: player
+                            }
+                        }
+                    })
+                })
+                army = [].concat.apply([], army)
                 async.each(army, function(item, done){
                     Game.makePiece(item, function(er, piece){
                         if (piece){
@@ -406,7 +423,8 @@ var Game = module.exports = (function(){
 
     function randomDirection(){
         var direction = {dx:0, dy:0}
-        while (direction.dx == 0 && direction.dy == 0){
+        // Only allow horizontal and vertical directions (no diagonals)
+        while (Math.abs(direction.dx) == Math.abs(direction.dy)){
             direction = {
                 dx: Math.floor((Math.random() * 3) + 1) - 2,
                 dy: Math.floor((Math.random() * 3) + 1) - 2
@@ -517,7 +535,7 @@ var Game = module.exports = (function(){
         var on = {}
 
         on.move = function(data, done){
-            var nPiece = null
+            var enemyKing, nPiece = null
             try {
                 var player = data.player
                 var playerID = player._id
@@ -565,11 +583,11 @@ var Game = module.exports = (function(){
                 function(done){
                     Move.move(player, piece, from, to, function(er, _piece, enemyKing){
                         nPiece = _piece
+                        enemyKing = enemyKing
                         if (er){
                             H.log("ERROR. Move.move", er)
                             done(er)
                         } else done(null)
-                        if (enemyKing) Game.on.gameover(enemyKing.player, playerID)
                     })
                 },
                 function(done){
@@ -577,6 +595,10 @@ var Game = module.exports = (function(){
                         player = _player
                         done(er)
                     })
+                },
+                function(done){
+                    if (enemyKing) Game.on.gameover(enemyKing.player, playerID)
+                    done(null)
                 }
             ], function(er){
                 data.playerID = playerID

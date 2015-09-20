@@ -350,7 +350,8 @@ var Turn = module.exports = (function(){
             _id: playerID
         }, {
             $set: {
-                turn_tokens: []
+                turn_tokens: [],
+                turn_index: 0,
             }
         }, {
             new: true,
@@ -369,16 +370,7 @@ var Turn = module.exports = (function(){
                 })
             },
             function(done){
-                var player_index = 0
-                enemy.turn_tokens = enemy.turn_tokens.filter(function(token, i){
-                    if (token.player.equals(playerID)){
-                        player_index = i
-                        return false
-                    } else return true
-                })
-                if (player_index < enemy.turn_index){
-                    enemy.turn_index -= 1
-                }
+                removePlayerTokenFromEnemy(enemy, playerID)
                 enemy.save(function(er){
                     done(er)
                 })
@@ -386,6 +378,37 @@ var Turn = module.exports = (function(){
         ], function(er){
             done(er, enemy)
         })
+    }
+
+    function removePlayerTokenFromEnemy(enemy, playerID){
+        var player_index = 0
+        // Update turn_tokens
+        enemy.turn_tokens = enemy.turn_tokens.filter(function(token, i){
+            if (token.player.equals(playerID)){
+                player_index = i
+                return false
+            } else return true
+        })
+        // Update turn_index
+        if (player_index >= enemy.turn_index){
+            // Pulling token from above turn_index, so no need to
+            // change, except to wrap around by modding
+            // enemy.turn_tokens.length
+            //
+            //        i   p
+            // [0 1 2 3 4 5 6]
+            // p == player_index, i == turn_index
+            enemy.turn_index = enemy.turn_index % enemy.turn_tokens.length
+        } else if (player_index < enemy.turn_index){
+            // Pulling a token from underneath turn_index, so
+            // need to decrement. Math.max in case it becomes
+            // negative.
+            //
+            //    p   i
+            // [0 1 2 3 4 5 6]
+            // p == player_index, i == turn_index
+            enemy.turn_index = Math.max(enemy.turn_index - 1, 0)
+        }
     }
 
     return Turn

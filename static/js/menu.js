@@ -12,6 +12,7 @@ var Menu = (function(){
         $("#new_game").on("click", new_game)
     }
 
+    // todo let users start with a new army, but penalize restart.
     function new_game(){
         API.Game.buildArmy(_you._id, function(er, pieces){
             if (er) msg.error(er)

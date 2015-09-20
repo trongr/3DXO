@@ -7,3 +7,7 @@
     top: 0;
     font-family: arial;
 }
+
+#menu_box a {
+    color: white;
+}

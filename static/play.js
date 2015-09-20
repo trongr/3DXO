@@ -8,7 +8,7 @@ var K = (function(){
     var K = {
         INIT_CAM_POS: 15,
         CUBE_SIZE: 1,
-        QUADRANT_SIZE: 6,
+        QUADRANT_SIZE: 8,
 
         code: {
             turn: {
