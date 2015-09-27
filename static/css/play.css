@@ -1,0 +1,81 @@
+#info_box a {
+    color: white;
+}
+
+/* begin hud css */
+/* begin hud css */
+/* begin hud css */
+
+#hud_box {
+    color: white;
+    margin: 5px;
+    opacity: 0.8;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    font-family: arial;
+}
+
+#hud_turns {
+    display: table;
+    /* border-collapse: separate; */
+    /* border-spacing: 0px 1px; */
+}
+
+#hud_turns .turn_box {
+    display: table-row;
+}
+
+#hud_turns .turn_box div {
+    display: table-cell;
+}
+
+#hud_turns .turn_box .player_turn {
+    background-color: transparent;
+    width: 10px;
+}
+
+#hud_turns .turn_box .player_turn.active_turn {
+    background-color: #00FF00;
+    width: 10px;
+}
+
+#hud_turns .turn_box .player_name {
+    padding: 10px 15px 10px 15px;
+    background-color: #779677;
+}
+
+#hud_turns .turn_box .player_name.ready_turn {
+    background-color: #41B81A;
+}
+
+#hud_turns .turn_box .player_countdown {
+    padding: 10px 15px 10px 15px;
+    background-color: #607360;
+}
+
+/* end hud css */
+/* end hud css */
+/* end hud css */
+
+/* begin menu css */
+/* begin menu css */
+/* begin menu css */
+
+#menu_box {
+    color: white;
+    margin: 5px;
+    opacity: 0.8;
+    position: fixed;
+    right: 0;
+    top: 0;
+    font-family: arial;
+}
+
+#menu_box a {
+    color: white;
+}
+
+/* end menu css */
+/* end menu css */
+/* end menu css */

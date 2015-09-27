@@ -1,183 +1,240 @@
-// you can't move the same piece twice in the same round
+// todo gradient color code the counters to make it more obvious
+// and make a big counter for the active token
 
+// pawns aren't allowed to move towards the nearest (cause you can
+// have multiple) king during combat
+//
+// you can't move the same piece twice in the same round
+//
 // free roaming lets you move any piece to a neighbouring grid, but no
 // farther
 
 var K = (function(){
 
+    var S = 1
     var K = {
         INIT_CAM_POS: 15,
-        CUBE_SIZE: 1,
-        QUADRANT_SIZE: 8,
-
-        code: {
-            turn: {
-                timeout: {
-                    code: "timeout",
-                    info: "ERROR. Turn request too early"
-                },
-                gameover: {
-                    code: "gameover",
-                    info: "ERROR. Can't request turn: gameover"
-                },
-                enemy_dead: {
-                    code: "enemy_dead",
-                    info: "ERROR. Can't request turn: enemy dead"
-                },
-                none: {
-                    code: "none",
-                    info: "ERROR. No more turn"
-                },
-            },
-            move: {
-                gameover: {
-                    code: "gameover",
-                    info: "ERROR. Can't move: gameover"
-                },
-            },
-            gameover: {
-                error: {
-                    code: "error",
-                    info: "ERROR. Unknown gameover error"
-                }
-            }
-        }
-
+        CUBE_SIZE: S,
+        CUBE_GEO: new THREE.BoxGeometry(S, S, S),
     }
-    K.CUBE_GEO = new THREE.BoxGeometry(K.CUBE_SIZE, K.CUBE_SIZE, K.CUBE_SIZE)
 
     return K
+}())
+
+var Conf = {} // set on load from server
+
+var Cache = {}
+
+var Menu = (function(){
+    var Menu = {}
+
+    var _you
+
+    Menu.init = function(you){
+        _you = you
+        var html = "<div id='menu_box'>"
+            +           "<a id='new_game' href='#'>New Game</a>"
+            +      "</div>"
+        $("body").append(html)
+        $("#new_game").on("click", new_game)
+    }
+
+    // todo let users start with a new army, but penalize restart.
+    function new_game(){
+        API.Game.buildArmy(_you._id, function(er, pieces){
+            if (er) msg.error(er)
+            else {
+                msg.info("Building new army")
+                window.location.href = "/play"
+            }
+        })
+    }
+
+    return Menu
+}())
+
+var Hud = (function(){
+    var Hud = {}
+
+    Hud.init = function(you){
+        Cache.tokens = {}
+        var html = "<div id='hud_box'>"
+            +           "<div id='hud_turns'></div>"
+            +      "</div>"
+        $("body").append(html)
+        Hud.init_turns(you)
+    }
+
+    Hud.init_turns = function(you){
+        Hud.clearTurns()
+        Hud.renderTurns(you)
+    }
+
+    Hud.clearTurns = function(){
+        $("#hud_turns").html("")
+        Cache.tokens = {}
+    }
+
+    Hud.delete_turn = function(enemyID){
+        $("#" + enemyID + ".turn_box").remove()
+    }
+
+    Hud.renderTurns = function(you){
+        var tokens = you.turn_tokens
+        var activeTurnIndex = you.turn_index
+        upsertTokens(tokens)
+        highlightActiveTurn(activeTurnIndex, tokens)
+        cacheTokens(tokens) // so we can tell if a token has changed
+                            // and update / ignore it in the hud:
+    }
+
+    function upsertTokens(tokens){
+        tokens.forEach(function(token){
+            upsertToken(token)
+        })
+    }
+
+    function upsertToken(token){
+        var elmt = $("#" + token.player + ".turn_box")
+        if (elmt.length){ // token exists, re-render if changed
+            if (JSON.stringify(Cache.tokens[token.player]) != JSON.stringify(token)){
+                elmt.replaceWith(turn_box(token))
+            }
+        } else { // token doesn't exist, add to end of parent
+            $("#hud_turns").append(turn_box(token))
+        }
+    }
+
+    function cacheTokens(tokens){
+        tokens.forEach(function(token){
+            Cache.tokens[token.player] = token
+        })
+    }
+
+    function highlightActiveTurn(activeTurnIndex, tokens){
+        try {
+            var activeTokenPlayerID = tokens[activeTurnIndex].player
+        } catch (e){
+            return console.log("ERROR. Hud.highlightActiveTurn: activeTurnIndex out of bounds", activeTurnIndex, tokens)
+        }
+        $("#hud_turns .player_turn.active_turn").removeClass("active_turn")
+        $("#" + activeTokenPlayerID + ".turn_box .player_turn").addClass("active_turn")
+    }
+
+    function turn_box(token){
+        var ready_turn = (token.live ? "ready_turn" : "")
+        return "<div id='" + token.player + "' class='turn_box'>"
+            +     "<div class='player_turn'></div>"
+            +     "<div class='player_name " + ready_turn + "'>" + token.player_name + "</div>"
+            +     "<div class='player_countdown'></div>"
+            +  "</div>"
+    }
+
+    return Hud
 }())
 
 var Turn = (function(){
     var Turn = {}
 
-    var TURN_TIMEOUT = 30000
-    // var TURN_TIMEOUT = 5000
-    var TURN_TIMEOUT_S = TURN_TIMEOUT / 1000
     var _timersForNewTurnRequest = {} // keyed by enemy._id. Time til sending new turn request
     var _timersForNewTurn = {} // keyed by enemy._id. Time til new turn
     var _timersForTurnExpire = {} // keyed by enemy._id. Time til turn expires
 
-    Turn.init = function(player){
+    Turn.init = function(you){
         _timersForNewTurnRequest = {}
         _timersForNewTurn = {}
         _timersForTurnExpire = {}
-        var tokens = player.turn_tokens
-        for (var i = 0; i < tokens.length; i++){
-            var token = tokens[i]
-            if (!token.live){
-                Turn.countDownTilNewTurn(token.player)
-            }
-        }
+        // Count down til new turns for dead tokens
+        initNewTurnCountDowns(you.turn_tokens)
     }
 
-    // Calls whenever someone moves
-    Turn.update = function(mover){
-        API.Player.get({}, function(er, re){
-            if (er) return console.log("ERROR. API.Player.get", er)
-            var you = re.player
-            if (mover._id == you._id){
-                updatePlayerTurns(mover)
-            } else {
-                updateEnemyTurns(you, mover)
+    // NOTE. For now we're only removing deleted turns
+    Turn.refresh_turns = function(you){
+        $.each(Cache.tokens, function(keyAsEnemyID, token){
+            if (!doesTokensContainEnemyID(you.turn_tokens, keyAsEnemyID)){
+                console.log("DEBUG. Deleting token", keyAsEnemyID)
+                delete_turn(keyAsEnemyID)
             }
-            Hud.renderTurns(you)
         })
     }
 
-    function updatePlayerTurns(you){
-        if (you.turn_tokens.length){
-            var enemy = you.turn_tokens[(you.turn_index - 1 + you.turn_tokens.length) % you.turn_tokens.length]
-            var enemyID = enemy.player
-            Turn.countDownTilNewTurn(enemyID)
-        } else {
-            msg.info("Free roaming")
-        }
-    }
-
-    function updateEnemyTurns(you, enemy){
-        if (enemy.turn_tokens.length){
-            var enemyEnemy = enemy.turn_tokens[(enemy.turn_index - 1 + enemy.turn_tokens.length) % enemy.turn_tokens.length]
-            var enemyID = enemy._id
-            if (enemyEnemy.player == you._id){ // the enemy of my enemy might be me lol
-                Turn.countDownTilTurnExpires(enemyID)
+    function doesTokensContainEnemyID(tokens, enemyID){
+        return tokens.filter(function(token){
+            if (token.player == enemyID){
+                return true
             }
-        } // otw enemy is free roaming
+            return false
+        }).length > 0
     }
 
-    Turn.startTimerForNewTurnRequest = function(enemyID, timeout){
-        Turn.clearTimerForNewTurnRequest(enemyID)
+    function delete_turn(enemyID){
+        clearEnemyTimers(enemyID)
+        Hud.delete_turn(enemyID)
+    }
+
+    Turn.countDownTilNewTurn = function(enemyID, timeout){
+        clearEnemyTimers(enemyID)
+        startTimerForNewTurnRequest(enemyID, timeout)
+        startTimerForNewTurn(enemyID, timeout)
+    }
+
+    Turn.countDownTilTurnExpires = function(enemyID){
+        clearEnemyTimers(enemyID)
+        startTimerForTurnExpire(enemyID)
+    }
+
+    function initNewTurnCountDowns(tokens){
+        tokens.forEach(function(token){
+            if (!token.live){
+                Turn.countDownTilNewTurn(token.player)
+            }
+        })
+    }
+
+    function clearEnemyTimers(enemyID){
+        clearTimerForNewTurn(enemyID)
+        clearTimerForTurnExpire(enemyID)
+        clearTimerForNewTurnRequest(enemyID)
+    }
+
+    function startTimerForNewTurnRequest(enemyID, timeout){
         var you = Player.getPlayer()
         var to = setTimeout(function(){
             Sock.send("turn", {
                 playerID: you._id,
                 enemyID: enemyID,
             })
-        }, timeout || TURN_TIMEOUT)
+        }, timeout || Conf.turn_timeout)
         _timersForNewTurnRequest[enemyID] = to
     }
-
-    Turn.clearTimerForNewTurnRequest = function(enemyID){
+    function clearTimerForNewTurnRequest(enemyID){
         clearTimeout(_timersForNewTurnRequest[enemyID])
     }
 
-    Turn.startTimerForNewTurn = function(enemyID){
-        Turn.clearTimerForNewTurn(enemyID)
-        var time = TURN_TIMEOUT_S;
+    function startTimerForNewTurn(enemyID, timeout){
+        var time = (timeout || Conf.turn_timeout) / 1000
         var interval = setInterval(function(){
-            $("#" + enemyID + " .player_countdown")
-                .html(s2mmss(time) + " til new turn")
+            $("#" + enemyID + " .player_countdown").html(H.s2mmss(time) + " til new turn")
             time--
+            if (time < 0) clearTimerForNewTurn(enemyID)
         }, 1000);
         _timersForNewTurn[enemyID] = interval
     }
-
-    Turn.clearTimerForNewTurn = function(enemyID){
+    function clearTimerForNewTurn(enemyID){
         clearInterval(_timersForNewTurn[enemyID])
     }
 
-    function s2mmss(s){
-        var t = Math.abs(s)
-        var sign, mm, ss;
-        sign = (s < 0 ? "-" : "")
-        mm = parseInt(t / 60, 10);
-        ss = parseInt(t % 60, 10);
-        mm = mm < 10 ? "0" + mm : mm;
-        ss = ss < 10 ? "0" + ss : ss;
-        return sign + mm + ":" + ss
-    }
-
-    Turn.startTimerForTurnExpire = function(enemyID){
-        Turn.clearTimerForTurnExpire(enemyID);
-        var time = TURN_TIMEOUT_S;
+    function startTimerForTurnExpire(enemyID){
+        var time = Conf.turn_timeout / 1000
         var interval = setInterval(function(){
-            $("#" + enemyID + " .player_countdown")
-                .html(s2mmss(time) + " til turn expires")
+            $("#" + enemyID + " .player_countdown").html(H.s2mmss(time) + " til turn expires")
             time--
+            if (time < 0) clearTimerForTurnExpire(enemyID)
         }, 1000);
         _timersForTurnExpire[enemyID] = interval
     }
-
-    Turn.clearTimerForTurnExpire = function(enemyID){
+    function clearTimerForTurnExpire(enemyID){
         clearInterval(_timersForTurnExpire[enemyID])
-    }
-
-    Turn.extendCountDownTilNewTurn = function(enemyID, timeout){
-        Turn.clearTimerForTurnExpire(enemyID)
-        Turn.startTimerForNewTurnRequest(enemyID, timeout)
-    }
-
-    Turn.countDownTilNewTurn = function(enemyID){
-        Turn.clearTimerForTurnExpire(enemyID)
-        Turn.startTimerForNewTurnRequest(enemyID)
-        Turn.startTimerForNewTurn(enemyID)
-    }
-
-    Turn.countDownTilTurnExpires = function(enemyID){
-        Turn.clearTimerForNewTurnRequest(enemyID)
-        Turn.clearTimerForNewTurn(enemyID)
-        Turn.startTimerForTurnExpire(enemyID)
     }
 
     return Turn
@@ -578,11 +635,12 @@ var Map = (function(){
 
     // x and y are real game coordinates
     Map.loadQuadrants = function(x, y){
+        var S = Conf.quadrant_size
         // also load the 8 neighbouring quadrants to x, y
         for (var i = -2; i <= 2; i++){
             for (var j = -2; j <= 2; j++){
-                var X = Math.floor((x + i * K.QUADRANT_SIZE) / K.QUADRANT_SIZE) * K.QUADRANT_SIZE
-                var Y = Math.floor((y + j * K.QUADRANT_SIZE) / K.QUADRANT_SIZE) * K.QUADRANT_SIZE
+                var X = Math.floor((x + i * S) / S) * S
+                var Y = Math.floor((y + j * S) / S) * S
 
                 if (Map.knownQuadrants[[X, Y]]) continue // Check if we already rendered this quadrant
                 else Map.knownQuadrants[[X, Y]] = true
@@ -595,14 +653,15 @@ var Map = (function(){
         }
     }
 
-    // X and Y are game units rounded to nearest multiple of QUADRANT_SIZE
+    // X and Y are game units rounded to nearest multiple of quadrant_size
     Map.loadQuadrant = function(X, Y){
+        var S = Conf.quadrant_size
 		var geometry = new THREE.Geometry();
-		for ( var i = 0; i < K.QUADRANT_SIZE; i++){
-			geometry.vertices.push(new THREE.Vector3(X + i,               Y + 0,               1));
-			geometry.vertices.push(new THREE.Vector3(X + i,               Y + K.QUADRANT_SIZE, 1));
-			geometry.vertices.push(new THREE.Vector3(X + 0,               Y + i,               1));
-			geometry.vertices.push(new THREE.Vector3(X + K.QUADRANT_SIZE, Y + i,               1));
+		for ( var i = 0; i < S; i++){
+			geometry.vertices.push(new THREE.Vector3(X + i, Y + 0, 1));
+			geometry.vertices.push(new THREE.Vector3(X + i, Y + S, 1));
+			geometry.vertices.push(new THREE.Vector3(X + 0, Y + i, 1));
+			geometry.vertices.push(new THREE.Vector3(X + S, Y + i, 1));
 		}
 		var material = new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.2, transparent: true } );
 		var line = new THREE.Line( geometry, material, THREE.LinePieces );
@@ -611,23 +670,23 @@ var Map = (function(){
 
         // add thicker lines around the edges
         geometry = new THREE.Geometry()
-        geometry.vertices.push(new THREE.Vector3(X + 0,               Y + 0,               1));
-        geometry.vertices.push(new THREE.Vector3(X + 0,               Y + K.QUADRANT_SIZE, 1));
-        geometry.vertices.push(new THREE.Vector3(X + K.QUADRANT_SIZE, Y + K.QUADRANT_SIZE, 1));
-        geometry.vertices.push(new THREE.Vector3(X + K.QUADRANT_SIZE, Y + 0,               1));
+        geometry.vertices.push(new THREE.Vector3(X + 0, Y + 0, 1));
+        geometry.vertices.push(new THREE.Vector3(X + 0, Y + S, 1));
+        geometry.vertices.push(new THREE.Vector3(X + S, Y + S, 1));
+        geometry.vertices.push(new THREE.Vector3(X + S, Y + 0, 1));
         material = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.2, transparent:true});
         line = new THREE.Line( geometry, material, THREE.LineStrip );
 
         Scene.add(line);
 
         // todo. checker board pattern so you can see better
-        geometry = new THREE.PlaneBufferGeometry(K.QUADRANT_SIZE, K.QUADRANT_SIZE);
+        geometry = new THREE.PlaneBufferGeometry(S, S);
         material = new THREE.MeshBasicMaterial({color:0x7B84A8});
         // material = new THREE.MeshBasicMaterial({color:0x7B84A8, transparent:true, opacity:0.5});
 		plane = new THREE.Mesh(geometry, material);
 		plane.visible = true;
         plane.receiveShadow = true;
-        plane.position.set(X + K.QUADRANT_SIZE / 2, Y + K.QUADRANT_SIZE / 2, 1)
+        plane.position.set(X + S / 2, Y + S / 2, 1)
 
         Game.addObj(plane)
 
@@ -865,7 +924,6 @@ var Scene = (function(){
 
         Rollover.init()
         Select.init()
-        Sock.init()
         // Statistics.init(_container)
 
         animate();
@@ -876,8 +934,8 @@ var Scene = (function(){
         _scene.add(obj)
     }
 
-    Scene.remove = function(mesh){
-        _scene.remove(mesh)
+    Scene.remove = function(obj){
+        _scene.remove(obj)
     }
 
     Scene.getScene = function(){
@@ -940,14 +998,14 @@ var Scene = (function(){
 
     function initInfo(){
         var info = document.createElement( 'div' );
+        info.setAttribute("id", "info_box")
         info.style.color = "white"
         info.style.position = 'absolute';
-        info.style.top = '10px';
-        info.style.right = "10px";
-        info.style.textAlign = 'right';
-        info.innerHTML = 'M.M.O.Chess<br>'
-            + "<strong>Right mouse drag</strong>: navigate<br>"
-            + '<strong>Left mouse</strong>: move<br>'
+        info.style.top = '5px';
+        info.style.left = "10px";
+        info.innerHTML = '<a href="/">M.M.O.Chess</a><br>'
+            + "Right mouse drag: navigate<br>"
+            + 'Left mouse click: move<br>'
         _container.appendChild( info );
     }
 
@@ -1017,6 +1075,12 @@ var Game = (function(){
         var x = y = 0
         async.waterfall([
             function(done){
+                API.get("/static/conf.json", function(er, re){
+                    Conf = re
+                    done(er)
+                })
+            },
+            function(done){
                 Player.init(function(er, re){
                     if (re){
                         king = re.king
@@ -1031,6 +1095,7 @@ var Game = (function(){
                     x = king.x
                     y = king.y
                 }
+                Sock.init()
                 Scene.init(x, y)
                 Obj.init()
                 Map.init(x, y)
@@ -1076,95 +1141,55 @@ var Game = (function(){
 
         // Generic error handler
         on.error = function(data){
-            if (data.playerID == Player.getPlayer()._id) msg.error(data.er)
+            var you = Player.getPlayer()
+            if (isYourSock(you, data)){
+                msg.error(data.info || data.error) // TODO. Should stick with .info
+                console.log("ERROR. Game.on.error", JSON.stringify(data, 0, 2))
+            }
         }
 
         on.move = function(data){
             var you = Player.getPlayer()
-            if (isNoMoreTurns(you, data)){
-                return msg.error(data.error.info)
-            } else if (isGenericSockError(you, data)){
-                return
-            }
-
             var playerName = data.player.name
             Game.removeObjAtXY(data.to.x, data.to.y)
 
-            // move selected
+            // move selected piece
             var sel = Obj.findObjAtPosition(Math.floor(data.from.x), Math.floor(data.from.y), 1)
             sel.game.piece = data.piece // update piece with new position data
             data.to.z = 1.5
             Obj.move(sel, data.to)
 
             Scene.render()
-            Turn.update(data.player)
         }
 
-        on.turn = function(data){
+        on.to_new_turn = function(data){
             var you = Player.getPlayer()
-            if (isTurnRequestEarly(you, data)){
-                return Turn.extendCountDownTilNewTurn(data.enemyID, 2000)
-            } else if (isEnemyDead(you, data)){
-                return // Don't show this error
-            } else if (isGenericSockError(you, data)){
-                return // Alert error
-            }
             var enemyID = data.enemy._id
-            var your_turn = data.your_turn
+            var timeout = data.timeout
             if (isYourSock(you, data)){
+                console.log("DEBUG. to_new_turn", enemyID, timeout)
+                Turn.countDownTilNewTurn(enemyID, timeout)
                 Hud.renderTurns(data.player)
-                if (your_turn){ // just got new turn: count down til turn expires
-                    Turn.countDownTilTurnExpires(enemyID)
-                } else { // just lost turn: count down til new turn
-                    Turn.countDownTilNewTurn(enemyID)
-                }
             }
         }
 
-        function isYourSock(you, data){
-            return (you._id == data.playerID)
-        }
-
-        function isGenericSockError(you, data){
-            if (isYourOtherErrors(you, data)){
-                msg.error(data.error.info)
-                return true
-            } else if (isOtherPeoplesError(you, data)){
-                return true
+        on.to_turn_exp = function(data){
+            var you = Player.getPlayer()
+            var enemyID = data.enemy._id
+            if (isYourSock(you, data)){
+                console.log("DEBUG. to_turn_exp", enemyID)
+                Turn.countDownTilTurnExpires(enemyID)
+                Hud.renderTurns(data.player)
             }
-            return false
         }
 
-        function isNoMoreTurns(you, data){
-            return (isYourSock(you, data) && data.error &&
-                data.error.code == K.code.turn.none.code)
-        }
-
-        function isEnemyDead(you, data){
-            return (isYourSock(you, data) && data.error &&
-                data.error.code == K.code.turn.enemy_dead.code)
-        }
-
-        function isTurnRequestEarly(you, data){
-            return (isYourSock(you, data) && data.error &&
-                data.error.code == K.code.turn.timeout.code)
-        }
-
-        function isYourOtherErrors(you, data){
-            return (isYourSock(you, data) && data.error)
-        }
-
-        function isOtherPeoplesError(you, data){
-            return (data.error && !isYourSock(you, data))
-        }
-
-        on.turn_refresh = function(data){
+        // One of the enemy tokens is being removed so needs to
+        // refresh the hud
+        on.refresh_turns = function(data){
             var you = Player.getPlayer()
             var player = data.player
             if (isYourSock(you, data)){
-                // mach
-                Hud.clearTurns()
-                Hud.renderTurns(player)
+                Turn.refresh_turns(player)
             }
         }
 
@@ -1186,6 +1211,11 @@ var Game = (function(){
             Game.defect(defectors, defecteeID)
             Game.loadPieces(defectors)
             Scene.render()
+        }
+
+        function isYourSock(you, data){
+            var playerID = (data.player ? data.player._id : data.playerID)
+            return (you._id == playerID)
         }
 
         return on

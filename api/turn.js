@@ -2,15 +2,25 @@ var async = require("async")
 var express = require('express');
 var H = require("../lib/h.js")
 var K = require("../conf/k.js")
+var Conf = require("../static/conf.json") // shared with client
 var Player = require("../models/player.js")
 var Piece = require("../models/piece.js")
 
 var Turn = module.exports = (function(){
     Turn = {}
 
+    Turn.code = {
+        ready: 0,
+        extended: 1,
+        early: 2,
+        dead: 3,
+        noncombat: 4,
+    }
+
+    // Enemy requesting token from player.  Loop over
+    // player.turn_tokens for enemyID's token and check that token.t
+    // was over Conf.turn_timeout ms ago
     Turn.validateTimeout = function(player, enemyID){
-        // Loop over player.turn_tokens for enemyID's token and check that
-        // token.t was over K.TURN_TIMEOUT ms ago
         for (var i = 0; i < player.turn_tokens.length; i++){
             var token = player.turn_tokens[i]
             if (token.player == enemyID){
@@ -18,19 +28,25 @@ var Turn = module.exports = (function(){
                 // Need to check token.live so enemy can't keep
                 // requesting new turns even though player's token is
                 // dead
-                if (token.live && elapsed > K.TURN_TIMEOUT){
-                    return true
-                } else if (token.live && elapsed + 2000 > K.TURN_TIMEOUT){
-                    H.log("WARNING. Turn.validateTimeout: 2s buffer:", K.TURN_TIMEOUT - elapsed)
-                    return true // separate clause for debugging: still allow turn request
+                if (token.live){
+                    if (elapsed > Conf.turn_timeout){
+                        return Turn.code.ready
+                    } else if (elapsed + 2000 > Conf.turn_timeout){
+                        H.log("WARNING. Turn.validateTimeout: overtime: player:" + token.player_name + " enemy:" + player.name, Conf.turn_timeout - elapsed)
+                        return Turn.code.extended
+                    } else {
+                        // todo. check how big this can get and adjust Conf.turn_timeout
+                        H.log("WARNING. Turn.validateTimeout: too soon: player:" + token.player_name + " enemy:" + player.name, Conf.turn_timeout - elapsed)
+                        return Turn.code.early
+                    }
                 } else {
-                    // todo. check how big this can get and adjust K.TURN_TIMEOUT
-                    H.log("WARNING. Turn.validateTimeout: early ms:", K.TURN_TIMEOUT - elapsed)
-                    return false
+                    H.log("ERROR. Turn.validateTimeout: live:false player:" + token.player_name + " enemy:" + player.name)
+                    return Turn.code.dead
                 }
             }
         }
-        return false // enemy's not in player's tokens list: invalid turn request
+        H.log("ERROR. Turn.validateTimeout: not in combat: player:" + enemyID + " enemy:" + player.name)
+        return Turn.code.noncombat
     }
 
     // Can move if no enemy in range of player. Once someone comes in
@@ -50,8 +66,10 @@ var Turn = module.exports = (function(){
         }
     }
 
-    Turn.update = function(playerID, to, done){
-        var player = null
+    // done(er, player, enemy, nEnemies). enemy corresponds to the oturn being
+    // spent, can be null if player is free roaming.
+    Turn.update = function(playerID, done){
+        var player, enemy = null
         async.waterfall([
             function(done){
                 Player.findOneByID(playerID, function(er, _player){
@@ -60,27 +78,60 @@ var Turn = module.exports = (function(){
                 })
             },
             function(done){
-                updateTurnTokens({
+                spendTurn({
                     _id: playerID
-                }, function(er, _player){
+                }, function(er, _player, _enemy){
                     player = _player
+                    enemy = _enemy // can be null if free roaming
                     done(er)
                 })
             },
-            function(done){
-                findNewEnemies(player, to, function(er, _player){
-                    player = _player
-                    done(er)
-                })
-            }
         ], function(er){
-            done(er, player)
+            done(er ? ["ERROR. Turn.update", playerID] : null, player, enemy)
         })
     }
 
-    // Does nothing if player has no turn tokens
-    function updateTurnTokens(playerID, done){
-        var player = null
+    // todo. clear enemy tokens once they or you move away
+    Turn.findNewEnemies = function(player, pos, done){
+        var pieces, nEnemies = null
+        var RANGE = 6 // This should (?) be bigger than max range so
+                      // you can't capture as the first move into
+                      // someone's territory. todo
+        async.waterfall([
+            function(done){
+                Piece.find({
+                    x: {$gte: pos.x - RANGE, $lte: pos.x + RANGE},
+                    y: {$gte: pos.y - RANGE, $lte: pos.y + RANGE},
+                }).populate("player").exec(function(er, _pieces){
+                    pieces = _pieces
+                    if (er) done(er)
+                    else if (pieces && pieces.length) done(null)
+                    else done({info:"No piece to be found"})
+                });
+            },
+            function(done){
+                var enemies = findNewEnemiesNearby(player, pieces)
+                // Ignore dead enemies so we don't add their tokens to player:
+                enemies = removeDeadEnemies(enemies)
+                if (enemies.length){
+                    exchangeTokens(player, enemies, function(er, _player, _nEnemies){
+                        player = _player
+                        nEnemies = _nEnemies
+                        done(er)
+                    })
+                } else done(null)
+            }
+        ], function(er){
+            done(er ? ["ERROR. Turn.findNewEnemies", player, pos, er] : null, player, nEnemies)
+        })
+    }
+
+    // Player spends active turn and passes it to corresponding enemy.
+    // done(er, player, enemy) if turn spent, enemy == null if no
+    // enemy (i.e. free roaming)
+    var FREE_ROAMING = "FREE_ROAMING"
+    function spendTurn(playerID, done){
+        var player, enemy, enemyID = null
         async.waterfall([
             function(done){
                 Player.findOneByID(playerID, function(er, _player){
@@ -90,23 +141,33 @@ var Turn = module.exports = (function(){
             },
             function(done){
                 if (player.turn_tokens.length){
-                    var oldTurnIndex = player.turn_index
-                    var newTurnIndex = (player.turn_index + 1) % player.turn_tokens.length
-
-                    player.turn_tokens[oldTurnIndex].live = false
-                    player.turn_index = newTurnIndex
-                    player.save(function(er){
+                    incrPlayerTurn(player, function(er, _player, _enemyID){
+                        player = _player
+                        enemyID = _enemyID // token being spent
                         done(er)
                     })
-
-                    var enemy = player.turn_tokens[oldTurnIndex]
-                    Turn.passTokenToEnemy(player._id, enemy.player)
-                } else { // No turn token means no enemy in range so nothing to update
-                    done(null)
-                }
+                } else done({code:FREE_ROAMING})
+            },
+            function(done){
+                passTokenToEnemy(player._id, enemyID, function(er, _enemy){
+                    enemy = _enemy
+                    done(er)
+                })
             }
         ], function(er){
-            done(er, player)
+            if (er && er.code == FREE_ROAMING){
+                done(null, player, null)
+            } else done(er ? ["ERROR. Turn.spendTurn", playerID] : null, player, enemy)
+        })
+    }
+
+    function incrPlayerTurn(player, done){
+        var i = player.turn_index
+        var enemyID = player.turn_tokens[i].player
+        player.turn_tokens[i].live = false
+        player.turn_index = (i + 1) % player.turn_tokens.length
+        player.save(function(er){
+            done(er ? ["ERROR. Turn.incrPlayerTurn", player] : null, player, enemyID)
         })
     }
 
@@ -140,19 +201,26 @@ var Turn = module.exports = (function(){
         })
     }
 
-    Turn.passTokenToEnemies = function(playerID, enemies){
-        enemies.map(function(enemy, i){
-            Turn.passTokenToEnemy(playerID, enemy._id)
+    function passTokenToEnemies(playerID, enemies, done){
+        var nEnemies = []
+        async.each(enemies, function(enemy, done){
+            passTokenToEnemy(playerID, enemy._id, function(er, nEnemy){
+                nEnemies.push(nEnemy)
+                done(er)
+            })
+        }, function(er){
+            if (er) H.log("ERROR. Turn.passTokenToEnemies", [playerID, enemies, er])
+            if (done) done(er ? ["ERROR. Turn.passTokenToEnemies", playerID, enemies] : null, nEnemies)
         })
     }
 
     // Does the opposite of passTokenToEnemy
     Turn.getTokenFromEnemy = function(playerID, enemyID, done){
-        Turn.passTokenToEnemy(enemyID, playerID, done)
+        passTokenToEnemy(enemyID, playerID, done)
     }
 
     // Passes token from player to enemy
-    Turn.passTokenToEnemy = function(playerID, enemyID, done){
+    function passTokenToEnemy(playerID, enemyID, done){
         var player, enemy = null
         async.waterfall([
             function(done){
@@ -174,8 +242,8 @@ var Turn = module.exports = (function(){
                 })
             }
         ], function(er){
-            if (er) H.log("ERROR. Turn.passTokenToEnemy", er)
-            if (done) done(er, enemy)
+            if (er) H.log("ERROR. passTokenToEnemy", {player:playerID, enemy:enemyID, er:er})
+            if (done) done(er ? ["ERROR. Turn.passTokenToEnemy", playerID, enemyID] : null, enemy)
         })
     }
 
@@ -204,42 +272,23 @@ var Turn = module.exports = (function(){
         })
     }
 
-    var NO_NEW_TURN_TOKENS = "NO_NEW_TURN_TOKENS"
-
-    // todo. clear enemy tokens once they or you move away
-    function findNewEnemies(player, pos, done){
-        var pieces = null
-        var RANGE = 6 // This should (?) be bigger than max range so
-                      // you can't capture as the first move into
-                      // someone's territory. todo
+    function exchangeTokens(player, enemies, done){
+        var player, nEnemies = null
         async.waterfall([
             function(done){
-                Piece.find({
-                    x: {$gte: pos.x - RANGE, $lte: pos.x + RANGE},
-                    y: {$gte: pos.y - RANGE, $lte: pos.y + RANGE},
-                }).populate("player").exec(function(er, _pieces){
-                    pieces = _pieces
-                    if (er) done(er)
-                    else if (pieces && pieces.length) done(null)
-                    else done({code:NO_NEW_TURN_TOKENS})
-                });
+                addNewEnemyTokens(player, enemies, function(er, _player){
+                    player = _player
+                    done(er)
+                })
             },
             function(done){
-                var enemies = findNewEnemiesNearby(player, pieces)
-                if (enemies.length){
-                    // Ignore dead enemies so we don't add their tokens to player:
-                    enemies = removeDeadEnemies(enemies)
-                    Turn.passTokenToEnemies(player._id, enemies)
-                    addNewEnemyTokens(player, enemies, function(er, _player){
-                        player = _player
-                        done(er)
-                    })
-                } else done(null)
-            }
+                passTokenToEnemies(player._id, enemies, function(er, _nEnemies){
+                    nEnemies = _nEnemies
+                    done(er)
+                })
+            },
         ], function(er){
-            if (er && er.code) done(null)
-            else if (er) done(er)
-            else done(null, player)
+            done(er ? ["ERROR. Turn.exchangeTokens", player, enemies] : null, player, nEnemies)
         })
     }
 
@@ -300,7 +349,7 @@ var Turn = module.exports = (function(){
                 })
             },
             function(done){
-                async.each(player.turn_tokens, function(token){
+                async.each(player.turn_tokens, function(token, done){
                     clearToken(playerID, token.player, function(er, enemy){
                         if (enemy) enemies.push(enemy)
                         else if (er) H.log("ERROR. Turn.clearToken", playerID, token.player)
@@ -346,8 +395,8 @@ var Turn = module.exports = (function(){
                 })
             },
             function(done){
-                removePlayerTokenFromEnemy(enemy, playerID)
-                enemy.save(function(er){
+                removePlayerTokenFromEnemy(enemy, playerID, function(er, _enemy){
+                    enemy = _enemy
                     done(er)
                 })
             }
@@ -356,39 +405,58 @@ var Turn = module.exports = (function(){
         })
     }
 
-    function removePlayerTokenFromEnemy(enemy, playerID){
-        var player_index = 0
-        // Update turn_tokens
-        enemy.turn_tokens = enemy.turn_tokens.filter(function(token, i){
-            if (token.player.equals(playerID)){
-                player_index = i
-                return false
-            } else return true
-        })
-        // Update turn_index
-        if (player_index >= enemy.turn_index){
-            // Pulling token from above turn_index, so no need to
-            // change, except to wrap around by modding
-            // enemy.turn_tokens.length
-            //
-            //        i   p
-            // [0 1 2 3 4 5 6]
-            // p == player_index, i == turn_index
-            enemy.turn_index = enemy.turn_index % enemy.turn_tokens.length
-        } else if (player_index < enemy.turn_index){
-            // Pulling a token from underneath turn_index, so
-            // need to decrement. Math.max in case it becomes
-            // negative.
-            //
-            //    p   i
-            // [0 1 2 3 4 5 6]
-            // p == player_index, i == turn_index
-            enemy.turn_index = Math.max(enemy.turn_index - 1, 0)
+    function removePlayerTokenFromEnemy(enemy, playerID, done){
+        var oti = enemy.turn_index
+        var nti = oti
+        var otl = enemy.turn_tokens.length
+        var ntl = otl - 1
+        var player_i = playerIndex(enemy.turn_tokens, playerID)
+        if (player_i == null){
+            return done(["ERROR. Turn.removePlayerTokenFromEnemy: player not in enemy.turn_tokens", enemy, playerID])
         }
+
+        if (player_i >= oti){
+            nti = oti % Math.max(ntl, 1) // max 1 to avoid modding ntl == 0
+        } else if (player_i < oti){
+            nti = Math.max(oti - 1, 0)
+        }
+        H.log("DEBUG. removePlayerTokenFromEnemy", [enemy.name, player_i, oti, otl, nti, ntl])
+
+        Player.findByIdAndUpdate(enemy._id, {
+            $set: {
+                turn_index: nti
+            },
+            $pull: {
+                turn_tokens: {player:playerID}
+            }
+        }, {
+            new: true
+        }, function(er, _enemy){
+            done(er, _enemy)
+            test_removePlayerTokenFromEnemy(enemy, _enemy)
+        })
+    }
+
+    function playerIndex(tokens, playerID){
+        for (var i = 0; i < tokens.length; i++){
+            if (tokens[i].player.equals(playerID)){
+                return i
+            }
+        }
+        return null
     }
 
     return Turn
 }())
+
+function test_removePlayerTokenFromEnemy(enemy, nEnemy){
+    if (!enemy || !nEnemy){
+        return H.log("ERROR. test_removePlayerTokenFromEnemy: null enemy or nEnemy", [enemy, nEnemy])
+    }
+    if (enemy.turn_tokens.length - 1 != nEnemy.turn_tokens.length){
+        return H.log("ERROR. test_removePlayerTokenFromEnemy: nEnemy should have one fewer token", [enemy, nEnemy])
+    }
+}
 
 var Test = (function(){
     var Test = {}

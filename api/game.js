@@ -3,6 +3,7 @@ var async = require("async")
 var express = require('express');
 var H = require("../lib/h.js")
 var K = require("../conf/k.js")
+var Conf = require("../static/conf.json") // shared with client
 var Cell = require("../models/cell.js")
 var Piece = require("../models/piece.js")
 var Player = require("../models/player.js")
@@ -294,7 +295,9 @@ var Move = (function(){
             },
         ], function(er){
             // returns enemyKing if you're killing their king
-            done(er, nPiece, enemyKing)
+            done(er ? [
+                "Game.Move.move", player, piece, from, to
+            ] : null, nPiece, enemyKing)
         })
     }
 
@@ -347,16 +350,36 @@ var Game = module.exports = (function(){
     //     ["0", "0", "0", "0", "0", "0", "0", "0", "0", "0"],
     // ];
 
+    // // 8 x 8
+    // var ARMY_CONFIG = [
+    //     ["0", "0", "0", "0", "0", "0", "0", "0"],
+    //     ["0", "p", "p", "p", "p", "p", "p", "0"],
+    //     ["0", "p", "b", "n", "r", "b", "p", "0"],
+    //     ["0", "p", "r", "k", "0", "n", "p", "0"],
+    //     ["0", "p", "n", "0", "q", "r", "p", "0"],
+    //     ["0", "p", "b", "r", "n", "b", "p", "0"],
+    //     ["0", "p", "p", "p", "p", "p", "p", "0"],
+    //     ["0", "0", "0", "0", "0", "0", "0", "0"],
+    // ];
+
+    // // 8 x 8
+    // var ARMY_CONFIG = [
+    //     ["0", "0", "0", "0", "0", "0", "0", "0"],
+    //     ["0", "p", "p", "p", "p", "p", "p", "0"],
+    //     ["0", "p", "n", "0", "0", "n", "p", "0"],
+    //     ["0", "p", "0", "k", "r", "0", "p", "0"],
+    //     ["0", "p", "0", "r", "q", "0", "p", "0"],
+    //     ["0", "p", "b", "0", "0", "b", "p", "0"],
+    //     ["0", "p", "p", "p", "p", "p", "p", "0"],
+    //     ["0", "0", "0", "0", "0", "0", "0", "0"],
+    // ];
+
     // 8 x 8
     var ARMY_CONFIG = [
-        ["0", "0", "0", "0", "0", "0", "0", "0"],
-        ["0", "p", "p", "p", "p", "p", "p", "0"],
-        ["0", "p", "b", "n", "r", "b", "p", "0"],
-        ["0", "p", "r", "k", "0", "n", "p", "0"],
-        ["0", "p", "n", "0", "q", "r", "p", "0"],
-        ["0", "p", "b", "r", "n", "b", "p", "0"],
-        ["0", "p", "p", "p", "p", "p", "p", "0"],
-        ["0", "0", "0", "0", "0", "0", "0", "0"],
+        ["0", "0", "0", "0"],
+        ["0", "0", "k", "0"],
+        ["0", "q", "0", "0"],
+        ["0", "0", "0", "0"],
     ];
 
     Game.buildArmy = function(playerID, done){
@@ -468,11 +491,12 @@ var Game = module.exports = (function(){
         async.doWhilst(
             function(done){
                 console.log(JSON.stringify(nPiece._id, 0, 2))
-                x = Math.floor(nPiece.x / K.QUADRANT_SIZE) * K.QUADRANT_SIZE + direction.dx * K.QUADRANT_SIZE // quadrant coordinates
-                y = Math.floor(nPiece.y / K.QUADRANT_SIZE) * K.QUADRANT_SIZE + direction.dy * K.QUADRANT_SIZE
+                var S = Conf.quadrant_size
+                x = Math.floor(nPiece.x / S) * S + direction.dx * S // quadrant coordinates
+                y = Math.floor(nPiece.y / S) * S + direction.dy * S
                 Cell.find({
-                    x: {$gte: x, $lt: x + K.QUADRANT_SIZE},
-                    y: {$gte: y, $lt: y + K.QUADRANT_SIZE},
+                    x: {$gte: x, $lt: x + S},
+                    y: {$gte: y, $lt: y + S},
                     piece: {$ne:null}
                 }).populate("piece").exec(function(er, _cells){
                     cells = _cells
@@ -524,7 +548,7 @@ var Game = module.exports = (function(){
     Game.sock = function(data, done){
         var chan = data.chan
         if (["move", "turn"].indexOf(chan) < 0){
-            return done("ERROR. Unknown channel: " + chan)
+            return done({info:"Unknown channel:" + chan})
         }
         Game.on[chan](data, done)
     }
@@ -533,11 +557,11 @@ var Game = module.exports = (function(){
         var on = {}
 
         on.move = function(data, done){
-            var enemyKing, nPiece = null
             try {
                 var player = data.player
                 var playerID = player._id
                 var piece = data.piece
+                var nPiece = null
                 var from = { // Clean coordinates and remove z axis
                     x: Math.floor(data.from.x),
                     y: Math.floor(data.from.y),
@@ -546,8 +570,10 @@ var Game = module.exports = (function(){
                     x: Math.floor(data.to.x),
                     y: Math.floor(data.to.y),
                 }
+                var enemy, enemyKing, nEnemies = null
             } catch (e){
-                return done({info:"Move invalid input"})
+                H.log("ERROR. Game.on.move: invalid input", data)
+                return
             }
             async.waterfall([
                 function(done){
@@ -557,18 +583,17 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    if (player.alive) done(null)
-                    else done({
-                        error: K.code.move.gameover,
-                        playerID: playerID,
-                    })
-                },
-                function(done){
-                    if (Turn.hasTurn(player)) done(null)
-                    else done({
-                        error: K.code.turn.none,
-                        playerID: playerID,
-                    })
+                    try {
+                        if (player.turn_tokens.length){ // for debugging
+                            var enemyToken = player.turn_tokens[player.turn_index]
+                            H.log("INFO. Game.on.move live:" + enemyToken.live + " player:" + player.name + " enemy:" + enemyToken.player_name)
+                        }
+                    } catch (e){
+                        return done({info:"ERROR. Game.on.move: player.turn_index out of bounds", player:player})
+                    }
+                    if (!player.alive) return done({info: "ERROR. You are dead"})
+                    if (!Turn.hasTurn(player)) return done({info: "ERROR. No more turn"})
+                    done(null)
                 },
                 function(done){
                     Move.validateMove(player, piece, from, to, function(er){
@@ -580,32 +605,43 @@ var Game = module.exports = (function(){
                         nPiece = _piece
                         enemyKing = _enemyKing
                         if (er){
-                            H.log("ERROR. Move.move", er)
                             done(er)
                         } else done(null)
                     })
                 },
                 function(done){
-                    Turn.update(playerID, to, function(er, _player){
+                    Turn.update(playerID, function(er, _player, _enemy){
                         player = _player
+                        enemy = _enemy // can be null if player free roaming
                         done(er)
                     })
                 },
                 function(done){
-                    // mach
+                    Turn.findNewEnemies(player, to, function(er, _player, _nEnemies){
+                        player = _player
+                        nEnemies = _nEnemies
+                        if (nEnemies) Publisher.new_enemies(player, nEnemies)
+                        done(er)
+                    })
+                },
+                function(done){
                     if (enemyKing){
-                        Game.on.gameover(enemyKing.player, playerID, function(er, re){
-                            player = re.winner // player has updated turn tokens, so client can render correctly
-                            done(er)
-                        })
-                    } else done(null)
+                        Game.on.gameover(enemyKing.player, playerID)
+                    } else if (enemy){ // only publish turn updates if actually spending a token (enemy exists)
+                        H.log("DEBUG. Game.on.move: to_new_turn player:" + player.name + " enemy:" + enemy.name)
+                        Publisher.to_new_turn(player, enemy, Conf.turn_timeout) // Player spent turn: timeout to new turn
+                        H.log("DEBUG. Game.on.move: to_turn_exp player:" + enemy.name + " enemy:" + player.name)
+                        Publisher.to_turn_exp(enemy, player) // Enemy getting new turn: timeout to expire
+                    }
+                    done(null)
                 }
             ], function(er){
                 data.playerID = playerID
                 data.player = player
                 data.piece = nPiece
                 if (er){
-                    done(er)
+                    H.log("ERROR. Game.on.move", er)
+                    Publisher.error(playerID, er.info || "ERROR. Game.on.move: unexpected error")
                 } else {
                     done(null, data)
                 }
@@ -618,11 +654,8 @@ var Game = module.exports = (function(){
                 var playerID = data.playerID
                 var enemyID = data.enemyID
                 var player, enemy = null
-                if (!DB.isValidIDs([playerID, enemyID])){
-                    throw "Invalid player IDs"
-                }
             } catch (e){
-                return done({info:"Turn invalid input"})
+                return H.log("ERROR. Game.on.turn: invalid input", data)
             }
             async.waterfall([
                 function(done){
@@ -638,24 +671,39 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    if (player.alive && enemy.alive) done(null)
-                    else if (player.alive) done({
-                        error: K.code.turn.enemy_dead,
-                        playerID: playerID
-                    })
-                    else done({
-                        error: K.code.turn.gameover,
-                        playerID: playerID
-                    })
+                    H.log("INFO. Game.on.turn player:" + player.name + " enemy:" + enemy.name)
+                    if (player.alive && enemy.alive){
+                        done(null)
+                    } else {
+                        Publisher.refresh_turns(player)
+                        done({info: "ERROR. Can't request turn: " + (!player.alive ? "player" : "enemy") + " dead"})
+                    }
                 },
                 function(done){
-                    // This also checks if player and enemy are in combat
-                    if (Turn.validateTimeout(enemy, playerID)) done(null)
-                    else done({
-                        error: K.code.turn.timeout,
-                        playerID: playerID,
-                        enemyID: enemyID,
-                    })
+                    switch(Turn.validateTimeout(enemy, playerID)){
+                    case Turn.code.ready:
+                        done(null)
+                        break;
+                    case Turn.code.extended:
+                        done(null)
+                        break;
+                    case Turn.code.early:
+                        // TODO. Check how early the request was and
+                        // send retry by that amount
+                        H.log("DEBUG. Game.on.turn: to_new_turn player:" + player.name + " enemy:" + enemy.name)
+                        Publisher.to_new_turn(player, enemy, Conf.turn_timeout_ext)
+                        done({info: "ERROR. Can't request turn: too soon"})
+                        break;
+                    case Turn.code.dead:
+                        // mach maybe notify the client to correct its states
+                        done({info: "DEBUG. Turn.validateTimeout: live:false player:" + player.name + " enemy:" + enemy.name})
+                        break;
+                    case Turn.code.noncombat:
+                        done({info: "ERROR. Requesting turn from nonexistent enemy"})
+                        break;
+                    default: // this should never happen
+                        done({info: "ERROR. Unknown timeout code", code: code})
+                    }
                 },
                 function(done){
                     Turn.getTokenFromEnemy(playerID, enemyID, function(er, _player){
@@ -670,21 +718,16 @@ var Game = module.exports = (function(){
                     })
                 },
             ], function(er){
-                if (er) done(er)
-                else {
+                if (er){
+                    H.log("ERROR. Game.on.turn", er)
+                    Publisher.error(playerID, er.info || "ERROR. Game.on.turn: unexpected error")
+                } else {
                     // todo implement private channel / room so only
                     // specific users can get those pubs
-                    done(null, { // update player hud
-                        playerID: playerID,
-                        player: player,
-                        enemy: enemy,
-                        your_turn: true, // to distinguish whose turn it is
-                    })
-                    done(null, { // update enemy hud
-                        playerID: enemyID,
-                        player: enemy,
-                        enemy: player,
-                    })
+                    H.log("DEBUG. Game.on.turn: to_new_turn player:" + enemy.name + " enemy:" + player.name)
+                    Publisher.to_new_turn(enemy, player, Conf.turn_timeout) // Enemy lost their turn so tell them to start counting to new turn
+                    H.log("DEBUG. Game.on.turn: to_turn_exp player:" + player.name + " enemy:" + enemy.name)
+                    Publisher.to_turn_exp(player, enemy) // Player is getting a new turn so tell them to count to turn expiration
                 }
             })
         }
@@ -694,12 +737,12 @@ var Game = module.exports = (function(){
         // world).
         //
         // game over for player. remove player's token from his
-        // enemies. done(er, {winner:enemy, loser:player})
-        on.gameover = function(playerID, enemyID, done){
+        // enemies
+        on.gameover = function(playerID, enemyID){
             try {
                 var player, enemy = null
             } catch (e){
-                return done("gameover invalid input: " + e)
+                return H.log("ERROR. Game.on.gameover: invalid input", data)
             }
             async.waterfall([
                 function(done){
@@ -717,61 +760,22 @@ var Game = module.exports = (function(){
                 function(done){
                     Players.kill(playerID)
                     Turn.clearTokens(playerID, function(er, player, enemies){
-                        publishPlayersTokenRefresh(enemies.concat([player]))
+                        Publisher.refresh_players_turns(enemies.concat([player]))
                     })
                     Pieces.defect(playerID, enemyID, function(er){
-                        publishDefector(playerID, enemyID)
+                        Publisher.defect(playerID, enemyID)
                     })
                     done(null)
                 },
             ], function(er){
                 if (er){
-                    // todo publish error to player and enemy only
-                    Publisher.publish("error", {
-                        error: K.code.gameover.error,
-                        playerID: playerID,
-                    })
-                    Publisher.publish("error", {
-                        error: K.code.gameover.error,
-                        playerID: enemyID,
-                    })
+                    H.log("ERROR. Game.on.gameover", er)
+                    Publisher.error(playerID, er.info || "ERROR. Game.on.gameover: unexpected error")
+                    Publisher.error(enemyID, er.info || "ERROR. Game.on.gameover: unexpected error")
                 } else {
-                    var chan = "gameover"
-                    var loser = {
-                        playerID: playerID,
-                        player: player,
-                        enemy: enemy,
-                        you_win: false,
-                    }
-                    var winner = {
-                        playerID: enemyID,
-                        player: enemy,
-                        enemy: player,
-                        you_win: true,
-                    }
-                    Publisher.publish(chan, winner)
-                    Publisher.publish(chan, loser)
+                    Publisher.gameover(player, enemy, false)
+                    Publisher.gameover(enemy, player, true)
                 }
-                done(er, {winner:enemy, loser:player})
-            })
-        }
-
-        function publishPlayersTokenRefresh(players){
-            var chan = "turn_refresh"
-            players.forEach(function(player, i){
-                Publisher.publish(chan, {
-                    playerID: player._id,
-                    player: player
-                })
-            })
-        }
-
-        function publishDefector(defectorID, defecteeID){
-            var chan = "defect"
-            // Publishes to everyone (that listens, i.e. within range)
-            Publisher.publish(chan, {
-                defectorID: defectorID,
-                defecteeID: defecteeID,
             })
         }
 

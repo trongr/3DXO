@@ -2,6 +2,7 @@ var redis   = require('redis');
 var async = require("async")
 var express = require('express');
 var H = require("../lib/h.js")
+var Conf = require("../static/conf.json") // shared with client
 
 var Publisher = module.exports = (function(){
     Publisher = {}
@@ -13,7 +14,62 @@ var Publisher = module.exports = (function(){
         _publisher.publish(chan, JSON.stringify(data))
     }
 
-    // Publisher.createClient
+    Publisher.error = function(playerID, info){
+        Publisher.publish("error", {
+            playerID: playerID,
+            info: info,
+        })
+    }
+
+    Publisher.new_enemies = function(player, enemies){
+        enemies.forEach(function(enemy){
+            Publisher.to_new_turn(player, enemy, Conf.turn_timeout) // Player spent turn: timeout to new turn
+            Publisher.to_turn_exp(enemy, player) // Enemy getting new turn: timeout to expire
+        })
+    }
+
+    Publisher.to_new_turn = function(player, enemy){
+        Publisher.publish("to_new_turn", {
+            player: player,
+            enemy: enemy,
+            timeout: Conf.turn_timeout,
+        })
+    }
+
+    Publisher.to_turn_exp = function(player, enemy){
+        Publisher.publish("to_turn_exp", {
+            player: player,
+            enemy: enemy,
+        })
+    }
+
+    Publisher.refresh_players_turns = function(players){
+        players.forEach(function(player){
+            Publisher.refresh_turns(player)
+        })
+    }
+    // Refresh player tokens cause either they or one of their enemies died
+    Publisher.refresh_turns = function(player){
+        Publisher.publish("refresh_turns", {
+            player: player,
+        })
+    }
+
+    Publisher.gameover = function(player, enemy, you_win){
+        Publisher.publish("gameover", {
+            player: player,
+            enemy: enemy,
+            you_win: you_win,
+        })
+    }
+
+    // Defector defecting to defectee
+    Publisher.defect = function(defectorID, defecteeID){
+        Publisher.publish("defect", {
+            defectorID: defectorID,
+            defecteeID: defecteeID,
+        })
+    }
 
     return Publisher
 }())

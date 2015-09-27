@@ -1,8 +1,9 @@
 var express = require('express');
 var Cell = require("../models/cell.js")
 var H = require("../lib/h.js")
-var Sanitize = require("../lib/sanitize.js")
 var K = require("../conf/k.js")
+var Conf = require("../static/conf.json")
+var Sanitize = require("../lib/sanitize.js")
 
 var Cells = module.exports = (function(){
     Cells = {
@@ -14,10 +15,11 @@ var Cells = module.exports = (function(){
     Cells.router.route("/:x/:y/:r")
         .get(function(req, res){
             try {
-                var x = Math.floor(Sanitize.integer(H.param(req, "x")) / K.QUADRANT_SIZE) * K.QUADRANT_SIZE
-                var y = Math.floor(Sanitize.integer(H.param(req, "y")) / K.QUADRANT_SIZE) * K.QUADRANT_SIZE
+                var S = Conf.quadrant_size
+                var x = Math.floor(Sanitize.integer(H.param(req, "x")) / S) * S
+                var y = Math.floor(Sanitize.integer(H.param(req, "y")) / S) * S
                 // var r = Sanitize.integer(H.param(req, "r"))
-                var r = K.QUADRANT_SIZE // use default quadrant size
+                var r = S // use default quadrant size
             } catch (e){
                 return res.send({info:ERROR_GET_CELLS})
             }

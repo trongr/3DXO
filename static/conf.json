@@ -1,0 +1,33 @@
+{
+    "turn_timeout": 30000,
+    "turn_timeout_ext": 2000,
+    "quadrant_size": 4,
+    "code": {
+        "turn": {
+            "gameover": {
+                "code": "gameover",
+                "info": "ERROR. Can't request turn: gameover"
+            },
+            "enemy_dead": {
+                "code": "enemy_dead",
+                "info": "ERROR. Can't request turn: enemy dead"
+            },
+            "none": {
+                "code": "none",
+                "info": "ERROR. No more turn"
+            }
+        },
+        "move": {
+            "gameover": {
+                "code": "gameover",
+                "info": "ERROR. Can't move: gameover"
+            }
+        },
+        "gameover": {
+            "error": {
+                "code": "error",
+                "info": "ERROR. Unknown gameover error"
+            }
+        }
+    }
+}
