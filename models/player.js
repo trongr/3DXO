@@ -59,10 +59,10 @@ schema.methods.comparePassword = function(candidatePassword, cb) {
     });
 };
 
-schema.statics.findOneByID = function(playerID, done) {
+schema.statics.findOneByID = function(playerID, done){
     this.findById(playerID, function(er, player){
         if (player) done(null, player)
-        else done({error:"Player.findOneByID", er:er})
+        else done({error:"Player.findOneByID", playerID:playerID, er:er})
     })
 };
 

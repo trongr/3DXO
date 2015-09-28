@@ -24,5 +24,16 @@ var H = (function(){
         return size;
     };
 
+    H.s2mmss = function(s){
+        var t = Math.abs(s)
+        var sign, mm, ss;
+        sign = (s < 0 ? "-" : "")
+        mm = parseInt(t / 60, 10);
+        ss = parseInt(t % 60, 10);
+        mm = mm < 10 ? "0" + mm : mm;
+        ss = ss < 10 ? "0" + ss : ss;
+        return sign + mm + ":" + ss
+    }
+
     return H
 }())

@@ -36,12 +36,16 @@ var Sock = module.exports = (function(){
         // todo subscriber module
         var client = redis.createClient();
 
+        client.subscribe('error');
+
         client.subscribe('move');
-        client.subscribe('turn');
-        client.subscribe('turn_refresh');
+
+        client.subscribe('to_new_turn');
+        client.subscribe('to_turn_exp');
+        client.subscribe('refresh_turns');
+
         client.subscribe('gameover');
         client.subscribe('defect');
-        client.subscribe('error');
 
         // Server just published data to this channel, to be sent to
         // client. Client has to check channel encoded in data
@@ -61,11 +65,12 @@ var Sock = module.exports = (function(){
             } catch (e){
                 return H.log("ERROR. Sock.onConnection.conn.data.JSON.parse", msg)
             }
-            H.log("INFO. Sock.data:", chan, playerID)
             Game.sock(data, function(er, re){
                 // todo refactor cause Publisher.publish will push
                 // everything to everyone
-                Publisher.publish(chan, er || re)
+                var chan = (er ? "error" : re.chan)
+                var data = er || re
+                Publisher.publish(chan, data)
             })
         });
 

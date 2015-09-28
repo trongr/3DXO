@@ -25,6 +25,23 @@ var API = (function(){
         });
     }
 
+    // Useful for loading static assets, e.g. JSON conf files
+    API.get = function(url, done){
+        $.ajax({
+            type: "get",
+            url: url,
+            dataType: 'json',
+            cache: false, // otw 304 routes to error callback...
+            success: function(re, status, xhr){
+                done(null, re)
+            },
+            error: function (xhr, status, er){ // ...here
+                done(er)
+            },
+            // complete: function (xhr, status){}
+        });
+    }
+
     // Auth is for individual player authentication. Player is for
     // querying a generic player
     API.Auth = (function(){
