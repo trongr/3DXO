@@ -317,12 +317,14 @@ var Game = module.exports = (function(){
                 if (er){
                     res.send(er)
                 } else {
+                    Publisher.new_army(pieces)
                     res.send({ok:true, pieces:pieces})
                 }
             })
         })
 
     var LETTER_PIECES = {
+        0: "0", // for empty cells
         p: "pawn",
         r: "rook",
         n: "knight",
@@ -404,21 +406,7 @@ var Game = module.exports = (function(){
                 })
             },
             function(done){
-                var army = ARMY_CONFIG.map(function(row, i){
-                    return row.map(function(p, j){
-                        if (p == LETTER_PIECES[0]){
-                            return null
-                        } else {
-                            return {
-                                kind: LETTER_PIECES[p],
-                                x: quadrant.x + j,
-                                y: quadrant.y + i,
-                                player: player
-                            }
-                        }
-                    })
-                })
-                army = [].concat.apply([], army)
+                var army = generateArmy(player, quadrant)
                 async.each(army, function(item, done){
                     Game.makePiece(item, function(er, piece){
                         if (piece){
@@ -435,6 +423,24 @@ var Game = module.exports = (function(){
         ], function(er){
             done(er, pieces)
         })
+    }
+
+    function generateArmy(player, quadrant){
+        var army = []
+        for (var i = 0; i < ARMY_CONFIG.length; i++){
+            for (var j = 0; j < ARMY_CONFIG.length; j++){
+                var p = ARMY_CONFIG[i][j]
+                if (p != LETTER_PIECES[0]){
+                    army.push({
+                        kind: LETTER_PIECES[p],
+                        x: quadrant.x + j,
+                        y: quadrant.y + i,
+                        player: player
+                    })
+                }
+            }
+        }
+        return army
     }
 
     function randomDirection(){
@@ -485,7 +491,6 @@ var Game = module.exports = (function(){
         var x, y
         async.doWhilst(
             function(done){
-                console.log(JSON.stringify(nPiece._id, 0, 2))
                 var S = Conf.quadrant_size
                 x = Math.floor(nPiece.x / S) * S + direction.dx * S // quadrant coordinates
                 y = Math.floor(nPiece.y / S) * S + direction.dy * S
@@ -499,8 +504,8 @@ var Game = module.exports = (function(){
                 });
             },
             function(){
-                count++
-                if (count > 100) H.log("WARNING. Game.doWhilstCheckNeighbourQuadrantEmpty: big count", count)
+                H.log("INFO. Game.quadrantSearch count:", count)
+                count++ // todo make sure this doesn't blow up
                 if (cells && cells.length == 0){
                     return false // found empty quadrant
                 } else {
@@ -509,7 +514,6 @@ var Game = module.exports = (function(){
                 }
             },
             function(er){
-                console.log("count " + count)
                 done(er, {x:x, y:y})
             }
         )
@@ -540,18 +544,18 @@ var Game = module.exports = (function(){
         })
     }
 
-    Game.sock = function(data, done){
+    Game.sock = function(data){
         var chan = data.chan
         if (["move", "turn"].indexOf(chan) < 0){
-            return done({info:"Unknown channel:" + chan})
+            return H.log("ERROR. Game.sock: unknown channel", data)
         }
-        Game.on[chan](data, done)
+        Game.on[chan](data)
     }
 
     Game.on = (function(){
         var on = {}
 
-        on.move = function(data, done){
+        on.move = function(data){
             try {
                 var player = data.player
                 var playerID = player._id
@@ -643,20 +647,17 @@ var Game = module.exports = (function(){
                     done(null)
                 }
             ], function(er){
-                data.playerID = playerID
-                data.player = player
-                data.piece = nPiece
                 if (er){
                     H.log("ERROR. Game.on.move", er)
                     Publisher.error(playerID, er.info || "ERROR. Game.on.move: unexpected error")
                 } else {
-                    done(null, data)
+                    Publisher.move(player, nPiece, from, to)
                 }
             })
         }
 
         // player requesting token from enemy
-        on.turn = function(data, done){
+        on.turn = function(data){
             try {
                 var playerID = data.playerID
                 var enemyID = data.enemyID
@@ -687,30 +688,9 @@ var Game = module.exports = (function(){
                     }
                 },
                 function(done){
-                    switch(Turn.validateTimeout(enemy, playerID)){
-                    case Turn.code.ready:
-                        done(null)
-                        break;
-                    case Turn.code.extended:
-                        done(null)
-                        break;
-                    case Turn.code.early:
-                        // TODO. Check how early the request was and
-                        // send retry by that amount
-                        H.log("INFO. Game.on.turn.to_new_turn player:" + player.name + " enemy:" + enemy.name)
-                        Publisher.to_new_turn(player, enemy, Conf.turn_timeout_ext)
-                        done({info: "ERROR. Can't request turn: too soon"})
-                        break;
-                    case Turn.code.dead:
-                        // mach maybe notify the client to correct its states
-                        done({info: "INFO. Turn.validateTimeout: live:false player:" + player.name + " enemy:" + enemy.name})
-                        break;
-                    case Turn.code.noncombat:
-                        done({info: "ERROR. Requesting turn from nonexistent enemy"})
-                        break;
-                    default: // this should never happen
-                        done({info: "ERROR. Unknown timeout code", code: code})
-                    }
+                    validateTimeout(enemy, player, function(er){
+                        done(er)
+                    })
                 },
                 function(done){
                     Turn.getTokenFromEnemy(playerID, enemyID, function(er, _player){
@@ -739,6 +719,33 @@ var Game = module.exports = (function(){
             })
         }
 
+        function validateTimeout(enemy, player, done){
+            switch(Turn.validateTimeout(enemy, player._id)){
+            case Turn.code.ready:
+                done(null)
+                break;
+            case Turn.code.extended:
+                done(null)
+                break;
+            case Turn.code.early:
+                // TODO. Check how early the request was and
+                // send retry by that amount
+                H.log("INFO. Game.on.turn.to_new_turn player:" + player.name + " enemy:" + enemy.name)
+                Publisher.to_new_turn(player, enemy, Conf.turn_timeout_ext)
+                done({info: "ERROR. Can't request turn: too soon"})
+                break;
+            case Turn.code.dead:
+                // todo maybe notify the client to correct its states
+                done({info: "INFO. Turn.validateTimeout: live:false player:" + player.name + " enemy:" + enemy.name})
+                break;
+            case Turn.code.noncombat:
+                done({info: "ERROR. Requesting turn from nonexistent enemy"})
+                break;
+            default: // this should never happen
+                done({info: "ERROR. Unknown timeout code"})
+            }
+        }
+
         // todo. A fraction (half?) of pieces convert to enemy,
         // remaining pieces die (maybe later give them AI to roam the
         // world).
@@ -765,14 +772,19 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Players.kill(playerID)
+                    Players.kill(playerID, function(er, _player){
+                        player = _player
+                        done(er)
+                    })
+                },
+                function(done){
                     Turn.clearTokens(playerID, function(er, player, enemies){
                         Publisher.refresh_players_turns(enemies.concat([player]))
+                        done(er)
                     })
                     Pieces.defect(playerID, enemyID, function(er){
                         Publisher.defect(playerID, enemyID)
                     })
-                    done(null)
                 },
             ], function(er){
                 if (er){
@@ -780,7 +792,7 @@ var Game = module.exports = (function(){
                     Publisher.error(playerID, er.info || "ERROR. Game.on.gameover: unexpected error")
                     Publisher.error(enemyID, er.info || "ERROR. Game.on.gameover: unexpected error")
                 } else {
-                    H.log("INFO. Game.on.gameover winner:" + enemy.name + " loser:" + player.name)
+                    H.log("INFO. Game.on.gameover winner:" + enemy.name + " loser:" + player.name + " live:" + player.alive)
                     Publisher.gameover(player, enemy, false)
                     Publisher.gameover(enemy, player, true)
                 }

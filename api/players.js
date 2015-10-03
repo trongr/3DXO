@@ -49,16 +49,18 @@ var Players = module.exports = (function(){
         })
 
     Players.kill = function(playerID, done){
-        Player.update({
+        Player.findOneAndUpdate({
             _id: playerID
         }, {
             $set: {
                 modified: new Date(), // update bypasses mongoose's pre save middleware
                 alive: false,
             }
-        }, {}, function(er, re){
+        }, {
+            new: true
+        }, function(er, player){
             if (er) H.log("ERROR. Players.kill", er)
-            if (done) done(er)
+            if (done) done(er, player)
         })
     }
 
@@ -72,7 +74,6 @@ var Players = module.exports = (function(){
             }
         }, {
             new: true,
-            runValidators: true,
         }, function(er, player){
             if (er) H.log("ERROR. Players.resurrect", er)
             if (done) done(er, player)

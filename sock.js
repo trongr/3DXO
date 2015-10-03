@@ -38,6 +38,8 @@ var Sock = module.exports = (function(){
 
         client.subscribe('error');
 
+        client.subscribe('new_army');
+
         client.subscribe('move');
 
         client.subscribe('to_new_turn');
@@ -50,8 +52,6 @@ var Sock = module.exports = (function(){
         // Server just published data to this channel, to be sent to
         // client. Client has to check channel encoded in data
         client.on("message", function(chan, data){
-            // todo. can decide what to do with data based on channel,
-            // e.g. sometimes you might not want to publish to client
             conn.write(data);
         });
 
@@ -62,16 +62,10 @@ var Sock = module.exports = (function(){
                 var data = JSON.parse(msg)
                 var chan = data.chan
                 var playerID = data.playerID
+                Game.sock(data)
             } catch (e){
-                return H.log("ERROR. Sock.onConnection.conn.data.JSON.parse", msg)
+                return H.log("ERROR. Sock.data:catch", msg)
             }
-            Game.sock(data, function(er, re){
-                // todo refactor cause Publisher.publish will push
-                // everything to everyone
-                var chan = (er ? "error" : re.chan)
-                var data = er || re
-                Publisher.publish(chan, data)
-            })
         });
 
         conn.on("close", function(){

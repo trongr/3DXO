@@ -21,6 +21,21 @@ var Publisher = module.exports = (function(){
         })
     }
 
+    Publisher.new_army = function(pieces){
+        Publisher.publish("new_army", {
+            pieces: pieces
+        })
+    }
+
+    Publisher.move = function(player, piece, from, to){
+        Publisher.publish("move", {
+            player: player,
+            piece: piece,
+            from: from,
+            to: to
+        })
+    }
+
     Publisher.new_enemies = function(player, enemies){
         enemies.forEach(function(enemy){
             Publisher.to_new_turn(player, enemy, Conf.turn_timeout) // Player spent turn: timeout to new turn

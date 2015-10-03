@@ -1,7 +1,11 @@
-// mach unhighlight cells and rollover when you lose
+// mach when a new army first spawns, if it kills another king on the
+// first move or its king gets killed on the first move, the losing
+// army doesn't convert and loser.alive stays true
 
-// todo gradient color code the counters to make it more obvious
-// and make a big counter for the active token
+// unhighlight cells and rollover when you lose
+
+// gradient color code the counters to make it more obvious and make a
+// big counter for the active token
 
 // pawns aren't allowed to move towards the nearest (cause you can
 // have multiple) king during combat
@@ -1150,11 +1154,18 @@ var Game = (function(){
             }
         }
 
+        // todo load quadrant where the new pieces are, segmenting, etc.
+        on.new_army = function(data){
+            Game.loadPieces(data.pieces)
+            Scene.render()
+        }
+
         on.move = function(data){
             var you = Player.getPlayer()
             var playerName = data.player.name
             Game.removeObjAtXY(data.to.x, data.to.y)
 
+            // mach helper function
             // move selected piece
             var sel = Obj.findObjAtPosition(Math.floor(data.from.x), Math.floor(data.from.y), 1)
             sel.game.piece = data.piece // update piece with new position data
