@@ -1,0 +1,67 @@
+#!/bin/bash
+
+if [[ $# -eq 0 ]]; then
+    echo "run node|mongo"
+    exit 1
+fi
+
+prog=$1; shift
+case $prog in
+    n|node)
+        prog=_node
+        ;;
+    m|mongo)
+        prog=_mongo
+        ;;
+    *)
+        echo "ERROR. Unknown program:" $prog
+        exit 1
+esac
+
+# todo
+_node(){
+    echo "running node yall" "$@"
+}
+
+_mongo(){
+    method=$1; shift
+    case $method in
+        find)
+            method=_mongo_find
+            ;;
+        update)
+            method=_mongo_update
+            ;;
+        remove)
+            method=_mongo_remove
+            ;;
+        drop)
+            method=_mongo_drop
+            ;;
+        *)
+            echo "ERROR. mongo: unknown method:" $method
+            exit 1
+    esac
+    $method "$@"
+}
+
+_mongo_find(){
+    collection=$1; shift
+    mongo chess --eval "db."$collection".find().pretty().shellPrint()"
+}
+
+# todo
+_mongo_update(){
+    echo "$@"
+}
+
+_mongo_remove(){
+    collection=$1; shift
+    mongo chess --eval "db."$collection".remove({})"
+}
+
+_mongo_drop(){
+    mongo chess --eval "db.dropDatabase()"
+}
+
+$prog "$@"
