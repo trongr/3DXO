@@ -23,7 +23,7 @@ var Turn = module.exports = (function(){
     Turn.validateTimeout = function(player, enemyID){
         for (var i = 0; i < player.turn_tokens.length; i++){
             var token = player.turn_tokens[i]
-            if (token.player == enemyID){
+            if (token.player.equals(enemyID)){
                 var elapsed = new Date().getTime() - token.t.getTime()
                 // Need to check token.live so enemy can't keep
                 // requesting new turns even though player's token is
@@ -45,7 +45,7 @@ var Turn = module.exports = (function(){
                 }
             }
         }
-        H.log("ERROR. Turn.validateTimeout: not in combat: player:" + enemyID + " enemy:" + player.name)
+        H.log("ERROR. Turn.validateTimeout: not in combat: player:" + enemyID + " enemy:", player)
         return Turn.code.noncombat
     }
 
