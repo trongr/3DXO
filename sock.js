@@ -2,7 +2,6 @@ var sockjs  = require('sockjs');
 var redis   = require('redis');
 var H = require("./lib/h.js")
 var Game = require("./api/game.js")
-var Publisher = require("./api/publisher.js")
 
 var Sock = module.exports = (function(){
     var Sock = {}
@@ -34,8 +33,12 @@ var Sock = module.exports = (function(){
         H.log("INFO. Sock.onConnection.opening socket")
 
         // todo subscriber module
+        // todo createClient needs remote redis server's location (port and ip)
         var client = redis.createClient();
 
+        // todo can use psubscribe and punsubscribe with pattern:
+        // https://github.com/NodeRedis/node_redis
+        // http://redis.io/commands/PSUBSCRIBE
         client.subscribe('error');
 
         client.subscribe('new_army');
@@ -70,7 +73,8 @@ var Sock = module.exports = (function(){
 
         conn.on("close", function(){
             H.log("INFO. Sock.close")
-            client.unsubscribe() // just to be safe, to avoid potential memory leak
+            // client.unsubscribe() // todo remove
+            client.quit() // just to be safe, to avoid potential memory leak
         })
     }
 

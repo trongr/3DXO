@@ -19,7 +19,6 @@ var K = (function(){
 
     var S = 1
     var K = {
-        INIT_CAM_POS: 15,
         CUBE_SIZE: S,
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
     }
@@ -958,8 +957,12 @@ var Scene = (function(){
     // you get a weird camera lookAt bug. See
     // initControls._controls.target
     function initCamera(x, y){
-        Scene.camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 50 );
-        Scene.camera.position.z = K.INIT_CAM_POS; // for some reason you need this or track ball controls won't work properly
+        var fov = 30
+        var near = 1
+        var far = 1000
+        var init_cam_pos = 30
+        Scene.camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, near, far);
+        Scene.camera.position.z = init_cam_pos; // for some reason you need this or track ball controls won't work properly
         Scene.camera.position.x = x
         Scene.camera.position.y = y
     }
@@ -969,7 +972,7 @@ var Scene = (function(){
         _controls.target = new THREE.Vector3(x, y, 0)
         _controls.rotateSpeed = 2.5;
         _controls.zoomSpeed = 1.5;
-        _controls.panSpeed = 1.0;
+        _controls.panSpeed = 0.5;
         _controls.noRotate = true;
         _controls.noZoom = false;
         _controls.noPan = false;
