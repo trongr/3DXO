@@ -1,0 +1,3 @@
+#!/bin/bash
+collection=$1; shift
+mongo chess --eval "db."$collection".find().pretty().shellPrint()"

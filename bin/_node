@@ -1,0 +1,33 @@
+#!/bin/bash
+
+if [[ $# -eq 0 ]]; then
+    echo "_node server.js [--port 8080]"
+    echo
+    echo "NOTE. Parameter order matters"
+    exit 1
+fi
+
+server=$1; shift
+while [[ $# > 0 ]]; do
+    key="$1"
+    case $key in
+        -p|--port)
+            port="$2"
+            ;;
+        *)  ;; # unknown option
+    esac
+    shift
+    shift
+done
+
+server_dir=$(dirname "$server")
+server_file=$(basename "$server")
+log_dir=logs
+log_file=$log_dir/$server_file.log
+
+cd $server_dir
+
+mkdir -p $log_dir
+
+forever stop $server_file
+PORT=$port forever start -o $log_file -e $log_file $server_file

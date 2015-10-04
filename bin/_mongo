@@ -1,0 +1,41 @@
+#!/bin/bash
+
+method=$1; shift
+case $method in
+    find)
+        method=_find
+        ;;
+    update)
+        method=_update
+        ;;
+    remove)
+        method=_remove
+        ;;
+    drop)
+        method=_drop
+        ;;
+    *)
+        echo "ERROR. mongo: unknown method:" $method
+        exit 1
+esac
+
+_find(){
+    collection=$1; shift
+    mongo chess --eval "db."$collection".find().pretty().shellPrint()"
+}
+
+# todo
+_update(){
+    echo "$@"
+}
+
+_remove(){
+    collection=$1; shift
+    mongo chess --eval "db."$collection".remove({})"
+}
+
+_drop(){
+    mongo chess --eval "db.dropDatabase()"
+}
+
+$method "$@"

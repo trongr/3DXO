@@ -18,50 +18,13 @@ case $prog in
         exit 1
 esac
 
-# todo
-_node(){
-    echo "running node yall" "$@"
-}
+# cd to project root
+root_dir=$(dirname "${BASH_SOURCE}")
+cd "$root_dir"
 
-_mongo(){
-    method=$1; shift
-    case $method in
-        find)
-            method=_mongo_find
-            ;;
-        update)
-            method=_mongo_update
-            ;;
-        remove)
-            method=_mongo_remove
-            ;;
-        drop)
-            method=_mongo_drop
-            ;;
-        *)
-            echo "ERROR. mongo: unknown method:" $method
-            exit 1
-    esac
-    $method "$@"
-}
+./bin/$prog "$@"
 
-_mongo_find(){
-    collection=$1; shift
-    mongo chess --eval "db."$collection".find().pretty().shellPrint()"
-}
-
-# todo
-_mongo_update(){
-    echo "$@"
-}
-
-_mongo_remove(){
-    collection=$1; shift
-    mongo chess --eval "db."$collection".remove({})"
-}
-
-_mongo_drop(){
-    mongo chess --eval "db.dropDatabase()"
-}
-
-$prog "$@"
+# todo install scripts
+# if [[ $DEPS == true ]]; then
+#     npm install --no-bin-links
+# fi
