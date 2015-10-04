@@ -573,7 +573,8 @@ var Obj = (function(){
     Obj.findObjsByPlayerID = function(playerID){
         return _objects.filter(function(obj){
             return (obj.game && obj.game.piece &&
-                    obj.game.piece.player == playerID)
+                    (obj.game.piece.player == playerID ||
+                     obj.game.piece.player._id == playerID))
         })
     }
 

@@ -43,6 +43,13 @@ var Publisher = module.exports = (function(){
         })
     }
 
+    Publisher.to_turns = function(player, enemy){
+        H.log("INFO. Publisher.to_new_turn player:" + player.name + " enemy:" + enemy.name)
+        H.log("INFO. Publisher.to_turn_exp player:" + enemy.name + " enemy:" + player.name)
+        Publisher.to_new_turn(player, enemy, Conf.turn_timeout)
+        Publisher.to_turn_exp(enemy, player)
+    }
+
     Publisher.to_new_turn = function(player, enemy){
         Publisher.publish("to_new_turn", {
             player: player,

@@ -38,12 +38,12 @@ schema.pre("save", function(next) {
     if (!user.isModified('pass')) return next();
 
     // generate a salt
-    bcrypt.genSalt(SALT_WORK_FACTOR, function(err, salt) {
-        if (err) return next(err);
+    bcrypt.genSalt(SALT_WORK_FACTOR, function(er, salt) {
+        if (er) return next(er);
 
         // hash the password using our new salt
-        bcrypt.hash(user.pass, salt, function(err, hash) {
-            if (err) return next(err);
+        bcrypt.hash(user.pass, salt, function(er, hash) {
+            if (er) return next(er);
 
             // override the cleartext password with the hashed one
             user.pass = hash;
@@ -52,11 +52,15 @@ schema.pre("save", function(next) {
     });
 });
 
-schema.methods.comparePassword = function(candidatePassword, cb) {
-    bcrypt.compare(candidatePassword, this.pass, function(err, isMatch) {
-        if (err) return cb(err);
-        cb(null, isMatch);
+schema.methods.comparePassword = function(candidatePassword, done) {
+    bcrypt.compare(candidatePassword, this.pass, function(er, isMatch) {
+        if (er) return done(er);
+        done(null, isMatch);
     });
+};
+
+schema.methods.isInCombat = function(){
+    return this.turn_tokens.length > 0
 };
 
 schema.statics.findOneByID = function(playerID, done){

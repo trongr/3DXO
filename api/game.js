@@ -225,7 +225,7 @@ var Move = (function(){
 
     // Actually making the move
     Move.move = function(player, piece, from, to, done){
-        var nPiece, dstCell, enemyKing = null
+        var nPiece, dstCell, captured = null
         async.waterfall([
             function(done){ // update origin cell
                 Cell.update({
@@ -255,9 +255,7 @@ var Move = (function(){
             },
             function(done){
                 if (dstCell && dstCell.piece){ // is a kill move: remove dst piece
-                    if (dstCell.piece.kind == "king"){
-                        enemyKing = dstCell.piece
-                    }
+                    captured = dstCell.piece
                     dstCell.piece.remove(function(er){
                         done(er)
                     })
@@ -289,10 +287,9 @@ var Move = (function(){
                 })
             },
         ], function(er){
-            // returns enemyKing if you're killing their king
             done(er ? [
                 "Game.Move.move", player, piece, from, to
-            ] : null, nPiece, enemyKing)
+            ] : null, nPiece, captured)
         })
     }
 
@@ -569,7 +566,7 @@ var Game = module.exports = (function(){
                     x: Math.floor(data.to.x),
                     y: Math.floor(data.to.y),
                 }
-                var enemy, enemyKing, nEnemies = null
+                var enemy, captured, nEnemies = null
             } catch (e){
                 H.log("ERROR. Game.on.move: invalid input", data)
                 return
@@ -600,12 +597,10 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Move.move(player, piece, from, to, function(er, _piece, _enemyKing){
+                    Move.move(player, piece, from, to, function(er, _piece, _captured){
                         nPiece = _piece
-                        enemyKing = _enemyKing
-                        if (er){
-                            done(er)
-                        } else done(null)
+                        captured = _captured
+                        done(er)
                     })
                 },
                 function(done){
@@ -627,22 +622,26 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
+                    var enemyKing = null
+                    if (captured && captured.kind == "king"){
+                        enemyKing = captured
+                    }
                     if (enemy && enemyKing && enemyKing.player.equals(enemy._id)){
                         // enemy and enemyKing are the same people
                         Game.on.gameover(enemyKing.player, playerID)
                     } else if (enemy && enemyKing){
-                        // Using enemy's token against enemyKing
                         Game.on.gameover(enemyKing.player, playerID)
-                        H.log("INFO. Game.on.move.to_new_turn player:" + player.name + " enemy:" + enemy.name)
-                        H.log("INFO. Game.on.move.to_turn_exp player:" + enemy.name + " enemy:" + player.name)
-                        Publisher.to_new_turn(player, enemy, Conf.turn_timeout) // Player spent turn: timeout to new turn
-                        Publisher.to_turn_exp(enemy, player) // Enemy getting new turn: timeout to expire
-                    } else if (enemy && !enemyKing){ // only publish turn updates if actually spending a token (enemy exists)
-                        // Just a regular move: no king killing
-                        H.log("INFO. Game.on.move.to_new_turn player:" + player.name + " enemy:" + enemy.name)
-                        H.log("INFO. Game.on.move.to_turn_exp player:" + enemy.name + " enemy:" + player.name)
-                        Publisher.to_new_turn(player, enemy, Conf.turn_timeout) // Player spent turn: timeout to new turn
-                        Publisher.to_turn_exp(enemy, player) // Enemy getting new turn: timeout to expire
+                        // Using enemy's token against someone else
+                        // (enemyKing): maintain turn requests with
+                        // enemy
+                        Publisher.to_turns(player, enemy)
+                    } else if (enemy && !enemyKing){ // Just a regular move: no king killing
+                        Publisher.to_turns(player, enemy)
+                    } else if (!enemy && enemyKing){
+                        // enemy is null because player is free
+                        // roaming, and killing enemyKing on the first
+                        // move.
+                        Game.on.gameover(enemyKing.player, playerID)
                     }
                     done(null)
                 }
@@ -709,12 +708,7 @@ var Game = module.exports = (function(){
                     H.log("ERROR. Game.on.turn", er)
                     Publisher.error(playerID, er.info || "ERROR. Game.on.turn: unexpected error")
                 } else {
-                    // todo implement private channel / room so only
-                    // specific users can get those pubs
-                    H.log("INFO. Game.on.turn.to_new_turn player:" + enemy.name + " enemy:" + player.name)
-                    H.log("INFO. Game.on.turn.to_turn_exp player:" + player.name + " enemy:" + enemy.name)
-                    Publisher.to_new_turn(enemy, player, Conf.turn_timeout) // Enemy lost their turn so tell them to start counting to new turn
-                    Publisher.to_turn_exp(player, enemy) // Player is getting a new turn so tell them to count to turn expiration
+                    Publisher.to_turns(enemy, player)
                 }
             })
         }
@@ -731,6 +725,7 @@ var Game = module.exports = (function(){
                 // TODO. Check how early the request was and
                 // send retry by that amount
                 H.log("INFO. Game.on.turn.to_new_turn player:" + player.name + " enemy:" + enemy.name)
+                // mach add to_turn_exp for enemy too, with Conf.turn_timeout_ext, and use Publisher.to_turns
                 Publisher.to_new_turn(player, enemy, Conf.turn_timeout_ext)
                 done({info: "ERROR. Can't request turn: too soon"})
                 break;

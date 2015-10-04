@@ -420,7 +420,7 @@ var Turn = module.exports = (function(){
         } else if (player_i < oti){
             nti = Math.max(oti - 1, 0)
         }
-        H.log("DEBUG. removePlayerTokenFromEnemy", [enemy.name, player_i, oti, otl, nti, ntl])
+        H.log("DEBUG. Turn.removePlayerTokenFromEnemy", [enemy.name, player_i, oti, otl, nti, ntl])
 
         Player.findByIdAndUpdate(enemy._id, {
             $set: {
