@@ -7,7 +7,7 @@ var Conf = require("../static/conf.json") // shared with client
 var Cell = require("../models/cell.js")
 var Piece = require("../models/piece.js")
 var Player = require("../models/player.js")
-var Publisher = require("../api/publisher.js")
+var Pub = require("../api/pub.js")
 var Cells = require("../api/cells.js")
 var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
@@ -314,7 +314,7 @@ var Game = module.exports = (function(){
                 if (er){
                     res.send(er)
                 } else {
-                    Publisher.new_army(pieces)
+                    Pub.new_army(pieces)
                     res.send({ok:true, pieces:pieces})
                 }
             })
@@ -617,7 +617,7 @@ var Game = module.exports = (function(){
                     Turn.findNewEnemies(player, to, function(er, _player, _nEnemies){
                         player = _player
                         nEnemies = _nEnemies
-                        if (nEnemies) Publisher.new_enemies(player, nEnemies)
+                        if (nEnemies) Pub.new_enemies(player, nEnemies)
                         done(er)
                     })
                 },
@@ -634,9 +634,9 @@ var Game = module.exports = (function(){
                         // Using enemy's token against someone else
                         // (enemyKing): maintain turn requests with
                         // enemy
-                        Publisher.to_turns(player, enemy)
+                        Pub.to_turns(player, enemy)
                     } else if (enemy && !enemyKing){ // Just a regular move: no king killing
-                        Publisher.to_turns(player, enemy)
+                        Pub.to_turns(player, enemy)
                     } else if (!enemy && enemyKing){
                         // enemy is null because player is free
                         // roaming, and killing enemyKing on the first
@@ -648,9 +648,9 @@ var Game = module.exports = (function(){
             ], function(er){
                 if (er){
                     H.log("ERROR. Game.on.move", er)
-                    Publisher.error(playerID, er.info || "ERROR. Game.on.move: unexpected error")
+                    Pub.error(playerID, er.info || "ERROR. Game.on.move: unexpected error")
                 } else {
-                    Publisher.move(player, nPiece, from, to)
+                    Pub.move(player, nPiece, from, to)
                 }
             })
         }
@@ -682,7 +682,7 @@ var Game = module.exports = (function(){
                     if (player.alive && enemy.alive){
                         done(null)
                     } else {
-                        Publisher.refresh_turns(player)
+                        Pub.refresh_turns(player)
                         done({info: "ERROR. Can't request turn: " + (!player.alive ? "player" : "enemy") + " dead"})
                     }
                 },
@@ -706,9 +706,9 @@ var Game = module.exports = (function(){
             ], function(er){
                 if (er){
                     H.log("ERROR. Game.on.turn", er)
-                    Publisher.error(playerID, er.info || "ERROR. Game.on.turn: unexpected error")
+                    Pub.error(playerID, er.info || "ERROR. Game.on.turn: unexpected error")
                 } else {
-                    Publisher.to_turns(enemy, player)
+                    Pub.to_turns(enemy, player)
                 }
             })
         }
@@ -725,8 +725,8 @@ var Game = module.exports = (function(){
                 // TODO. Check how early the request was and
                 // send retry by that amount
                 H.log("INFO. Game.on.turn.to_new_turn player:" + player.name + " enemy:" + enemy.name)
-                // mach add to_turn_exp for enemy too, with Conf.turn_timeout_ext, and use Publisher.to_turns
-                Publisher.to_new_turn(player, enemy, Conf.turn_timeout_ext)
+                // mach add to_turn_exp for enemy too, with Conf.turn_timeout_ext, and use Pub.to_turns
+                Pub.to_new_turn(player, enemy, Conf.turn_timeout_ext)
                 done({info: "ERROR. Can't request turn: too soon"})
                 break;
             case Turn.code.dead:
@@ -774,22 +774,22 @@ var Game = module.exports = (function(){
                 },
                 function(done){
                     Turn.clearTokens(playerID, function(er, player, enemies){
-                        Publisher.refresh_players_turns(enemies.concat([player]))
+                        Pub.refresh_players_turns(enemies.concat([player]))
                         done(er)
                     })
                     Pieces.defect(playerID, enemyID, function(er){
-                        Publisher.defect(playerID, enemyID)
+                        Pub.defect(playerID, enemyID)
                     })
                 },
             ], function(er){
                 if (er){
                     H.log("ERROR. Game.on.gameover", er)
-                    Publisher.error(playerID, er.info || "ERROR. Game.on.gameover: unexpected error")
-                    Publisher.error(enemyID, er.info || "ERROR. Game.on.gameover: unexpected error")
+                    Pub.error(playerID, er.info || "ERROR. Game.on.gameover: unexpected error")
+                    Pub.error(enemyID, er.info || "ERROR. Game.on.gameover: unexpected error")
                 } else {
                     H.log("INFO. Game.on.gameover winner:" + enemy.name + " loser:" + player.name + " live:" + player.alive)
-                    Publisher.gameover(player, enemy, false)
-                    Publisher.gameover(enemy, player, true)
+                    Pub.gameover(player, enemy, false)
+                    Pub.gameover(enemy, player, true)
                 }
             })
         }

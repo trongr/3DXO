@@ -4,31 +4,31 @@ var express = require('express');
 var H = require("../lib/h.js")
 var Conf = require("../static/conf.json") // shared with client
 
-var Publisher = module.exports = (function(){
-    Publisher = {}
+var Pub = module.exports = (function(){
+    Pub = {}
 
     var _publisher = redis.createClient();
 
-    Publisher.publish = function(chan, data){
+    Pub.publish = function(chan, data){
         data.chan = chan
         _publisher.publish(chan, JSON.stringify(data))
     }
 
-    Publisher.error = function(playerID, info){
-        Publisher.publish("error", {
+    Pub.error = function(playerID, info){
+        Pub.publish("error", {
             playerID: playerID,
             info: info,
         })
     }
 
-    Publisher.new_army = function(pieces){
-        Publisher.publish("new_army", {
+    Pub.new_army = function(pieces){
+        Pub.publish("new_army", {
             pieces: pieces
         })
     }
 
-    Publisher.move = function(player, piece, from, to){
-        Publisher.publish("move", {
+    Pub.move = function(player, piece, from, to){
+        Pub.publish("move", {
             player: player,
             piece: piece,
             from: from,
@@ -36,49 +36,49 @@ var Publisher = module.exports = (function(){
         })
     }
 
-    Publisher.new_enemies = function(player, enemies){
+    Pub.new_enemies = function(player, enemies){
         enemies.forEach(function(enemy){
-            Publisher.to_new_turn(player, enemy, Conf.turn_timeout) // Player spent turn: timeout to new turn
-            Publisher.to_turn_exp(enemy, player) // Enemy getting new turn: timeout to expire
+            Pub.to_new_turn(player, enemy, Conf.turn_timeout) // Player spent turn: timeout to new turn
+            Pub.to_turn_exp(enemy, player) // Enemy getting new turn: timeout to expire
         })
     }
 
-    Publisher.to_turns = function(player, enemy){
-        H.log("INFO. Publisher.to_new_turn player:" + player.name + " enemy:" + enemy.name)
-        H.log("INFO. Publisher.to_turn_exp player:" + enemy.name + " enemy:" + player.name)
-        Publisher.to_new_turn(player, enemy, Conf.turn_timeout)
-        Publisher.to_turn_exp(enemy, player)
+    Pub.to_turns = function(player, enemy){
+        H.log("INFO. Pub.to_new_turn player:" + player.name + " enemy:" + enemy.name)
+        H.log("INFO. Pub.to_turn_exp player:" + enemy.name + " enemy:" + player.name)
+        Pub.to_new_turn(player, enemy, Conf.turn_timeout)
+        Pub.to_turn_exp(enemy, player)
     }
 
-    Publisher.to_new_turn = function(player, enemy){
-        Publisher.publish("to_new_turn", {
+    Pub.to_new_turn = function(player, enemy){
+        Pub.publish("to_new_turn", {
             player: player,
             enemy: enemy,
             timeout: Conf.turn_timeout,
         })
     }
 
-    Publisher.to_turn_exp = function(player, enemy){
-        Publisher.publish("to_turn_exp", {
+    Pub.to_turn_exp = function(player, enemy){
+        Pub.publish("to_turn_exp", {
             player: player,
             enemy: enemy,
         })
     }
 
-    Publisher.refresh_players_turns = function(players){
+    Pub.refresh_players_turns = function(players){
         players.forEach(function(player){
-            Publisher.refresh_turns(player)
+            Pub.refresh_turns(player)
         })
     }
     // Refresh player tokens cause either they or one of their enemies died
-    Publisher.refresh_turns = function(player){
-        Publisher.publish("refresh_turns", {
+    Pub.refresh_turns = function(player){
+        Pub.publish("refresh_turns", {
             player: player,
         })
     }
 
-    Publisher.gameover = function(player, enemy, you_win){
-        Publisher.publish("gameover", {
+    Pub.gameover = function(player, enemy, you_win){
+        Pub.publish("gameover", {
             player: player,
             enemy: enemy,
             you_win: you_win,
@@ -86,14 +86,14 @@ var Publisher = module.exports = (function(){
     }
 
     // Defector defecting to defectee
-    Publisher.defect = function(defectorID, defecteeID){
-        Publisher.publish("defect", {
+    Pub.defect = function(defectorID, defecteeID){
+        Pub.publish("defect", {
             defectorID: defectorID,
             defecteeID: defecteeID,
         })
     }
 
-    return Publisher
+    return Pub
 }())
 
 var Test = (function(){

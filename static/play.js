@@ -245,6 +245,7 @@ var Turn = (function(){
     return Turn
 }())
 
+// todo rename to something else
 var Sock = (function(){
     var Sock = {}
 
@@ -285,6 +286,47 @@ var Sock = (function(){
     }
 
     return Sock
+}())
+
+var Chat = (function(){
+    var Chat = {}
+
+    var _chat = null
+    var _socketAutoReconnectTimeout = null
+
+    Chat.init = function(){
+        _chat = new SockJS('http://localhost:8080/chat');
+
+        _chat.onopen = function() {
+            msg.info("Opening socket connection")
+            clearTimeout(_socketAutoReconnectTimeout)
+        };
+
+        _chat.onmessage = function(re){
+            try {
+                var data = JSON.parse(re.data)
+            } catch (e){
+                if (re) return msg.error(re.data)
+                else return msg.error("FATAL ERROR. Server socket response")
+            }
+            // Game.on[data.chan](data)
+            console.log("chat msg", JSON.stringify(data, 0, 2))
+        };
+
+        _chat.onclose = function() {
+            msg.warning("Losing chat connection. Retrying in 5s...")
+            setTimeout(function(){
+                Chat.init()
+            }, 5000)
+        };
+    }
+
+    Chat.send = function(chan, data){
+        data.chan = chan
+        _chat.send(JSON.stringify(data))
+    }
+
+    return Chat
 }())
 
 var Select = (function(){
@@ -1106,6 +1148,7 @@ var Game = (function(){
                     y = king.y
                 }
                 Sock.init()
+                Chat.init()
                 Scene.init(x, y)
                 Obj.init()
                 Map.init(x, y)

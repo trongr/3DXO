@@ -61,10 +61,7 @@ var Sock = module.exports = (function(){
         // Receiving data from client
         conn.on('data', function(msg) {
             try {
-                // data always has playerID and chan
                 var data = JSON.parse(msg)
-                var chan = data.chan
-                var playerID = data.playerID
                 Game.sock(data)
             } catch (e){
                 return H.log("ERROR. Sock.data:catch", msg)
@@ -73,7 +70,6 @@ var Sock = module.exports = (function(){
 
         conn.on("close", function(){
             H.log("INFO. Sock.close")
-            // client.unsubscribe() // todo remove
             client.quit() // just to be safe, to avoid potential memory leak
         })
     }

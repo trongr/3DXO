@@ -9,6 +9,7 @@ var path = require('path');
 var session = require('express-session')
 var H = require("./lib/h.js")
 var Sock = require("./sock.js")
+var Chat = require("./chat.js")
 var DB = require("./db.js")
 var Auth = require("./api/auth.js")
 var Pieces = require("./api/pieces.js")
@@ -58,4 +59,5 @@ var port = process.env.PORT || 8080;
 server = http.createServer(app);
 server.listen(port);
 Sock.init(server)
+Chat.init(server)
 console.log('Magic happens on port ' + port);
