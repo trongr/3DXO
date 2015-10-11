@@ -1,3 +1,8 @@
+// keyboard moving: e.g. b2ru3: second bishop right up 3, n4ur: fourth
+// knight up 2 right 1, n4ru: fourth knight right 2 up 1, etc.
+
+// + for grid intersections
+
 // unhighlight cells and rollover when you lose
 
 // gradient color code the counters to make it more obvious and make a
@@ -137,14 +142,62 @@ var Hud = (function(){
 var Console = (function(){
     var Console = {}
 
+    var _textarea = null
+
     Console.init = function(){
+        initHTML()
+        cacheHTML()
+        initListeners()
+        alwaysFocus()
+        autosize($("#console_input"))
+    }
+
+    function initHTML(){
         var html = "<div id='console_box'>"
             +           "<div id='console_out_box'></div>"
             +           "<div id='console_in_box'>"
-            +               "<input id='console_input' type='text' placeholder='!cmd or chat'>"
+            +               "<div id='console_input_prompt'><i class='fa fa-quote-right'></i></div>"
+            +               "<textarea id='console_input' rows='1' type='text' placeholder='!cmd or chat'></textarea>"
             +           "</div>"
             +      "</div>"
         $("body").append(html)
+    }
+
+    function cacheHTML(){
+        _textarea = $("#console_input")
+    }
+
+    function initListeners(){
+        $("#console_input").on("keypress", keypressHandler)
+    }
+
+    // mach
+    function keypressHandler(event){
+        var key = event.keyCode || event.which
+        if (key == 13){ // new line
+            processConsoleInput()
+            autosize.update($("#console_input"))
+            return false
+            // returning false otw the new line will be added to the
+            // textarea after it's cleared by processConsoleInput,
+            // which leaves two lines in the textarea, whereas we only
+            // want one line when there's no text.
+        }
+    }
+
+    function processConsoleInput(){
+        var text = _textarea.val()
+        _textarea.val("")
+        console.log(text)
+    }
+
+    // Always keeps the chat box focused during gameplay so players
+    // can type quickly
+    function alwaysFocus(){
+        var console = $("#console_input").focus()
+        $(document).on("mouseup", function(){
+            console.focus()
+        })
     }
 
     return Console
@@ -302,17 +355,17 @@ var Sock = (function(){
 var Chat = (function(){
     var Chat = {}
 
-    var chat = null
+    var _chat = null
     var _socketAutoReconnectTimeout = null
 
     Chat.init = function(){
-        chat = new SockJS('http://localhost:8080/chat');
+        _chat = new SockJS('http://localhost:8080/chat');
 
-        chat.onopen = function() {
+        _chat.onopen = function() {
             clearTimeout(_socketAutoReconnectTimeout)
         };
 
-        chat.onmessage = function(re){
+        _chat.onmessage = function(re){
             try {
                 var data = JSON.parse(re.data)
             } catch (e){
@@ -323,7 +376,7 @@ var Chat = (function(){
             console.log("chat msg", JSON.stringify(data, 0, 2))
         };
 
-        chat.onclose = function() {
+        _chat.onclose = function() {
             msg.warning("Losing chat connection. Retrying in 5s...")
             setTimeout(function(){
                 Chat.init()
@@ -333,7 +386,7 @@ var Chat = (function(){
 
     Chat.send = function(chan, data){
         data.chan = chan
-        chat.send(JSON.stringify(data))
+        _chat.send(JSON.stringify(data))
     }
 
     return Chat
@@ -663,10 +716,9 @@ var Map = (function(){
         return _map
     }
 
-    // mach don't attach this mouse event to document. add it to Scene.container instead
     Map.addMouseDragListener = function(handler){
         var isDragging = false;
-        $(document).mousedown(function(){
+        $(Scene.container).mousedown(function(){
             isDragging = false;
         }).mousemove(function() {
             isDragging = true;
@@ -934,11 +986,11 @@ var Events = (function(){
     var Events = {}
 
     Events.init = function(){
-        Scene.container.addEventListener('mousedown', onGameBoxMousedown, false);
+        Scene.container.addEventListener('mousedown', on_game_box_mousedown, false);
         window.addEventListener('resize', onWindowResize, false);
     }
 
-    function onGameBoxMousedown(event){
+    function on_game_box_mousedown(event){
         if (event.which == 1){ // left mouse button
             Select.select(event.clientX, event.clientY)
             Scene.render()
@@ -954,6 +1006,25 @@ var Events = (function(){
     }
 
     return Events
+}())
+
+var Info = (function(){
+    var Info = {}
+
+    Info.init = function(){
+        var info = document.createElement('div');
+        info.setAttribute("id", "info_box")
+        info.style.color = "white"
+        info.style.position = 'absolute';
+        info.style.top = '5px';
+        info.style.left = "10px";
+        info.innerHTML = '<a href="/">M.M.O.Chess</a><br>'
+            + "Right mouse drag: navigate<br>"
+            + 'Left mouse click: move<br>'
+        document.body.appendChild(info)
+    }
+
+    return Info
 }())
 
 var Controls = (function(){
@@ -1001,7 +1072,6 @@ var Scene = (function(){
 
         // be careful about ordering of these methods. might need to refactor
         initContainer()
-        initInfo()
         initLights()
         initCamera(x, y)
         initRenderer()
@@ -1054,19 +1124,6 @@ var Scene = (function(){
         Scene.renderer.setPixelRatio( window.devicePixelRatio );
         Scene.renderer.setSize( window.innerWidth, window.innerHeight );
         Scene.container.appendChild( Scene.renderer.domElement );
-    }
-
-    function initInfo(){
-        var info = document.createElement( 'div' );
-        info.setAttribute("id", "info_box")
-        info.style.color = "white"
-        info.style.position = 'absolute';
-        info.style.top = '5px';
-        info.style.left = "10px";
-        info.innerHTML = '<a href="/">M.M.O.Chess</a><br>'
-            + "Right mouse drag: navigate<br>"
-            + 'Left mouse click: move<br>'
-        document.body.appendChild(info)
     }
 
     function animate() {
@@ -1129,6 +1186,7 @@ var Game = (function(){
                     x = king.x
                     y = king.y
                 }
+                Info.init()
                 Sock.init()
                 Chat.init()
                 Scene.init(x, y)

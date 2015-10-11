@@ -8,7 +8,7 @@
 
 #hud_box {
     color: white;
-    margin: 5px;
+    margin: 0 0 5px 0;
     opacity: 0.8;
     position: fixed;
     left: 0;
@@ -18,8 +18,6 @@
 
 #hud_turns {
     display: table;
-    /* border-collapse: separate; */
-    /* border-spacing: 0px 1px; */
 }
 
 #hud_turns .turn_box {
@@ -69,7 +67,6 @@
     position: fixed;
     right: 0;
     top: 0;
-    font-family: arial;
 }
 
 #menu_box a {
@@ -85,18 +82,31 @@
 /* begin console css */
 
 #console_box {
-    background-color: black;
-    color: white;
-    opacity: 0.5;
-    margin: 5px;
+    margin: 0 0 5px 0;
     position: absolute;
     right: 0;
     bottom: 0;
-    font-family: arial;
 }
 
-#console_box #console_input {
-    background-color: white;
+#console_box #console_input_prompt {
+    font-weight: bold;
+    font-family: arial;
+    font-size: 1.5em;
+    color: white;
+    display: inline-block;
+    padding: 10px;
+    vertical-align: top;
+}
+
+#console_box textarea#console_input {
+    font-weight: bold;
+    font-family: arial;
+    background-color: transparent;
+    color: white;
+    border: none;
+    padding: 10px;
+    width: 250px;
+    resize: none;
 }
 
 /* end console css */

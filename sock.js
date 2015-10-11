@@ -10,8 +10,7 @@ var Sock = module.exports = (function(){
 
     Sock.init = function(server){
         _server = sockjs.createServer({
-            // todo store local copy
-            sockjs_url: "http://cdn.sockjs.org/sockjs-0.3.min.js",
+            sockjs_url: "./lib/sockjs-0.3.min.js",
             // heartbeat_delay: 25000, // default 25 seconds
             disconnect_delay: 60000, // default 5 seconds
         });
