@@ -392,8 +392,11 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 		if ( _this.enabled === false ) return;
 
-		event.preventDefault();
-		event.stopPropagation();
+        // NOTE. Commented out so we can handle click events on the
+        // canvas container e.g. so players can select their pieces
+        //
+		// event.preventDefault();
+		// event.stopPropagation();
 
 		if ( _state === STATE.NONE ) {
 

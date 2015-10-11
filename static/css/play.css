@@ -79,3 +79,26 @@
 /* end menu css */
 /* end menu css */
 /* end menu css */
+
+/* begin console css */
+/* begin console css */
+/* begin console css */
+
+#console_box {
+    background-color: black;
+    color: white;
+    opacity: 0.5;
+    margin: 5px;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    font-family: arial;
+}
+
+#console_box #console_input {
+    background-color: white;
+}
+
+/* end console css */
+/* end console css */
+/* end console css */

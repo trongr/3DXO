@@ -1,7 +1,3 @@
-// mach when a new army first spawns, if it kills another king on the
-// first move or its king gets killed on the first move, the losing
-// army doesn't convert and loser.alive stays true
-
 // unhighlight cells and rollover when you lose
 
 // gradient color code the counters to make it more obvious and make a
@@ -138,6 +134,22 @@ var Hud = (function(){
     return Hud
 }())
 
+var Console = (function(){
+    var Console = {}
+
+    Console.init = function(){
+        var html = "<div id='console_box'>"
+            +           "<div id='console_out_box'></div>"
+            +           "<div id='console_in_box'>"
+            +               "<input id='console_input' type='text' placeholder='!cmd or chat'>"
+            +           "</div>"
+            +      "</div>"
+        $("body").append(html)
+    }
+
+    return Console
+}())
+
 var Turn = (function(){
     var Turn = {}
 
@@ -256,7 +268,6 @@ var Sock = (function(){
         _sock = new SockJS('http://localhost:8080/sock');
 
         _sock.onopen = function() {
-            msg.info("Opening socket connection")
             clearTimeout(_socketAutoReconnectTimeout)
         };
 
@@ -291,18 +302,17 @@ var Sock = (function(){
 var Chat = (function(){
     var Chat = {}
 
-    var _chat = null
+    var chat = null
     var _socketAutoReconnectTimeout = null
 
     Chat.init = function(){
-        _chat = new SockJS('http://localhost:8080/chat');
+        chat = new SockJS('http://localhost:8080/chat');
 
-        _chat.onopen = function() {
-            msg.info("Opening socket connection")
+        chat.onopen = function() {
             clearTimeout(_socketAutoReconnectTimeout)
         };
 
-        _chat.onmessage = function(re){
+        chat.onmessage = function(re){
             try {
                 var data = JSON.parse(re.data)
             } catch (e){
@@ -313,7 +323,7 @@ var Chat = (function(){
             console.log("chat msg", JSON.stringify(data, 0, 2))
         };
 
-        _chat.onclose = function() {
+        chat.onclose = function() {
             msg.warning("Losing chat connection. Retrying in 5s...")
             setTimeout(function(){
                 Chat.init()
@@ -323,7 +333,7 @@ var Chat = (function(){
 
     Chat.send = function(chan, data){
         data.chan = chan
-        _chat.send(JSON.stringify(data))
+        chat.send(JSON.stringify(data))
     }
 
     return Chat
@@ -405,15 +415,6 @@ var Rollover = (function(){
     Rollover.setColor = function(color){
         if (color == null) _rollover.material.color.setRGB(1, 0, 0)
         else _rollover.material.color = color
-    }
-
-    function onDocumentMouseMove( event ) {
-        event.preventDefault();
-        var intersect = Select.getIntersect(event.clientX, event.clientY)
-        if (intersect) {
-            Obj.move(Rollover.getMesh(), new THREE.Vector3().copy(intersect.point).add(intersect.face.normal))
-        }
-        Scene.render();
     }
 
     return Rollover
@@ -662,9 +663,10 @@ var Map = (function(){
         return _map
     }
 
+    // mach don't attach this mouse event to document. add it to Scene.container instead
     Map.addMouseDragListener = function(handler){
         var isDragging = false;
-        $(document).mousedown(function() {
+        $(document).mousedown(function(){
             isDragging = false;
         }).mousemove(function() {
             isDragging = true;
@@ -928,25 +930,63 @@ var Move = (function(){
     return Move
 }())
 
-var Statistics = (function(){
-    var Statistics = {}
+var Events = (function(){
+    var Events = {}
 
-    var _stats;
-
-    // turn on stats include in play.html if you want to use this
-    Statistics.init = function(container){
-        _stats = new Stats();
-        _stats.domElement.style.position = 'absolute';
-        _stats.domElement.style.top = '0px';
-        _stats.domElement.style.zIndex = 100;
-        container.appendChild( _stats.domElement );
+    Events.init = function(){
+        Scene.container.addEventListener('mousedown', onGameBoxMousedown, false);
+        window.addEventListener('resize', onWindowResize, false);
     }
 
-    Statistics.update = function(){
-        _stats.update()
+    function onGameBoxMousedown(event){
+        if (event.which == 1){ // left mouse button
+            Select.select(event.clientX, event.clientY)
+            Scene.render()
+        } else if (event.which == 2){ // middle mouse
+
+        } else if (event.which == 3){ // right mouse
+
+        }
     }
 
-    return Statistics
+    function onWindowResize(){
+        Scene.refresh()
+    }
+
+    return Events
+}())
+
+var Controls = (function(){
+    var Controls = {}
+
+    var _controls = null
+
+    Controls.init = function(x, y){
+        _controls = new THREE.TrackballControls(Scene.camera, Scene.renderer.domElement);
+        _controls.target = new THREE.Vector3(x, y, 0)
+        _controls.rotateSpeed = 2.5;
+        _controls.zoomSpeed = 1.5;
+        _controls.panSpeed = 0.5;
+        _controls.noRotate = true;
+        _controls.noZoom = false;
+        _controls.noPan = false;
+        _controls.staticMoving = true;
+        _controls.dynamicDampingFactor = 0.3;
+        _controls.keys = [ 65, 83, 68 ];
+        _controls.addEventListener('change', Scene.render);
+    }
+
+    Controls.update = function(){
+        // Need to check _controls cause when Scene first animates
+        // _controls isn't initialized yet
+        if (_controls) _controls.update()
+    }
+
+    Controls.handleResize = function(){
+        _controls.handleResize()
+    }
+
+    return Controls
 }())
 
 var Scene = (function(){
@@ -955,24 +995,19 @@ var Scene = (function(){
     }
 
     var _scene
-    var _container
-    var _controls, _renderer;
-    var _isShiftDown = false;
 
     Scene.init = function(x, y){
         _scene = new THREE.Scene();
 
+        // be careful about ordering of these methods. might need to refactor
         initContainer()
         initInfo()
         initLights()
         initCamera(x, y)
-        initControls(x, y)
-        initListeners()
         initRenderer()
 
         Rollover.init()
         Select.init()
-        // Statistics.init(_container)
 
         animate();
         Scene.render();
@@ -991,13 +1026,11 @@ var Scene = (function(){
     }
 
     function initContainer(){
-        _container = document.createElement( 'div' );
-        document.body.appendChild(_container);
+        Scene.container = document.createElement('div');
+        Scene.container.setAttribute("id", "game_box")
+        document.body.appendChild(Scene.container);
     }
 
-    // NOTE. Need to set TrackballControls's target to x, y, z, otw
-    // you get a weird camera lookAt bug. See
-    // initControls._controls.target
     function initCamera(x, y){
         var fov = 30
         var near = 1
@@ -1009,23 +1042,6 @@ var Scene = (function(){
         Scene.camera.position.y = y
     }
 
-    function initControls(x, y){
-        _controls = new THREE.TrackballControls(Scene.camera);
-        _controls.target = new THREE.Vector3(x, y, 0)
-        _controls.rotateSpeed = 2.5;
-        _controls.zoomSpeed = 1.5;
-        _controls.panSpeed = 0.5;
-        _controls.noRotate = true;
-        _controls.noZoom = false;
-        _controls.noPan = false;
-        _controls.staticMoving = true;
-        _controls.dynamicDampingFactor = 0.3;
-        _controls.keys = [ 65, 83, 68 ];
-        _controls.addEventListener('change', Scene.render);
-        // adding this makes moving with the mouse really slow
-        // document.addEventListener( 'mousemove', _controls.update.bind( _controls ), false ); // this fixes some mouse rotating reeeeeaaaal slow
-    }
-
     function initLights(){
         var ambientLight = new THREE.AmbientLight(0xB080D1);
         Scene.add(ambientLight);
@@ -1033,19 +1049,11 @@ var Scene = (function(){
     }
 
     function initRenderer(){
-        _renderer = new THREE.WebGLRenderer( { antialias:false, alpha:true } );
-        _renderer.setClearColor(0x02002B, 1);
-        _renderer.setPixelRatio( window.devicePixelRatio );
-        _renderer.setSize( window.innerWidth, window.innerHeight );
-
-        _container.appendChild( _renderer.domElement );
-    }
-
-    function initListeners(){
-        document.addEventListener( 'mousedown', onDocumentMouseDown, false );
-        document.addEventListener( 'keydown', onDocumentKeyDown, false );
-        document.addEventListener( 'keyup', onDocumentKeyUp, false );
-        window.addEventListener( 'resize', onWindowResize, false );
+        Scene.renderer = new THREE.WebGLRenderer( { antialias:false, alpha:true } );
+        Scene.renderer.setClearColor(0x02002B, 1);
+        Scene.renderer.setPixelRatio( window.devicePixelRatio );
+        Scene.renderer.setSize( window.innerWidth, window.innerHeight );
+        Scene.container.appendChild( Scene.renderer.domElement );
     }
 
     function initInfo(){
@@ -1058,52 +1066,18 @@ var Scene = (function(){
         info.innerHTML = '<a href="/">M.M.O.Chess</a><br>'
             + "Right mouse drag: navigate<br>"
             + 'Left mouse click: move<br>'
-        _container.appendChild( info );
-    }
-
-    function onDocumentMouseDown( event ) {
-        event.preventDefault();
-        if (event.which == 1){ // left mouse button
-            Select.select(event.clientX, event.clientY)
-            Scene.render()
-        } else if (event.which == 2){ // middle mouse
-            // using middle
-        } else if (event.which == 3){ // right mouse
-            // and right mouse buttons for navigation
-        }
-    }
-
-    function onDocumentKeyDown( event ) {
-        switch( event.keyCode ) {
-        case 16: _isShiftDown = true; break;
-        }
-        Scene.render()
-    }
-
-    function onDocumentKeyUp( event ) {
-        switch ( event.keyCode ) {
-        case 16: _isShiftDown = false; break;
-        }
-    }
-
-    function onWindowResize() {
-        Scene.camera.aspect = window.innerWidth / window.innerHeight;
-        Scene.camera.updateProjectionMatrix();
-        _renderer.setSize( window.innerWidth, window.innerHeight );
-        _controls.handleResize();
-        Scene.render();
+        document.body.appendChild(info)
     }
 
     function animate() {
         requestAnimationFrame( animate );
-        _controls.update(); // use this too cause zooming's weird without it
+        Controls.update();
         // Scene.render() // don't render on every frame unless you're really animating stuff
     }
 
     Scene.render = function(){
         try {
-            _renderer.render(_scene, Scene.camera);
-            // Statistics.update();
+            Scene.renderer.render(_scene, Scene.camera);
         } catch (e){
             msg.warning("Renderer not ready", 2)
         }
@@ -1114,6 +1088,14 @@ var Scene = (function(){
         light.position.set(x, y, z);
         light.intensity = 0.75;
         return light
+    }
+
+    Scene.refresh = function(){
+        Scene.camera.aspect = window.innerWidth / window.innerHeight;
+        Scene.camera.updateProjectionMatrix();
+        Scene.renderer.setSize(window.innerWidth, window.innerHeight);
+        Controls.handleResize();
+        Scene.render();
     }
 
     return Scene
@@ -1154,7 +1136,10 @@ var Game = (function(){
                 Map.init(x, y)
                 Menu.init(player)
                 Hud.init(player)
+                Console.init()
                 Turn.init(player)
+                Controls.init(x, y)
+                Events.init()
             },
         ], function(er){
             if (er) msg.error(er)
