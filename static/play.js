@@ -129,10 +129,14 @@ var Hud = (function(){
 
     function turn_box(token){
         var ready_turn = (token.live ? "ready_turn" : "")
+        var player_name = token.player_name.slice(0, 19)
+        if (token.player_name.length > 19){
+            player_name += "..."
+        }
         return "<div id='" + token.player + "' class='turn_box'>"
-            +     "<div class='player_turn'></div>"
-            +     "<div class='player_name " + ready_turn + "'>" + token.player_name + "</div>"
             +     "<div class='player_countdown'></div>"
+            +     "<div class='player_name " + ready_turn + "'>" + player_name + "</div>"
+            +     "<div class='player_turn'></div>"
             +  "</div>"
     }
 
@@ -142,53 +146,65 @@ var Hud = (function(){
 var Console = (function(){
     var Console = {}
 
-    var _textarea = null
+    var _console_in, _console_out = null
 
     Console.init = function(){
         initHTML()
-        cacheHTML()
-        initListeners()
         alwaysFocus()
         autosize($("#console_input"))
     }
 
     function initHTML(){
+        // mach oncontextmenu
+        // var html = "<div id='console_box' oncontextmenu='return false;'>"
         var html = "<div id='console_box'>"
             +           "<div id='console_out_box'></div>"
             +           "<div id='console_in_box'>"
-            +               "<div id='console_input_prompt'><i class='fa fa-quote-right'></i></div>"
             +               "<textarea id='console_input' rows='1' type='text' placeholder='!cmd or chat'></textarea>"
             +           "</div>"
             +      "</div>"
         $("body").append(html)
-    }
 
-    function cacheHTML(){
-        _textarea = $("#console_input")
-    }
+        _console_in = $("#console_input")
+        _console_out = $("#console_out_box")
 
-    function initListeners(){
         $("#console_input").on("keypress", keypressHandler)
+        // $("#console_box").on("mousedown", function(event){
+        //     event.preventDefault()
+        //     // mach
+        //     if (event.which == 3){
+        //         msg.info("right clicking")
+        //         return false
+        //     }
+        // })
     }
 
-    // mach
     function keypressHandler(event){
         var key = event.keyCode || event.which
         if (key == 13){ // new line
             processConsoleInput()
-            autosize.update($("#console_input"))
-            return false
             // returning false otw the new line will be added to the
             // textarea after it's cleared by processConsoleInput,
             // which leaves two lines in the textarea, whereas we only
             // want one line when there's no text.
+            return false
         }
     }
 
     function processConsoleInput(){
-        var text = _textarea.val()
-        _textarea.val("")
-        console.log(text)
+        var text = _console_in.val(); _console_in.val("")
+        if (!text) return
+
+        _console_out.append(console_line_box(text))
+
+        fixConsoleCSS()
+    }
+
+    function fixConsoleCSS(){
+        var console_out_box = document.getElementById("console_out_box");
+        console_out_box.scrollTop = console_out_box.scrollHeight;
+
+        autosize.update($("#console_input"))
     }
 
     // Always keeps the chat box focused during gameplay so players
@@ -198,6 +214,10 @@ var Console = (function(){
         $(document).on("mouseup", function(){
             console.focus()
         })
+    }
+
+    function console_line_box(text){
+        return "<div class='console_line_box'>" + text + "</div>"
     }
 
     return Console
@@ -986,11 +1006,11 @@ var Events = (function(){
     var Events = {}
 
     Events.init = function(){
-        Scene.container.addEventListener('mousedown', on_game_box_mousedown, false);
+        document.addEventListener('mousedown', on_document_mousedown, false);
         window.addEventListener('resize', onWindowResize, false);
     }
 
-    function on_game_box_mousedown(event){
+    function on_document_mousedown(event){
         if (event.which == 1){ // left mouse button
             Select.select(event.clientX, event.clientY)
             Scene.render()
@@ -1033,7 +1053,9 @@ var Controls = (function(){
     var _controls = null
 
     Controls.init = function(x, y){
-        _controls = new THREE.TrackballControls(Scene.camera, Scene.renderer.domElement);
+        // mach
+        // _controls = new THREE.TrackballControls(Scene.camera, Scene.renderer.domElement);
+        _controls = new THREE.TrackballControls(Scene.camera, Scene.container);
         _controls.target = new THREE.Vector3(x, y, 0)
         _controls.rotateSpeed = 2.5;
         _controls.zoomSpeed = 1.5;
@@ -1255,7 +1277,6 @@ var Game = (function(){
             var playerName = data.player.name
             Game.removeObjAtXY(data.to.x, data.to.y)
 
-            // mach helper function
             // move selected piece
             var sel = Obj.findObjAtPosition(Math.floor(data.from.x), Math.floor(data.from.y), 1)
             sel.game.piece = data.piece // update piece with new position data

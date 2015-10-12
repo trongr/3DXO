@@ -8,10 +8,10 @@
 
 #hud_box {
     color: white;
-    margin: 0 0 5px 0;
+    margin: 0 0 10px 0;
     opacity: 0.8;
     position: fixed;
-    left: 0;
+    right: 0;
     bottom: 0;
     font-family: arial;
 }
@@ -82,31 +82,47 @@
 /* begin console css */
 
 #console_box {
-    margin: 0 0 5px 0;
+    margin: 0 0 10px 0;
+    padding: 5px;
     position: absolute;
-    right: 0;
+    left: 0;
     bottom: 0;
+    width: 300px;
+    background: rgba(67, 78, 89, 0.5);
+    overflow-x: hidden;
 }
 
-#console_box #console_input_prompt {
-    font-weight: bold;
-    font-family: arial;
-    font-size: 1.5em;
+#console_out_box {
+    margin: 0 0 5px 0;
+    padding: 0 100px 0 0; /* 100px hides the scroll bar*/
+    width: 100%;
+    max-height: 400px;
+    overflow-y: scroll;
+    word-wrap: break-word;
+}
+
+#console_out_box .console_line_box {
     color: white;
-    display: inline-block;
-    padding: 10px;
-    vertical-align: top;
+    font-family: arial;
+    margin: 10px 0 0 0;
+    padding: 0 0 0 10px;
 }
 
-#console_box textarea#console_input {
-    font-weight: bold;
-    font-family: arial;
+#console_in_box {
+
+}
+
+#console_in_box textarea#console_input {
     background-color: transparent;
     color: white;
-    border: none;
+    font-family: arial;
+    font-size: 1em;
+    word-wrap: break-word;
+    width: 280px;
     padding: 10px;
-    width: 250px;
     resize: none;
+    border: none;
+    outline: none; /* hides blue border around textarea in chrome */
 }
 
 /* end console css */
