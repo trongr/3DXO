@@ -155,12 +155,10 @@ var Console = (function(){
     }
 
     function initHTML(){
-        // mach oncontextmenu
-        // var html = "<div id='console_box' oncontextmenu='return false;'>"
         var html = "<div id='console_box'>"
             +           "<div id='console_out_box'></div>"
             +           "<div id='console_in_box'>"
-            +               "<textarea id='console_input' rows='1' type='text' placeholder='!cmd or chat'></textarea>"
+            +               "<textarea id='console_input' rows='1' type='text' placeholder='chat or type /cmd'></textarea>"
             +           "</div>"
             +      "</div>"
         $("body").append(html)
@@ -169,14 +167,6 @@ var Console = (function(){
         _console_out = $("#console_out_box")
 
         $("#console_input").on("keypress", keypressHandler)
-        // $("#console_box").on("mousedown", function(event){
-        //     event.preventDefault()
-        //     // mach
-        //     if (event.which == 3){
-        //         msg.info("right clicking")
-        //         return false
-        //     }
-        // })
     }
 
     function keypressHandler(event){
@@ -738,7 +728,7 @@ var Map = (function(){
 
     Map.addMouseDragListener = function(handler){
         var isDragging = false;
-        $(Scene.container).mousedown(function(){
+        $(document).mousedown(function(){
             isDragging = false;
         }).mousemove(function() {
             isDragging = true;
@@ -1053,9 +1043,7 @@ var Controls = (function(){
     var _controls = null
 
     Controls.init = function(x, y){
-        // mach
-        // _controls = new THREE.TrackballControls(Scene.camera, Scene.renderer.domElement);
-        _controls = new THREE.TrackballControls(Scene.camera, Scene.container);
+        _controls = new THREE.TrackballControls(Scene.camera, document);
         _controls.target = new THREE.Vector3(x, y, 0)
         _controls.rotateSpeed = 2.5;
         _controls.zoomSpeed = 1.5;
