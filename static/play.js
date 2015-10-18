@@ -184,9 +184,9 @@ var Console = (function(){
         Console.print("HOW TO PLAY")
         Console.print("1. Right mouse drag: navigate map.") // Make it mouse click navigate
         Console.print('2. Left mouse click: move pieces.')
-        Console.print("3. The bottom right corner will indicate when you can move. " +
+        Console.print("3. The bottom right corner will signal when you can move. " +
                       "Type <code> /help turn </code> for more details on how " +
-                      "turns are determined.")
+                      "turns are allotted.")
     }
 
     function initHTML(){
@@ -221,7 +221,8 @@ var Console = (function(){
     function processConsoleInput(){
         var text = _console_in.val(); _console_in.val("")
         if (!text) return
-        Chat.send(text)
+        var zone = [0, 0]
+        Chat.pub(zone, text)
     }
 
     function fixConsoleCSS(){
@@ -363,7 +364,8 @@ var Sock = (function(){
     Sock.init = function(){
         _sock = new SockJS('http://localhost:8080/sock');
 
-        _sock.onopen = function() {
+        _sock.onopen = function(){
+            Console.info("INFO. Connected to game.")
             clearTimeout(_socketAutoReconnectTimeout)
         };
 
@@ -380,7 +382,7 @@ var Sock = (function(){
         };
 
         _sock.onclose = function() {
-            Console.warn("Losing socket connection. Retrying in 5s...")
+            Console.warn("WARNING. Lost game connection. Retrying in 5s.")
             setTimeout(function(){
                 Sock.init()
             }, 5000)
@@ -405,7 +407,10 @@ var Chat = (function(){
         _chat = new SockJS('http://localhost:8080/chat');
 
         _chat.onopen = function() {
+            Console.info("INFO. Connected to chat.")
             clearTimeout(_socketAutoReconnectTimeout)
+            var zone = [0, 0]
+            Chat.sub(zone)
         };
 
         _chat.onmessage = function(re){
@@ -415,20 +420,25 @@ var Chat = (function(){
                 Console.print(text)
             } catch (e){
                 if (re) Console.error(re.data)
-                else Console.error("FATAL ERROR. Server socket response")
+                else Console.error("FATAL ERROR. Server chat response")
             }
         };
 
         _chat.onclose = function() {
-            Console.warn("Losing chat connection. Retrying in 5s...")
+            Console.warn("WARNING. Lost chat connection. Retrying in 5s.")
             setTimeout(function(){
                 Chat.init()
             }, 5000)
         };
     }
 
-    Chat.send = function(text){
-        _chat.send(JSON.stringify({text:text}))
+    Chat.sub = function(zone){
+        _chat.send(JSON.stringify({chan:"sub", zone:zone}))
+    }
+
+    Chat.pub = function(zone, text){
+        // mach
+        _chat.send(JSON.stringify({chan:"pub", zone:zone, text:text}))
     }
 
     return Chat
@@ -506,11 +516,11 @@ var Rollover = (function(){
         Obj.move(_rollover, new THREE.Vector3(0, 0, -1000)) // just move the rollover out of sight
     }
 
-    // ref.
-    Rollover.setColor = function(color){
-        if (color == null) _rollover.material.color.setRGB(1, 0, 0)
-        else _rollover.material.color = color
-    }
+    // // ref.
+    // Rollover.setColor = function(color){
+    //     if (color == null) _rollover.material.color.setRGB(1, 0, 0)
+    //     else _rollover.material.color = color
+    // }
 
     return Rollover
 }())
@@ -1144,11 +1154,12 @@ var Scene = (function(){
 
     function initCamera(x, y){
         var fov = 30
+        var aspect = window.innerWidth / window.innerHeight
         var near = 1
         var far = 1000
         var init_cam_pos = 30
-        Scene.camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, near, far);
-        Scene.camera.position.z = init_cam_pos; // for some reason you need this or track ball controls won't work properly
+        Scene.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+        Scene.camera.position.z = init_cam_pos
         Scene.camera.position.x = x
         Scene.camera.position.y = y
     }

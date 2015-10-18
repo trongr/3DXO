@@ -32,21 +32,19 @@ var Chat = module.exports = (function(){
     function onConnection(conn){
         H.log("INFO. Chat.onConnection", conn.id)
 
-        // mach another channel that lets client send its position and
-        // subscribe to chat in that neighbourhood
-        Sub.sub("chat", [0, 0], conn.id, function onChatMsgCallback(msg){
-            conn.write(msg);
-        })
-
+        // mach clean text before publishing to other clients
         // Receiving data from client
         conn.on('data', function(msg) {
             try {
                 var data = JSON.parse(msg)
-                var text = data.text
-                H.log("INFO. Chat", text)
-                // mach clean text before publishing to other clients
-                // mach other grids
-                Pub.chat({text:text, grid:[0,0]})
+                var chan = data.chan
+                if (chan == "sub"){
+                    subChat(conn.id, onChatMsgCallback, data)
+                } else if (chan == "pub"){
+                    pubChat(data)
+                } else {
+                    H.log("ERROR. Chat: unknown channel", data)
+                }
             } catch (e){
                 return H.log("ERROR. Chat.data:catch", msg)
             }
@@ -56,6 +54,26 @@ var Chat = module.exports = (function(){
             Sub.unsub("chat", conn.id)
             H.log("INFO. Chat.close", conn.id)
         })
+
+        function onChatMsgCallback(msg){
+            conn.write(msg);
+        }
+
+    }
+
+    // mach validate
+    function subChat(connID, onChatMsgCallback, data){
+        var zone = data.zone
+        H.log("INFO. Chat.subChat", zone, connID)
+        Sub.sub("chat", zone, connID, onChatMsgCallback)
+    }
+
+    // mach validate text and zone
+    function pubChat(data){
+        var text = data.text
+        var zone = data.zone
+        H.log("INFO. Chat.pubChat", zone, text)
+        Pub.chat({text:text, zone:zone})
     }
 
     return Chat

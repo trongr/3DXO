@@ -13,17 +13,17 @@ var Sub = module.exports = (function(){
     var _subscriber = redis.createClient();
     _subscriber.subscribe('chat');
 
-    // A grid's position is its lower left coordinate.  Each grid
+    // A zone's position is its lower left coordinate.  Each zone
     // stores onChatMsgCallback's keyed by connID's
-    var _grids = {
+    var _zones = {
         // "0,0": {connID:onChatMsgCallback}
     }
 
     _subscriber.on("message", function(chan, msg){
         try {
-            // mach loop through nearby grids too, centered at grid
+            // mach loop through nearby zones too, centered at zone
             var data = JSON.parse(msg)
-            var onChatMsgCallbacks = _grids[data.grid]
+            var onChatMsgCallbacks = _zones[data.zone]
             for (var connID in onChatMsgCallbacks){
                 if (onChatMsgCallbacks.hasOwnProperty(connID)){
                     onChatMsgCallbacks[connID](msg)
@@ -34,22 +34,22 @@ var Sub = module.exports = (function(){
         }
     });
 
-    Sub.sub = function(chan, grid, connID, onChatMsgCallback){
-        // mach validate grid so we don't create empty grid objs for
+    Sub.sub = function(chan, zone, connID, onChatMsgCallback){
+        // mach validate zone so we don't create empty zone objs for
         // no reason
         try {
-            _grids[grid] = _grids[grid] || {}
-            _grids[grid][connID] = onChatMsgCallback
-            H.log("INFO. Sub.sub", chan, grid, H.length(_grids[grid]), connID)
+            _zones[zone] = _zones[zone] || {}
+            _zones[zone][connID] = onChatMsgCallback
+            H.log("INFO. Sub.sub", chan, zone, H.length(_zones[zone]), connID)
         } catch (e){
-            H.log("ERROR. Sub.sub.catch", chan, grid, connID)
+            H.log("ERROR. Sub.sub.catch", chan, zone, connID)
         }
     }
 
     // Remove connID from all zones
     Sub.unsub = function(chan, connID){
-        // mach remove connID and its callback from _grids[zoneID]
-        // delete _grids[zoneID]
+        // mach remove connID and its callback from _zones[zoneID]
+        // delete _zones[zoneID]
         H.log("INFO. Sub.unsub:", connID)
     }
 

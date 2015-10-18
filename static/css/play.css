@@ -98,7 +98,6 @@ body {
 }
 
 #console_out_box {
-    margin: 0 0 5px 0;
     padding: 0 100px 0 0; /* 100px hides the scroll bar*/
     width: 100%;
     max-height: 400px;
@@ -108,7 +107,7 @@ body {
 
 #console_out_box .console_line_box {
     color: white;
-    margin: 10px 0 0 0;
+    margin: 5px 0 0 0;
     padding: 0 0 0 10px;
 }
 
@@ -123,22 +122,22 @@ body {
     font-size: 1em;
     word-wrap: break-word;
     width: 280px;
-    padding: 10px;
+    padding: 5px 10px 10px 10px;
     resize: none;
     border: none;
     outline: none; /* hides blue border around textarea in chrome */
 }
 
 .console_info {
-    color: #87FF89;
+    color: #A1FF9C;
 }
 
 .console_warning {
-    color: #FFFF78;
+    color: yellow;
 }
 
 .console_error {
-    color: #FF8787;
+    color: #FF2B2B;
 }
 
 /* end console css */
