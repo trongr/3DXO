@@ -29,7 +29,7 @@ var Sock = module.exports = (function(){
     // One connection from client to server. Multiple channels to
     // publish and subscribe to.
     function onConnection(conn){
-        H.log("INFO. Sock.onConnection.opening socket")
+        H.log("INFO. Sock.onConnection")
 
         // todo subscriber module
         // todo createClient needs remote redis server's location (port and ip)
@@ -51,10 +51,10 @@ var Sock = module.exports = (function(){
         client.subscribe('gameover');
         client.subscribe('defect');
 
-        // Server just published data to this channel, to be sent to
-        // client. Client has to check channel encoded in data
-        client.on("message", function(chan, data){
-            conn.write(data);
+        // Server just published to this channel, to be sent to
+        // client. Client has to check channel encoded in msg
+        client.on("message", function(chan, msg){
+            conn.write(msg);
         });
 
         // Receiving data from client

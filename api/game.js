@@ -582,13 +582,13 @@ var Game = module.exports = (function(){
                     try {
                         if (player.turn_tokens.length){ // for debugging
                             var enemyToken = player.turn_tokens[player.turn_index]
-                            H.log("INFO. Game.on.move live:" + enemyToken.live + " player:" + player.name + " enemy:" + enemyToken.player_name)
+                            H.log("INFO. Game.on.move", enemyToken.live, player.name, enemyToken.player_name)
                         }
                     } catch (e){
                         return done({info:"ERROR. Game.on.move: player.turn_index out of bounds", player:player})
                     }
-                    if (!player.alive) return done({info: "ERROR. You are dead"})
-                    if (!Turn.hasTurn(player)) return done({info: "ERROR. No more turn"})
+                    if (!player.alive) return done({info: "ERROR. You are dead."})
+                    if (!Turn.hasTurn(player)) return done({info: "ERROR. No more turn."})
                     done(null)
                 },
                 function(done){
@@ -678,7 +678,7 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    H.log("INFO. Game.on.turn player:" + player.name + " enemy:" + enemy.name)
+                    H.log("INFO. Game.on.turn", player.name, enemy.name)
                     if (player.alive && enemy.alive){
                         done(null)
                     } else {
@@ -724,7 +724,7 @@ var Game = module.exports = (function(){
             case Turn.code.early:
                 // TODO. Check how early the request was and
                 // send retry by that amount
-                H.log("INFO. Game.on.turn.to_new_turn player:" + player.name + " enemy:" + enemy.name)
+                H.log("INFO. Game.on.turn.to_new_turn", player.name, enemy.name)
                 // mach add to_turn_exp for enemy too, with Conf.turn_timeout_ext, and use Pub.to_turns
                 Pub.to_new_turn(player, enemy, Conf.turn_timeout_ext)
                 done({info: "ERROR. Can't request turn: too soon"})

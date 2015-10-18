@@ -1,3 +1,10 @@
+body {
+	margin: 0px;
+	overflow: hidden;
+    font-family: arial, helvetica, sans-serif;
+    font-size: 12px;
+}
+
 #info_box a {
     color: white;
 }
@@ -9,11 +16,9 @@
 #hud_box {
     color: white;
     margin: 0 0 10px 0;
-    opacity: 0.8;
     position: fixed;
     right: 0;
     bottom: 0;
-    font-family: arial;
 }
 
 #hud_turns {
@@ -29,27 +34,28 @@
 }
 
 #hud_turns .turn_box .player_turn {
-    background-color: transparent;
-    width: 10px;
-}
-
-#hud_turns .turn_box .player_turn.active_turn {
-    background-color: #00FF00;
     width: 10px;
 }
 
 #hud_turns .turn_box .player_name {
     padding: 10px 15px 10px 15px;
-    background-color: #779677;
-}
-
-#hud_turns .turn_box .player_name.ready_turn {
-    background-color: #41B81A;
+    background: rgba(96, 115, 96, 0.5);
+    color: white;
 }
 
 #hud_turns .turn_box .player_countdown {
     padding: 10px 15px 10px 15px;
-    background-color: #607360;
+    background: rgba(119, 150, 119, 0.5);
+    color: white;
+}
+
+#hud_turns .turn_box .ready_turn {
+    background: rgba(82, 219, 37, 0.5);
+}
+
+#hud_turns .turn_box .active_turn {
+    background: rgba(0, 255, 0, 0.5);
+    width: 10px;
 }
 
 /* end hud css */
@@ -63,7 +69,6 @@
 #menu_box {
     color: white;
     margin: 5px;
-    opacity: 0.8;
     position: fixed;
     right: 0;
     top: 0;
@@ -88,7 +93,7 @@
     left: 0;
     bottom: 0;
     width: 300px;
-    background: rgba(67, 78, 89, 0.5);
+    background: rgba(0, 34, 115, 0.3);
     overflow-x: hidden;
 }
 
@@ -103,7 +108,6 @@
 
 #console_out_box .console_line_box {
     color: white;
-    font-family: arial;
     margin: 10px 0 0 0;
     padding: 0 0 0 10px;
 }
@@ -115,7 +119,7 @@
 #console_in_box textarea#console_input {
     background-color: transparent;
     color: white;
-    font-family: arial;
+    font-family: arial, helvetica, sans-serif;
     font-size: 1em;
     word-wrap: break-word;
     width: 280px;
@@ -123,6 +127,18 @@
     resize: none;
     border: none;
     outline: none; /* hides blue border around textarea in chrome */
+}
+
+.console_info {
+    color: #87FF89;
+}
+
+.console_warning {
+    color: #FFFF78;
+}
+
+.console_error {
+    color: #FF8787;
 }
 
 /* end console css */

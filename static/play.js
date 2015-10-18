@@ -1,3 +1,9 @@
+// turn light.castShadow = true and move the directional light with
+// the camera
+
+// checker board pattern so you can see better... MAYBE
+// toggle hide hud
+
 // keyboard moving: e.g. b2ru3: second bishop right up 3, n4ur: fourth
 // knight up 2 right 1, n4ru: fourth knight right 2 up 1, etc.
 
@@ -48,9 +54,9 @@ var Menu = (function(){
     // todo let users start with a new army, but penalize restart.
     function new_game(){
         API.Game.buildArmy(_you._id, function(er, pieces){
-            if (er) msg.error(er)
+            if (er) Console.error(er)
             else {
-                msg.info("Building new army")
+                Console.info("Building new army")
                 window.location.href = "/play"
             }
         })
@@ -123,7 +129,7 @@ var Hud = (function(){
         } catch (e){
             return console.log("ERROR. Hud.highlightActiveTurn: activeTurnIndex out of bounds", activeTurnIndex, tokens)
         }
-        $("#hud_turns .player_turn.active_turn").removeClass("active_turn")
+        $("#hud_turns .active_turn").removeClass("active_turn")
         $("#" + activeTokenPlayerID + ".turn_box .player_turn").addClass("active_turn")
     }
 
@@ -134,9 +140,9 @@ var Hud = (function(){
             player_name += "..."
         }
         return "<div id='" + token.player + "' class='turn_box'>"
-            +     "<div class='player_countdown'></div>"
-            +     "<div class='player_name " + ready_turn + "'>" + player_name + "</div>"
             +     "<div class='player_turn'></div>"
+            +     "<div class='player_countdown " + ready_turn + "'></div>"
+            +     "<div class='player_name'>" + player_name + "</div>"
             +  "</div>"
     }
 
@@ -152,17 +158,47 @@ var Console = (function(){
         initHTML()
         alwaysFocus()
         autosize($("#console_input"))
+        helloConsole()
+    }
+
+    Console.print = function(text){
+        _console_out.append(console_line_box(text))
+        fixConsoleCSS()
+    }
+
+    Console.info = function(text){
+        Console.print("<span class='console_info'>" + text + "</span>")
+    }
+
+    Console.warn = function(text){
+        Console.print("<span class='console_warning'>" + text + "</span>")
+    }
+
+    Console.error = function(text){
+        Console.print("<span class='console_error'>" + text + "</span>")
+    }
+
+    function helloConsole(){
+        Console.print("Welcome to M.M.O.Chess!")
+        Console.print("<br>")
+        Console.print("HOW TO PLAY")
+        Console.print("1. Right mouse drag: navigate map.") // Make it mouse click navigate
+        Console.print('2. Left mouse click: move pieces.')
+        Console.print("3. The bottom right corner will indicate when you can move. " +
+                      "Type <code> /help turn </code> for more details on how " +
+                      "turns are determined.")
     }
 
     function initHTML(){
         var html = "<div id='console_box'>"
             +           "<div id='console_out_box'></div>"
             +           "<div id='console_in_box'>"
-            +               "<textarea id='console_input' rows='1' type='text' placeholder='chat or type /cmd'></textarea>"
+            +               "<textarea id='console_input' rows='1' type='text' placeholder='chat or type /help'></textarea>"
             +           "</div>"
             +      "</div>"
         $("body").append(html)
 
+        // Cache
         _console_in = $("#console_input")
         _console_out = $("#console_out_box")
 
@@ -181,19 +217,16 @@ var Console = (function(){
         }
     }
 
+    // mach
     function processConsoleInput(){
         var text = _console_in.val(); _console_in.val("")
         if (!text) return
-
-        _console_out.append(console_line_box(text))
-
-        fixConsoleCSS()
+        Chat.send(text)
     }
 
     function fixConsoleCSS(){
         var console_out_box = document.getElementById("console_out_box");
         console_out_box.scrollTop = console_out_box.scrollHeight;
-
         autosize.update($("#console_input"))
     }
 
@@ -294,7 +327,7 @@ var Turn = (function(){
     function startTimerForNewTurn(enemyID, timeout){
         var time = (timeout || Conf.turn_timeout) / 1000
         var interval = setInterval(function(){
-            $("#" + enemyID + " .player_countdown").html(H.s2mmss(time) + " til new turn")
+            $("#" + enemyID + " .player_countdown").html(H.s2mmss(time) + " til new turn against:")
             time--
             if (time < 0) clearTimerForNewTurn(enemyID)
         }, 1000);
@@ -340,14 +373,14 @@ var Sock = (function(){
             try {
                 var data = JSON.parse(re.data)
             } catch (e){
-                if (re) return msg.error(re.data)
-                else return msg.error("FATAL ERROR. Server socket response")
+                if (re) return Console.error(re.data)
+                else return Console.error("FATAL ERROR. Server socket response")
             }
             Game.on[data.chan](data)
         };
 
         _sock.onclose = function() {
-            msg.warning("Losing socket connection. Retrying in 5s...")
+            Console.warn("Losing socket connection. Retrying in 5s...")
             setTimeout(function(){
                 Sock.init()
             }, 5000)
@@ -378,25 +411,24 @@ var Chat = (function(){
         _chat.onmessage = function(re){
             try {
                 var data = JSON.parse(re.data)
+                var text = data.text
+                Console.print(text)
             } catch (e){
-                if (re) return msg.error(re.data)
-                else return msg.error("FATAL ERROR. Server socket response")
+                if (re) Console.error(re.data)
+                else Console.error("FATAL ERROR. Server socket response")
             }
-            // Game.on[data.chan](data)
-            console.log("chat msg", JSON.stringify(data, 0, 2))
         };
 
         _chat.onclose = function() {
-            msg.warning("Losing chat connection. Retrying in 5s...")
+            Console.warn("Losing chat connection. Retrying in 5s...")
             setTimeout(function(){
                 Chat.init()
             }, 5000)
         };
     }
 
-    Chat.send = function(chan, data){
-        data.chan = chan
-        _chat.send(JSON.stringify(data))
+    Chat.send = function(text){
+        _chat.send(JSON.stringify({text:text}))
     }
 
     return Chat
@@ -487,9 +519,9 @@ var Highlight = (function(){
     var Highlight = {}
 
     var HIGHLIGHT_MATERIALS = {
-        red: new THREE.MeshLambertMaterial({color:0xFF4D4D, shading:THREE.FlatShading, opacity:0.8, transparent:true}),
+        red: new THREE.MeshLambertMaterial({color:0xFF4D4D, shading:THREE.FlatShading, opacity:0.7, transparent:true}),
         // green: new THREE.MeshLambertMaterial({color:0x00ff00, shading:THREE.FlatShading, opacity:0.5, transparent:true}),
-        green: new THREE.MeshLambertMaterial({color:0x66FF66, shading:THREE.FlatShading, opacity:0.7, transparent:true}),
+        green: new THREE.MeshLambertMaterial({color:0x66FF66, shading:THREE.FlatShading, opacity:0.5, transparent:true}),
     }
     var HIGHLIGHT_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, 0.01)
 
@@ -749,8 +781,9 @@ var Map = (function(){
     Map.loadQuadrants = function(x, y){
         var S = Conf.quadrant_size
         // also load the 8 neighbouring quadrants to x, y
-        for (var i = -2; i <= 2; i++){
-            for (var j = -2; j <= 2; j++){
+        var N = 4
+        for (var i = -N; i <= N; i++){
+            for (var j = -N; j <= N; j++){
                 var X = Math.floor((x + i * S) / S) * S
                 var Y = Math.floor((y + j * S) / S) * S
 
@@ -759,7 +792,7 @@ var Map = (function(){
 
                 Map.loadQuadrant(X, Y)
                 Obj.loadQuadrant(X, Y, function(er){
-                    if (er) msg.error(er)
+                    if (er) Console.error(er)
                 })
             }
         }
@@ -775,7 +808,7 @@ var Map = (function(){
 			geometry.vertices.push(new THREE.Vector3(X + 0, Y + i, 1));
 			geometry.vertices.push(new THREE.Vector3(X + S, Y + i, 1));
 		}
-		var material = new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.2, transparent: true } );
+		var material = new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.5, transparent: true } );
 		var line = new THREE.Line( geometry, material, THREE.LinePieces );
 
         Scene.add(line);
@@ -786,15 +819,15 @@ var Map = (function(){
         geometry.vertices.push(new THREE.Vector3(X + 0, Y + S, 1));
         geometry.vertices.push(new THREE.Vector3(X + S, Y + S, 1));
         geometry.vertices.push(new THREE.Vector3(X + S, Y + 0, 1));
-        material = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.2, transparent:true});
+        material = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.8, transparent:true});
         line = new THREE.Line( geometry, material, THREE.LineStrip );
 
         Scene.add(line);
 
-        // todo. checker board pattern so you can see better
         geometry = new THREE.PlaneBufferGeometry(S, S);
-        material = new THREE.MeshBasicMaterial({color:0x7B84A8});
-        // material = new THREE.MeshBasicMaterial({color:0x7B84A8, transparent:true, opacity:0.5});
+        // mach
+        // material = new THREE.MeshBasicMaterial({color:0x7B84A8});
+        material = new THREE.MeshBasicMaterial({color:0x7B84A8, transparent:true, opacity:0.9});
 		plane = new THREE.Mesh(geometry, material);
 		plane.visible = true;
         plane.receiveShadow = true;
@@ -1029,8 +1062,6 @@ var Info = (function(){
         info.style.top = '5px';
         info.style.left = "10px";
         info.innerHTML = '<a href="/">M.M.O.Chess</a><br>'
-            + "Right mouse drag: navigate<br>"
-            + 'Left mouse click: move<br>'
         document.body.appendChild(info)
     }
 
@@ -1043,7 +1074,7 @@ var Controls = (function(){
     var _controls = null
 
     Controls.init = function(x, y){
-        _controls = new THREE.TrackballControls(Scene.camera, document);
+        _controls = new THREE.TrackballControls(Scene.camera, document, Scene.container);
         _controls.target = new THREE.Vector3(x, y, 0)
         _controls.rotateSpeed = 2.5;
         _controls.zoomSpeed = 1.5;
@@ -1122,18 +1153,44 @@ var Scene = (function(){
         Scene.camera.position.y = y
     }
 
-    function initLights(){
-        var ambientLight = new THREE.AmbientLight(0xB080D1);
-        Scene.add(ambientLight);
-        Scene.add(createDirectionalLight(0, 0, 20));
-    }
-
     function initRenderer(){
         Scene.renderer = new THREE.WebGLRenderer( { antialias:false, alpha:true } );
         Scene.renderer.setClearColor(0x02002B, 1);
         Scene.renderer.setPixelRatio( window.devicePixelRatio );
         Scene.renderer.setSize( window.innerWidth, window.innerHeight );
+        Scene.renderer.shadowMapEnabled = true
+        Scene.renderer.shadowMapSoft = true
+        Scene.renderer.shadowMapType = THREE.PCFSoftShadowMap
         Scene.container.appendChild( Scene.renderer.domElement );
+    }
+
+    function initLights(){
+        var ambientLight = new THREE.AmbientLight(0xB080D1);
+        Scene.add(ambientLight);
+        Scene.add(createDirectionalLight(-20, 40, 50));
+    }
+
+    function createDirectionalLight(x, y, z){
+        var d = 10;
+        var s = 1024;
+        var light = new THREE.DirectionalLight(0xFFFB87);
+        light.position.set(x, y, z);
+        light.intensity = 0.75;
+
+        // light.castShadow = true
+
+        light.shadowCameraLeft = -d;
+        light.shadowCameraRight = d;
+        light.shadowCameraTop = d;
+        light.shadowCameraBottom = -d;
+
+        light.shadowMapWidth = s
+        light.shadowMapHeight = s
+
+        light.shadowCameraFar = 100;
+        light.shadowDarkness = 0.1;
+
+        return light
     }
 
     function animate() {
@@ -1146,15 +1203,8 @@ var Scene = (function(){
         try {
             Scene.renderer.render(_scene, Scene.camera);
         } catch (e){
-            msg.warning("Renderer not ready", 2)
+            Console.warn("Renderer not ready", 2)
         }
-    }
-
-    function createDirectionalLight(x, y, z){
-        var light = new THREE.DirectionalLight(0xFFFB87);
-        light.position.set(x, y, z);
-        light.intensity = 0.75;
-        return light
     }
 
     Scene.refresh = function(){
@@ -1210,7 +1260,7 @@ var Game = (function(){
                 Events.init()
             },
         ], function(er){
-            if (er) msg.error(er)
+            if (er) Console.error(er)
         })
     }
 
@@ -1222,7 +1272,7 @@ var Game = (function(){
         async.waterfall([
             function(done){
                 if (Move.isValidated(x, y, z)) done(null)
-                else done({code:"INVALID MOVE"})
+                else done({code:"ERROR. Invalid move."})
             },
             function(done){
                 done(null)
@@ -1235,7 +1285,7 @@ var Game = (function(){
                 })
             },
         ], function(er){
-            if (er && er.code) msg.error(er.code)
+            if (er && er.code) Console.error(er.code)
             Obj.highlight(Select.getSelected(), false)
             Highlight.hideAllHighlights()
             Scene.render()
@@ -1249,7 +1299,7 @@ var Game = (function(){
         on.error = function(data){
             var you = Player.getPlayer()
             if (isYourSock(you, data)){
-                msg.error(data.info || data.error) // TODO. Should stick with .info
+                Console.error(data.info || data.error) // TODO. Should stick with .info
                 console.log("ERROR. Game.on.error", JSON.stringify(data, 0, 2))
             }
         }
@@ -1310,9 +1360,9 @@ var Game = (function(){
             var you = Player.getPlayer()
             var you_win = data.you_win
             if (isYourSock(you, data) && you_win){
-                msg.info("YOU WIN!")
+                Console.info("YOU WIN!")
             } else if (isYourSock(you, data)){
-                msg.error("GAME OVER")
+                Console.error("GAME OVER")
             }
         }
 

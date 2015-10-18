@@ -2,6 +2,7 @@ var sockjs  = require('sockjs');
 var redis   = require('redis');
 var H = require("./lib/h.js")
 var Sub = require("./api/sub.js")
+var Pub = require("./api/pub.js")
 
 var Chat = module.exports = (function(){
     var Chat = {}
@@ -29,27 +30,31 @@ var Chat = module.exports = (function(){
     // One connection from client to server. Multiple channels to
     // publish and subscribe to.
     function onConnection(conn){
-        H.log("INFO. Chat.onConnection.opening socket")
+        H.log("INFO. Chat.onConnection", conn.id)
 
-        // conn subscribing to msg channel
-        // mach distinguish diff conns e.g. by playerID
-        Sub.sub("msg", "connID", function onMsg(data){
-            console.log("chat getting data from sub:", JSON.stringify(data, 0, 2))
-            conn.write(data);
+        // mach another channel that lets client send its position and
+        // subscribe to chat in that neighbourhood
+        Sub.sub("chat", [0, 0], conn.id, function onChatMsgCallback(msg){
+            conn.write(msg);
         })
 
         // Receiving data from client
         conn.on('data', function(msg) {
             try {
                 var data = JSON.parse(msg)
-                console.log("chat getting data from client", JSON.stringify(data, 0, 2))
+                var text = data.text
+                H.log("INFO. Chat", text)
+                // mach clean text before publishing to other clients
+                // mach other grids
+                Pub.chat({text:text, grid:[0,0]})
             } catch (e){
                 return H.log("ERROR. Chat.data:catch", msg)
             }
         });
 
         conn.on("close", function(){
-            H.log("INFO. Chat.close")
+            Sub.unsub("chat", conn.id)
+            H.log("INFO. Chat.close", conn.id)
         })
     }
 

@@ -5,13 +5,17 @@
  * @author Luca Antiga 	/ http://lantiga.github.io
  */
 
-THREE.TrackballControls = function ( object, domElement ) {
+// NOTE. Attach zoom control on zoom_domElement, and other controls
+// (rotate, pan) on domElement. Need a separate domElement cause
+// sometimes you wanna scroll on something other than the game dom
+THREE.TrackballControls = function ( object, domElement, zoom_domElement ) {
 
 	var _this = this;
 	var STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_ZOOM_PAN: 4 };
 
 	this.object = object;
 	this.domElement = ( domElement !== undefined ) ? domElement : document;
+	this.zoom_domElement = ( zoom_domElement !== undefined ) ? zoom_domElement : this.domElement;
 
 	// API
 
@@ -587,8 +591,8 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 	this.domElement.addEventListener( 'mousedown', mousedown, false );
 
-	this.domElement.addEventListener( 'mousewheel', mousewheel, false );
-	this.domElement.addEventListener( 'DOMMouseScroll', mousewheel, false ); // firefox
+	this.zoom_domElement.addEventListener( 'mousewheel', mousewheel, false );
+	this.zoom_domElement.addEventListener( 'DOMMouseScroll', mousewheel, false ); // firefox
 
 	this.domElement.addEventListener( 'touchstart', touchstart, false );
 	this.domElement.addEventListener( 'touchend', touchend, false );

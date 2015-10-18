@@ -14,6 +14,10 @@ var Pub = module.exports = (function(){
         _publisher.publish(chan, JSON.stringify(data))
     }
 
+    Pub.chat = function(data){
+        Pub.publish("chat", data)
+    }
+
     Pub.error = function(playerID, info){
         Pub.publish("error", {
             playerID: playerID,
@@ -44,8 +48,8 @@ var Pub = module.exports = (function(){
     }
 
     Pub.to_turns = function(player, enemy){
-        H.log("INFO. Pub.to_new_turn player:" + player.name + " enemy:" + enemy.name)
-        H.log("INFO. Pub.to_turn_exp player:" + enemy.name + " enemy:" + player.name)
+        H.log("INFO. Pub.to_new_turn", player.name, enemy.name)
+        H.log("INFO. Pub.to_turn_exp", enemy.name, player.name)
         Pub.to_new_turn(player, enemy, Conf.turn_timeout)
         Pub.to_turn_exp(enemy, player)
     }

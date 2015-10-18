@@ -10,39 +10,47 @@ var Sub = module.exports = (function(){
     // todo can use psubscribe and punsubscribe with pattern:
     // https://github.com/NodeRedis/node_redis
     // http://redis.io/commands/PSUBSCRIBE
-    var sub = redis.createClient();
-    sub.subscribe('error');
-    sub.subscribe('msg');
+    var _subscriber = redis.createClient();
+    _subscriber.subscribe('chat');
 
-    var conns = {} // stores onMsg callbacks by connID
+    // A grid's position is its lower left coordinate.  Each grid
+    // stores onChatMsgCallback's keyed by connID's
+    var _grids = {
+        // "0,0": {connID:onChatMsgCallback}
+    }
 
-    // Server just published data to this channel, to be sent to
-    // client. Client has to check channel encoded in data
-    sub.on("message", function(chan, data){
-        // mach. check data and see who (which conn) it's for, and
-        // call the corresponding onMsg callback
-        console.log("sub: on msg on chan:", chan, "data:", data)
-        // mach refactor this connID
+    _subscriber.on("message", function(chan, msg){
         try {
-            var connID = data.connID
-            conns[connID](data)
+            // mach loop through nearby grids too, centered at grid
+            var data = JSON.parse(msg)
+            var onChatMsgCallbacks = _grids[data.grid]
+            for (var connID in onChatMsgCallbacks){
+                if (onChatMsgCallbacks.hasOwnProperty(connID)){
+                    onChatMsgCallbacks[connID](msg)
+                }
+            }
         } catch (e){
-            H.log("ERROR. Sub.onMsg.catch", chan, data)
+            H.log("ERROR. Sub.on.message.catch", chan, msg)
         }
     });
 
-    // mach this method should take an ID of some kind to distinguish
-    // diff conns / clients
-    Sub.sub = function(chan, connID, onMsg){
-        // mach add onMsg
-        console.log("sub: subscribing to:" + chan)
-        conns[connID] = onMsg
+    Sub.sub = function(chan, grid, connID, onChatMsgCallback){
+        // mach validate grid so we don't create empty grid objs for
+        // no reason
+        try {
+            _grids[grid] = _grids[grid] || {}
+            _grids[grid][connID] = onChatMsgCallback
+            H.log("INFO. Sub.sub", chan, grid, H.length(_grids[grid]), connID)
+        } catch (e){
+            H.log("ERROR. Sub.sub.catch", chan, grid, connID)
+        }
     }
 
-    // mach check
+    // Remove connID from all zones
     Sub.unsub = function(chan, connID){
-        conns[connID] = null
-        console.log("sub.removing conn:", connID, conns)
+        // mach remove connID and its callback from _grids[zoneID]
+        // delete _grids[zoneID]
+        H.log("INFO. Sub.unsub:", connID)
     }
 
     return Sub
