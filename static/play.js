@@ -221,8 +221,7 @@ var Console = (function(){
     function processConsoleInput(){
         var text = _console_in.val(); _console_in.val("")
         if (!text) return
-        var zone = [0, 0]
-        Chat.pub(zone, text)
+        Chat.pub(text)
     }
 
     function fixConsoleCSS(){
@@ -403,14 +402,13 @@ var Chat = (function(){
     var _chat = null
     var _socketAutoReconnectTimeout = null
 
-    Chat.init = function(){
+    Chat.init = function(x, y){
         _chat = new SockJS('http://localhost:8080/chat');
 
         _chat.onopen = function() {
             Console.info("INFO. Connected to chat.")
             clearTimeout(_socketAutoReconnectTimeout)
-            var zone = [0, 0]
-            Chat.sub(zone)
+            Map.sub(x, y)
         };
 
         _chat.onmessage = function(re){
@@ -427,7 +425,8 @@ var Chat = (function(){
         _chat.onclose = function() {
             Console.warn("WARNING. Lost chat connection. Retrying in 5s.")
             setTimeout(function(){
-                Chat.init()
+                // mach get x and y from current map x y
+                Chat.init(x, y)
             }, 5000)
         };
     }
@@ -436,8 +435,9 @@ var Chat = (function(){
         _chat.send(JSON.stringify({chan:"sub", zone:zone}))
     }
 
-    Chat.pub = function(zone, text){
-        // mach
+    // mach get zone from Zone
+    Chat.pub = function(text){
+        var zone = [0, 0]
         _chat.send(JSON.stringify({chan:"pub", zone:zone, text:text}))
     }
 
@@ -657,7 +657,7 @@ var Obj = (function(){
         }
     }
 
-    Obj.loadQuadrant = function(x, y, done){
+    Obj.loadZone = function(x, y, done){
         API.Pieces.get({x:x, y:y, r:10}, function(er, _pieces){
             if (er && done) return done(er)
             Game.loadPieces(_pieces)
@@ -751,12 +751,13 @@ var Map = (function(){
 
     Map.init = function(x, y){
         _map = []
-        Map.addMouseDragListener(function(){
+        Map.addMouseDragListener(function scrollHandler(){
             var X = Scene.camera.position.x
             var Y = Scene.camera.position.y
-            Map.loadQuadrants(X, Y)
+            Map.loadZones(X, Y)
+            Map.sub(X, Y)
         })
-        Map.loadQuadrants(x, y) // load map wherever player spawns
+        Map.loadZones(x, y) // load map wherever player spawns
     }
 
     // obj = {x:asdf, y:asdf, z:asdf}
@@ -768,7 +769,7 @@ var Map = (function(){
         return _map
     }
 
-    Map.addMouseDragListener = function(handler){
+    Map.addMouseDragListener = function(scrollHandler){
         var isDragging = false;
         $(document).mousedown(function(){
             isDragging = false;
@@ -778,39 +779,39 @@ var Map = (function(){
             var wasDragging = isDragging;
             isDragging = false;
             if (wasDragging) {
-                handler()
+                scrollHandler()
             }
         });
     }
 
     // keys are string representations of arrays, e.g. a[[1,2]] ==
     // "asdf" means a = {"1,2":"asdf"}
-    Map.knownQuadrants = {}
+    Map.knownZones = {}
 
     // x and y are real game coordinates
-    Map.loadQuadrants = function(x, y){
-        var S = Conf.quadrant_size
-        // also load the 8 neighbouring quadrants to x, y
-        var N = 4
+    Map.loadZones = function(x, y){
+        var S = Conf.zone_size
+        // also load the 8 neighbouring zones to x, y
+        var N = 1
         for (var i = -N; i <= N; i++){
             for (var j = -N; j <= N; j++){
-                var X = Math.floor((x + i * S) / S) * S
-                var Y = Math.floor((y + j * S) / S) * S
+                var X = toZoneCoordinate(x + i * S)
+                var Y = toZoneCoordinate(y + j * S)
 
-                if (Map.knownQuadrants[[X, Y]]) continue // Check if we already rendered this quadrant
-                else Map.knownQuadrants[[X, Y]] = true
+                if (Map.knownZones[[X, Y]]) continue // Check if we already rendered this zone
+                else Map.knownZones[[X, Y]] = true
 
-                Map.loadQuadrant(X, Y)
-                Obj.loadQuadrant(X, Y, function(er){
+                Map.loadZone(X, Y)
+                Obj.loadZone(X, Y, function(er){
                     if (er) Console.error(er)
                 })
             }
         }
     }
 
-    // X and Y are game units rounded to nearest multiple of quadrant_size
-    Map.loadQuadrant = function(X, Y){
-        var S = Conf.quadrant_size
+    // X and Y are game units rounded to nearest multiple of zone_size
+    Map.loadZone = function(X, Y){
+        var S = Conf.zone_size
 		var geometry = new THREE.Geometry();
 		for ( var i = 0; i < S; i++){
 			geometry.vertices.push(new THREE.Vector3(X + i, Y + 0, 1));
@@ -846,6 +847,18 @@ var Map = (function(){
         Game.addObj(plane)
 
         Scene.render()
+    }
+
+    // mach cache coordinates
+    Map.sub = function(x, y){
+        var X = toZoneCoordinate(x)
+        var Y = toZoneCoordinate(y)
+        var zone = [X, Y]
+        Chat.sub(zone)
+    }
+
+    function toZoneCoordinate(x){
+        return Math.floor(x / Conf.zone_size) * Conf.zone_size
     }
 
     return Map
@@ -1067,10 +1080,6 @@ var Info = (function(){
     Info.init = function(){
         var info = document.createElement('div');
         info.setAttribute("id", "info_box")
-        info.style.color = "white"
-        info.style.position = 'absolute';
-        info.style.top = '5px';
-        info.style.left = "10px";
         info.innerHTML = '<a href="/">M.M.O.Chess</a><br>'
         document.body.appendChild(info)
     }
@@ -1232,6 +1241,9 @@ var Scene = (function(){
 var Game = (function(){
     var Game = {}
 
+    // mach add this to conf.json and use it in players.js
+    var ERROR_GET_PLAYER_CODE = 404
+
     Game.init = function(done){
         var player, king = null
         var x = y = 0
@@ -1259,7 +1271,7 @@ var Game = (function(){
                 }
                 Info.init()
                 Sock.init()
-                Chat.init()
+                Chat.init(x, y)
                 Scene.init(x, y)
                 Obj.init()
                 Map.init(x, y)
@@ -1271,7 +1283,9 @@ var Game = (function(){
                 Events.init()
             },
         ], function(er){
-            if (er) Console.error(er)
+            if (er == ERROR_GET_PLAYER_CODE){
+                window.location.href = "/"
+            } else if (er) Console.error(er)
         })
     }
 
@@ -1283,7 +1297,7 @@ var Game = (function(){
         async.waterfall([
             function(done){
                 if (Move.isValidated(x, y, z)) done(null)
-                else done({code:"ERROR. Invalid move."})
+                else done("ERROR. Invalid move.")
             },
             function(done){
                 done(null)
@@ -1296,7 +1310,6 @@ var Game = (function(){
                 })
             },
         ], function(er){
-            if (er && er.code) Console.error(er.code)
             Obj.highlight(Select.getSelected(), false)
             Highlight.hideAllHighlights()
             Scene.render()
@@ -1315,7 +1328,7 @@ var Game = (function(){
             }
         }
 
-        // todo load quadrant where the new pieces are, segmenting, etc.
+        // todo load zone where the new pieces are, segmenting, etc.
         on.new_army = function(data){
             Game.loadPieces(data.pieces)
             Scene.render()

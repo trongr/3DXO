@@ -34,10 +34,10 @@ var Sub = module.exports = (function(){
         }
     });
 
-    Sub.sub = function(chan, zone, connID, onChatMsgCallback){
-        // mach validate zone so we don't create empty zone objs for
-        // no reason
+    Sub.sub = function(chan, connID, data, onChatMsgCallback){
+        // mach validate zone and round down
         try {
+            var zone = data.zone
             _zones[zone] = _zones[zone] || {}
             _zones[zone][connID] = onChatMsgCallback
             H.log("INFO. Sub.sub", chan, zone, H.length(_zones[zone]), connID)
@@ -50,7 +50,7 @@ var Sub = module.exports = (function(){
     Sub.unsub = function(chan, connID){
         // mach remove connID and its callback from _zones[zoneID]
         // delete _zones[zoneID]
-        H.log("INFO. Sub.unsub:", connID)
+        H.log("INFO. Sub.unsub:", chan, connID)
     }
 
     return Sub

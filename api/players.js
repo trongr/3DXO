@@ -9,7 +9,7 @@ var Players = module.exports = (function(){
         router: express.Router()
     }
 
-    var ERROR_GET_PLAYER = "ERROR. Can't get player info"
+    var ERROR_GET_PLAYER_CODE = 404
 
     Players.router.route("/")
         .get(function(req, res){
@@ -18,7 +18,8 @@ var Players = module.exports = (function(){
                 var name = H.param(req, "name") || req.session.player.name
                 var player, king = null
             } catch (e){
-                return res.send({info:ERROR_GET_PLAYER})
+                H.log("ERROR. Players.get: invalid data", req.query, req.session)
+                return res.send({info:ERROR_GET_PLAYER_CODE})
             }
             async.waterfall([
                 function(done){
@@ -43,7 +44,8 @@ var Players = module.exports = (function(){
                 if (player){
                     res.send({ok:true, player:player, king:king})
                 } else {
-                    res.send({info:ERROR_GET_PLAYER})
+                    H.log("ERROR. Players.get", name)
+                    res.send({info:ERROR_GET_PLAYER_CODE})
                 }
             })
         })

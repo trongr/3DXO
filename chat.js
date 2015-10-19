@@ -38,10 +38,11 @@ var Chat = module.exports = (function(){
             try {
                 var data = JSON.parse(msg)
                 var chan = data.chan
+                // mach clean text and validate zone
                 if (chan == "sub"){
-                    subChat(conn.id, onChatMsgCallback, data)
+                    Sub.sub("chat", conn.id, data, onChatMsgCallback)
                 } else if (chan == "pub"){
-                    pubChat(data)
+                    Pub.chat(data)
                 } else {
                     H.log("ERROR. Chat: unknown channel", data)
                 }
@@ -59,21 +60,6 @@ var Chat = module.exports = (function(){
             conn.write(msg);
         }
 
-    }
-
-    // mach validate
-    function subChat(connID, onChatMsgCallback, data){
-        var zone = data.zone
-        H.log("INFO. Chat.subChat", zone, connID)
-        Sub.sub("chat", zone, connID, onChatMsgCallback)
-    }
-
-    // mach validate text and zone
-    function pubChat(data){
-        var text = data.text
-        var zone = data.zone
-        H.log("INFO. Chat.pubChat", zone, text)
-        Pub.chat({text:text, zone:zone})
     }
 
     return Chat

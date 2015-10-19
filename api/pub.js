@@ -15,6 +15,7 @@ var Pub = module.exports = (function(){
     }
 
     Pub.chat = function(data){
+        H.log("INFO. Chat.pubChat", data.zone, data.text)
         Pub.publish("chat", data)
     }
 

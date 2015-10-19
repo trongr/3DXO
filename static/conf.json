@@ -1,7 +1,7 @@
 {
     "turn_timeout": 30000,
     "turn_timeout_ext": 2000,
-    "quadrant_size": 4,
+    "zone_size": 4,
     "code": {
         "turn": {
             "gameover": {

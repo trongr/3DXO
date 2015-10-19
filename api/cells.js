@@ -15,11 +15,11 @@ var Cells = module.exports = (function(){
     Cells.router.route("/:x/:y/:r")
         .get(function(req, res){
             try {
-                var S = Conf.quadrant_size
+                var S = Conf.zone_size
                 var x = Math.floor(Sanitize.integer(H.param(req, "x")) / S) * S
                 var y = Math.floor(Sanitize.integer(H.param(req, "y")) / S) * S
                 // var r = Sanitize.integer(H.param(req, "r"))
-                var r = S // use default quadrant size
+                var r = S // use default zone size
             } catch (e){
                 return res.send({info:ERROR_GET_CELLS})
             }

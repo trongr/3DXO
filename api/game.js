@@ -377,7 +377,7 @@ var Game = module.exports = (function(){
     ];
 
     Game.buildArmy = function(playerID, done){
-        var player, quadrant = null
+        var player, zone = null
         var pieces = []
         async.waterfall([
             function(done){
@@ -397,13 +397,13 @@ var Game = module.exports = (function(){
                 })
             },
             function(done){
-                Game.findEmptyQuadrant(function(er, _quadrant){
-                    quadrant = _quadrant
+                Game.findEmptyZone(function(er, _zone){
+                    zone = _zone
                     done(er)
                 })
             },
             function(done){
-                var army = generateArmy(player, quadrant)
+                var army = generateArmy(player, zone)
                 async.each(army, function(item, done){
                     Game.makePiece(item, function(er, piece){
                         if (piece){
@@ -422,7 +422,7 @@ var Game = module.exports = (function(){
         })
     }
 
-    function generateArmy(player, quadrant){
+    function generateArmy(player, zone){
         var army = []
         for (var i = 0; i < ARMY_CONFIG.length; i++){
             for (var j = 0; j < ARMY_CONFIG.length; j++){
@@ -430,8 +430,8 @@ var Game = module.exports = (function(){
                 if (p != LETTER_PIECES[0]){
                     army.push({
                         kind: LETTER_PIECES[p],
-                        x: quadrant.x + j,
-                        y: quadrant.y + i,
+                        x: zone.x + j,
+                        y: zone.y + i,
                         player: player
                     })
                 }
@@ -453,8 +453,8 @@ var Game = module.exports = (function(){
     }
 
     // todo. binary search
-    Game.findEmptyQuadrant = function(done){
-        var pos, piece, quadrant = null
+    Game.findEmptyZone = function(done){
+        var pos, piece, zone = null
         var direction = randomDirection()
         async.waterfall([
             function(done){
@@ -465,31 +465,31 @@ var Game = module.exports = (function(){
             },
             function(done){
                 if (!piece){
-                    quadrant = {x:0, y:0}
+                    zone = {x:0, y:0}
                     return done(null)
                 }
-                Game.doWhilstCheckNeighbourQuadrantEmpty(piece, direction, function(er, _quadrant){
-                    quadrant = _quadrant
+                Game.doWhilstCheckNeighbourZoneEmpty(piece, direction, function(er, _zone){
+                    zone = _zone
                     done(er)
                 })
             },
         ], function(er){
-            done(er, quadrant)
+            done(er, zone)
         })
     }
 
     // todo limit so we don't get infinite loop?
     // direction = {dx:+-1, dy:+-1}
-    // returns quadrant = {x:x, y:y}
-    Game.doWhilstCheckNeighbourQuadrantEmpty = function(piece, direction, done){
+    // returns zone = {x:x, y:y}
+    Game.doWhilstCheckNeighbourZoneEmpty = function(piece, direction, done){
         var count = 0
         var cells = null
         var nPiece = piece
         var x, y
         async.doWhilst(
             function(done){
-                var S = Conf.quadrant_size
-                x = Math.floor(nPiece.x / S) * S + direction.dx * S // quadrant coordinates
+                var S = Conf.zone_size
+                x = Math.floor(nPiece.x / S) * S + direction.dx * S // zone coordinates
                 y = Math.floor(nPiece.y / S) * S + direction.dy * S
                 Cell.find({
                     x: {$gte: x, $lt: x + S},
@@ -501,13 +501,13 @@ var Game = module.exports = (function(){
                 });
             },
             function(){
-                H.log("INFO. Game.quadrantSearch count:", count)
+                H.log("INFO. Game.zoneSearch count:", count)
                 count++ // todo make sure this doesn't blow up
                 if (cells && cells.length == 0){
-                    return false // found empty quadrant
+                    return false // found empty zone
                 } else {
                     nPiece = cells[0].piece
-                    return true // quadrant not empty, continue
+                    return true // zone not empty, continue
                 }
             },
             function(er){
