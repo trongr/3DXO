@@ -5,17 +5,6 @@ body {
     font-size: 12px;
 }
 
-#info_box {
-    margin: 5px;
-    position: fixed;
-    top: 0;
-    left: 0;
-}
-
-#info_box a {
-    color: white;
-}
-
 /* begin hud css */
 /* begin hud css */
 /* begin hud css */
@@ -83,6 +72,7 @@ body {
 
 #menu_box a {
     color: white;
+    margin: 5px;
 }
 
 /* end menu css */
@@ -94,45 +84,56 @@ body {
 /* begin console css */
 
 #console_box {
-    margin: 0 0 10px 0;
-    padding: 5px;
     position: absolute;
+    top: 10px;
     left: 0;
-    bottom: 0;
+    bottom: 50px; /* see #console_in_box height and bottom */
     width: 300px;
     background: rgba(0, 34, 115, 0.3);
-    overflow-x: hidden;
+    overflow: hidden;
+    padding: 0 0 20px 10px;
+    color: white;
 }
 
 #console_out_box {
-    padding: 0 100px 0 0; /* 100px hides the scroll bar*/
     width: 100%;
-    max-height: 400px;
+    height: 100%;
     overflow-y: scroll;
     word-wrap: break-word;
+    padding-right: 300px;
 }
 
 #console_out_box .console_line_box {
-    color: white;
-    margin: 5px 0 0 0;
-    padding: 0 0 0 10px;
+    width: 100%;
+    margin-top: 5px;
 }
 
 #console_in_box {
-
+    position: absolute;
+    left: 0;
+    bottom: 10px;
+    height: 40px; /* see #console_box bottom */
+    width: 300px;
+    background: rgba(0, 34, 115, 0.3);
+    overflow: hidden;
+    padding: 0 0 0 10px;
 }
 
-#console_in_box textarea#console_input {
+#console_input {
     background-color: transparent;
     color: white;
     font-family: arial, helvetica, sans-serif;
     font-size: 1em;
+    font-weight: bold;
     word-wrap: break-word;
-    width: 280px;
-    padding: 5px 10px 10px 10px;
     resize: none;
     border: none;
     outline: none; /* hides blue border around textarea in chrome */
+    width: 300px;
+    height: 100%;
+    position: absolute;
+    bottom: 0;
+    padding: 0 300px 0 0;
 }
 
 .console_info {

@@ -1,3 +1,9 @@
+// when you load an army, also load the zone onto the client, otw when
+// the client moves to an unloaded zone, it will load the zone and
+// another duplicate copy (lol) of the same army
+
+// change ground opacity depending on the time of day. implement a world clock
+
 // turn light.castShadow = true and move the directional light with
 // the camera
 
@@ -45,7 +51,8 @@ var Menu = (function(){
     Menu.init = function(you){
         _you = you
         var html = "<div id='menu_box'>"
-            +           "<a id='new_game' href='#'>New Game</a>"
+            +           "<a href='/'>HOME</a>"
+            +           "<a id='new_game' href='#'>NEW</a>"
             +      "</div>"
         $("body").append(html)
         $("#new_game").on("click", new_game)
@@ -156,8 +163,6 @@ var Console = (function(){
 
     Console.init = function(){
         initHTML()
-        alwaysFocus()
-        autosize($("#console_input"))
         helloConsole()
     }
 
@@ -178,23 +183,31 @@ var Console = (function(){
         Console.print("<span class='console_error'>" + text + "</span>")
     }
 
+    // mach
     function helloConsole(){
-        Console.print("Welcome to M.M.O.Chess!")
-        Console.print("<br>")
-        Console.print("HOW TO PLAY")
-        Console.print("1. Right mouse drag: navigate map.") // Make it mouse click navigate
-        Console.print('2. Left mouse click: move pieces.')
-        Console.print("3. The bottom right corner will signal when you can move. " +
-                      "Type <code> /help turn </code> for more details on how " +
-                      "turns are allotted.")
+        Console.print("<h1>Welcome to M.M.O. Chess: Ragnarook!</h1>")
+        Console.print("<hr>")
+        Console.print("Ragnarook is a <i><b>Massively Multiplayer Open World Strategy Game</b></i> based on Chess, "
+                      + "where players form Alliances, build Empires, and conquer the World. "
+                      + "Prepare to destroy your enemies in a turn-based fashion!")
+        Console.print("<hr>")
+        Console.print("<h2><u>HOW TO PLAY</u></h2>")
+        Console.print("<ol>"
+                      + '<li>Left mouse: move pieces.</li>'
+                      + "<li>Right mouse: navigate.</li>" // mach Make it mouse click navigate
+                      + "<li>The bottom right HUD will signal when you can move. "
+                      + "Type <code> /info rules </code> for details on how turns are allotted.</li>"
+                      + "</ol>")
+        Console.print("Type <code> /info game </code> in the chat box below to start learning more about the game, "
+                      + "or dive right in and figure it out as you go.")
     }
 
     function initHTML(){
         var html = "<div id='console_box'>"
             +           "<div id='console_out_box'></div>"
-            +           "<div id='console_in_box'>"
-            +               "<textarea id='console_input' rows='1' type='text' placeholder='chat or type /help'></textarea>"
-            +           "</div>"
+            +      "</div>"
+            +      "<div id='console_in_box'>"
+            +           "<textarea id='console_input' rows='1' type='text' placeholder='chat or type /info'></textarea>"
             +      "</div>"
         $("body").append(html)
 
@@ -202,7 +215,9 @@ var Console = (function(){
         _console_in = $("#console_input")
         _console_out = $("#console_out_box")
 
-        $("#console_input").on("keypress", keypressHandler)
+        alwaysFocus()
+
+        _console_in.on("keypress", keypressHandler)
     }
 
     function keypressHandler(event){
@@ -217,7 +232,6 @@ var Console = (function(){
         }
     }
 
-    // mach
     function processConsoleInput(){
         var text = _console_in.val(); _console_in.val("")
         if (!text) return
@@ -227,15 +241,14 @@ var Console = (function(){
     function fixConsoleCSS(){
         var console_out_box = document.getElementById("console_out_box");
         console_out_box.scrollTop = console_out_box.scrollHeight;
-        autosize.update($("#console_input"))
     }
 
     // Always keeps the chat box focused during gameplay so players
     // can type quickly
     function alwaysFocus(){
-        var console = $("#console_input").focus()
+        _console_in.focus()
         $(document).on("mouseup", function(){
-            console.focus()
+            _console_in.focus()
         })
     }
 
@@ -364,7 +377,7 @@ var Sock = (function(){
         _sock = new SockJS('http://localhost:8080/sock');
 
         _sock.onopen = function(){
-            Console.info("INFO. Connected to game.")
+            // Console.info("INFO. Connected to game.")
             clearTimeout(_socketAutoReconnectTimeout)
         };
 
@@ -401,14 +414,15 @@ var Chat = (function(){
 
     var _chat = null
     var _socketAutoReconnectTimeout = null
+    var _zone = [] // player's current zone, updated as she moves around the map
 
     Chat.init = function(x, y){
         _chat = new SockJS('http://localhost:8080/chat');
 
         _chat.onopen = function() {
-            Console.info("INFO. Connected to chat.")
+            // Console.info("INFO. Connected to chat.")
             clearTimeout(_socketAutoReconnectTimeout)
-            Map.sub(x, y)
+            Chat.sub(x, y)
         };
 
         _chat.onmessage = function(re){
@@ -425,20 +439,26 @@ var Chat = (function(){
         _chat.onclose = function() {
             Console.warn("WARNING. Lost chat connection. Retrying in 5s.")
             setTimeout(function(){
-                // mach get x and y from current map x y
-                Chat.init(x, y)
+                Chat.init(_zone[0], _zone[1])
             }, 5000)
         };
     }
 
-    Chat.sub = function(zone){
-        _chat.send(JSON.stringify({chan:"sub", zone:zone}))
+    // mach remove player's current zone sub and replace with the new zone
+    Chat.sub = function(x, y){
+        var X = Map.toZoneCoordinate(x)
+        var Y = Map.toZoneCoordinate(y)
+        var zone = [X, Y]
+        if (zone.toString() == _zone.toString()){
+            return
+        } else {
+            _zone = zone
+        }
+        _chat.send(JSON.stringify({chan:"sub", zone:_zone}))
     }
 
-    // mach get zone from Zone
     Chat.pub = function(text){
-        var zone = [0, 0]
-        _chat.send(JSON.stringify({chan:"pub", zone:zone, text:text}))
+        _chat.send(JSON.stringify({chan:"pub", zone:_zone, text:text}))
     }
 
     return Chat
@@ -747,15 +767,15 @@ var Obj = (function(){
 var Map = (function(){
     var Map = {}
 
-    var _map
+    var _map = null
 
     Map.init = function(x, y){
         _map = []
         Map.addMouseDragListener(function scrollHandler(){
-            var X = Scene.camera.position.x
-            var Y = Scene.camera.position.y
-            Map.loadZones(X, Y)
-            Map.sub(X, Y)
+            var x = Scene.camera.position.x
+            var y = Scene.camera.position.y
+            Map.loadZones(x, y)
+            Chat.sub(x, y)
         })
         Map.loadZones(x, y) // load map wherever player spawns
     }
@@ -795,8 +815,8 @@ var Map = (function(){
         var N = 1
         for (var i = -N; i <= N; i++){
             for (var j = -N; j <= N; j++){
-                var X = toZoneCoordinate(x + i * S)
-                var Y = toZoneCoordinate(y + j * S)
+                var X = Map.toZoneCoordinate(x + i * S)
+                var Y = Map.toZoneCoordinate(y + j * S)
 
                 if (Map.knownZones[[X, Y]]) continue // Check if we already rendered this zone
                 else Map.knownZones[[X, Y]] = true
@@ -849,15 +869,8 @@ var Map = (function(){
         Scene.render()
     }
 
-    // mach cache coordinates
-    Map.sub = function(x, y){
-        var X = toZoneCoordinate(x)
-        var Y = toZoneCoordinate(y)
-        var zone = [X, Y]
-        Chat.sub(zone)
-    }
-
-    function toZoneCoordinate(x){
+    // rounds x or y or z coordinate to a the zone's lower left coordinate
+    Map.toZoneCoordinate = function(x){
         return Math.floor(x / Conf.zone_size) * Conf.zone_size
     }
 
@@ -1074,19 +1087,6 @@ var Events = (function(){
     return Events
 }())
 
-var Info = (function(){
-    var Info = {}
-
-    Info.init = function(){
-        var info = document.createElement('div');
-        info.setAttribute("id", "info_box")
-        info.innerHTML = '<a href="/">M.M.O.Chess</a><br>'
-        document.body.appendChild(info)
-    }
-
-    return Info
-}())
-
 var Controls = (function(){
     var Controls = {}
 
@@ -1269,7 +1269,6 @@ var Game = (function(){
                     x = king.x
                     y = king.y
                 }
-                Info.init()
                 Sock.init()
                 Chat.init(x, y)
                 Scene.init(x, y)

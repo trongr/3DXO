@@ -387,7 +387,7 @@ var Game = module.exports = (function(){
                 })
             },
             function(done){
-                if (player.alive) done({info:"ERROR. Can't build new army: player still alive"})
+                if (player.alive) done({info:"ERROR. Can't build new army: player still alive."})
                 else done(null)
             },
             function(done){
@@ -683,7 +683,7 @@ var Game = module.exports = (function(){
                         done(null)
                     } else {
                         Pub.refresh_turns(player)
-                        done({info: "ERROR. Can't request turn: " + (!player.alive ? "player" : "enemy") + " dead"})
+                        done({info: "ERROR. Can't request turn: " + (!player.alive ? "player" : "enemy") + " dead."})
                     }
                 },
                 function(done){
@@ -727,17 +727,17 @@ var Game = module.exports = (function(){
                 H.log("INFO. Game.on.turn.to_new_turn", player.name, enemy.name)
                 // mach add to_turn_exp for enemy too, with Conf.turn_timeout_ext, and use Pub.to_turns
                 Pub.to_new_turn(player, enemy, Conf.turn_timeout_ext)
-                done({info: "ERROR. Can't request turn: too soon"})
+                done({info: "ERROR. Can't request turn: too soon."})
                 break;
             case Turn.code.dead:
                 // todo maybe notify the client to correct its states
                 done({info: "INFO. Turn.validateTimeout: live:false player:" + player.name + " enemy:" + enemy.name})
                 break;
             case Turn.code.noncombat:
-                done({info: "ERROR. Requesting turn from nonexistent enemy"})
+                done({info: "ERROR. Requesting turn from nonexistent enemy."})
                 break;
             default: // this should never happen
-                done({info: "ERROR. Unknown timeout code"})
+                done({info: "ERROR. Unknown timeout code."})
             }
         }
 
