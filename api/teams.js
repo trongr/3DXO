@@ -1,6 +1,7 @@
 var express = require('express');
 var Team = require("../models/team.js")
-var H = require("../lib/h.js")
+// var H = require("../lib/h.js") // mach remove
+var H = require("../static/js/h.js")
 
 var Teams = module.exports = (function(){
     Teams = {

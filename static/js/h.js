@@ -1,9 +1,22 @@
-var H = (function(){
+if (typeof module === "undefined"){
+    var module = {}
+}
+var H = module.exports = (function(){
     var H = {}
 
-    H.log = function(msg, obj){
-        if (obj) console.log(new Date().getTime() + " " + msg + " " + JSON.stringify(obj, 0, 2))
-        else console.log(new Date().getTime() + " " + msg)
+    H.param = function(req, param){
+        return req.params[param] || req.query[param] || req.body[param]
+    }
+
+    H.log = function(msg, obj1, obj2, obj3, obj4, obj5, obj6){
+        var out = new Date() + " " + msg
+        out += " " + (obj1 ? JSON.stringify(obj1, 0, 2) : "-")
+        out += " " + (obj2 ? JSON.stringify(obj2, 0, 2) : "-")
+        out += " " + (obj3 ? JSON.stringify(obj3, 0, 2) : "-")
+        out += " " + (obj4 ? JSON.stringify(obj4, 0, 2) : "-")
+        out += " " + (obj5 ? JSON.stringify(obj5, 0, 2) : "-")
+        out += " " + (obj6 ? JSON.stringify(obj6, 0, 2) : "-")
+        console.log(out)
     }
 
     H.swapObjKeyValues = function(obj){
@@ -33,6 +46,11 @@ var H = (function(){
         mm = mm < 10 ? "0" + mm : mm;
         ss = ss < 10 ? "0" + ss : ss;
         return sign + mm + ":" + ss
+    }
+
+    // rounds x or y or z coordinate to a the zone's lower left coordinate
+    H.toZoneCoordinate = function(x, zone_size){
+        return Math.floor(x / zone_size) * zone_size
     }
 
     return H

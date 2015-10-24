@@ -1,6 +1,8 @@
 var sockjs  = require('sockjs');
 var redis   = require('redis');
-var H = require("./lib/h.js")
+var H = require("./static/js/h.js")
+// mach remove
+// var H = require("./lib/h.js")
 var Game = require("./api/game.js")
 
 var Sock = module.exports = (function(){

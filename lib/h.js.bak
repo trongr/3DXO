@@ -43,5 +43,10 @@ var H = module.exports = (function(){
         return req.params[param] || req.query[param] || req.body[param]
     }
 
+    // rounds x or y or z coordinate to a the zone's lower left coordinate
+    H.toZoneCoordinate = function(x, zone_size){
+        return Math.floor(x / zone_size) * zone_size
+    }
+
     return H
 }())

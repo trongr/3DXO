@@ -2,7 +2,9 @@ var async = require("async")
 var request = require("request")
 var express = require('express');
 var Piece = require("../models/piece.js")
-var H = require("../lib/h.js")
+// mach remove
+// var H = require("../lib/h.js")
+var H = require("../static/js/h.js")
 
 var Pieces = module.exports = (function(){
     Pieces = {

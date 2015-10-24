@@ -7,7 +7,6 @@ var logger = require('morgan');
 var bodyParser = require('body-parser');
 var path = require('path');
 var session = require('express-session')
-var H = require("./lib/h.js")
 var Sock = require("./sock.js")
 var Chat = require("./chat.js")
 var DB = require("./db.js")

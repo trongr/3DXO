@@ -1,6 +1,6 @@
 var sockjs  = require('sockjs');
 var redis   = require('redis');
-var H = require("./lib/h.js")
+var H = require("./static/js/h.js")
 var Sub = require("./api/sub.js")
 var Pub = require("./api/pub.js")
 
@@ -32,7 +32,14 @@ var Chat = module.exports = (function(){
     function onConnection(conn){
         H.log("INFO. Chat.onConnection", conn.id)
 
-        // mach clean text before publishing to other clients
+        // mach
+        // Zone this connection subscribes to. Remove and add to when
+        // player scrolls
+        //
+        // todo maybe make it a small list of zones so player can
+        // listen to and publish in multiple zones
+        var zone = [] // e.g. [0, 0]
+
         // Receiving data from client
         conn.on('data', function(msg) {
             try {

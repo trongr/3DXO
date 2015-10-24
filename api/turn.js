@@ -1,6 +1,8 @@
 var async = require("async")
 var express = require('express');
-var H = require("../lib/h.js")
+// var H = require("../lib/h.js")
+// mach remove
+var H = require("../static/js/h.js")
 var K = require("../conf/k.js")
 var Conf = require("../static/conf.json") // shared with client
 var Player = require("../models/player.js")

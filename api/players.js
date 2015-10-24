@@ -1,6 +1,8 @@
 var async = require("async")
 var express = require('express');
-var H = require("../lib/h.js")
+var H = require("../static/js/h.js")
+// mach remove
+// var H = require("../lib/h.js")
 var Player = require("../models/player.js")
 var Piece = require("../models/piece.js")
 

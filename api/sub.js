@@ -1,7 +1,9 @@
 var redis   = require('redis');
 var async = require("async")
 var express = require('express');
-var H = require("../lib/h.js")
+// mach remove
+// var H = require("../lib/h.js")
+var H = require("../static/js/h.js")
 var Conf = require("../static/conf.json") // shared with client
 
 var Sub = module.exports = (function(){
@@ -19,6 +21,7 @@ var Sub = module.exports = (function(){
         // "0,0": {connID:onChatMsgCallback}
     }
 
+    // mach validate data.zone. maybe should validate that before pub.chat
     _subscriber.on("message", function(chan, msg){
         try {
             // mach loop through nearby zones too, centered at zone
@@ -34,8 +37,8 @@ var Sub = module.exports = (function(){
         }
     });
 
+    // mach validate zone and round down
     Sub.sub = function(chan, connID, data, onChatMsgCallback){
-        // mach validate zone and round down
         try {
             var zone = data.zone
             _zones[zone] = _zones[zone] || {}

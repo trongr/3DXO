@@ -132,9 +132,10 @@ var Hud = (function(){
 
     function highlightActiveTurn(activeTurnIndex, tokens){
         try {
+            if (!tokens.length) return
             var activeTokenPlayerID = tokens[activeTurnIndex].player
         } catch (e){
-            return console.log("ERROR. Hud.highlightActiveTurn: activeTurnIndex out of bounds", activeTurnIndex, tokens)
+            return H.log("ERROR. Hud.highlightActiveTurn: activeTurnIndex out of bounds", activeTurnIndex, tokens)
         }
         $("#hud_turns .active_turn").removeClass("active_turn")
         $("#" + activeTokenPlayerID + ".turn_box .player_turn").addClass("active_turn")
@@ -278,7 +279,7 @@ var Turn = (function(){
     Turn.refresh_turns = function(you){
         $.each(Cache.tokens, function(keyAsEnemyID, token){
             if (!doesTokensContainEnemyID(you.turn_tokens, keyAsEnemyID)){
-                console.log("DEBUG. Deleting token", keyAsEnemyID)
+                H.log("INFO. Deleting token", keyAsEnemyID)
                 delete_turn(keyAsEnemyID)
             }
         })
@@ -446,8 +447,8 @@ var Chat = (function(){
 
     // mach remove player's current zone sub and replace with the new zone
     Chat.sub = function(x, y){
-        var X = Map.toZoneCoordinate(x)
-        var Y = Map.toZoneCoordinate(y)
+        var X = Chat.toZoneCoordinate(x)
+        var Y = Chat.toZoneCoordinate(y)
         var zone = [X, Y]
         if (zone.toString() == _zone.toString()){
             return
@@ -459,6 +460,10 @@ var Chat = (function(){
 
     Chat.pub = function(text){
         _chat.send(JSON.stringify({chan:"pub", zone:_zone, text:text}))
+    }
+
+    Chat.toZoneCoordinate = function(x){
+        return H.toZoneCoordinate(x, Conf.chat_zone_size)
     }
 
     return Chat
@@ -869,9 +874,8 @@ var Map = (function(){
         Scene.render()
     }
 
-    // rounds x or y or z coordinate to a the zone's lower left coordinate
     Map.toZoneCoordinate = function(x){
-        return Math.floor(x / Conf.zone_size) * Conf.zone_size
+        return H.toZoneCoordinate(x, Conf.zone_size)
     }
 
     return Map
@@ -1323,7 +1327,7 @@ var Game = (function(){
             var you = Player.getPlayer()
             if (isYourSock(you, data)){
                 Console.error(data.info || data.error) // TODO. Should stick with .info
-                console.log("ERROR. Game.on.error", JSON.stringify(data, 0, 2))
+                H.log("ERROR. Game.on.error", data)
             }
         }
 
@@ -1352,7 +1356,7 @@ var Game = (function(){
             var enemyID = data.enemy._id
             var timeout = data.timeout
             if (isYourSock(you, data)){
-                console.log("DEBUG. to_new_turn", enemyID, timeout)
+                H.log("INFO. to_new_turn", enemyID, timeout)
                 Turn.countDownTilNewTurn(enemyID, timeout)
                 Hud.renderTurns(data.player)
             }
@@ -1362,7 +1366,7 @@ var Game = (function(){
             var you = Player.getPlayer()
             var enemyID = data.enemy._id
             if (isYourSock(you, data)){
-                console.log("DEBUG. to_turn_exp", enemyID)
+                H.log("INFO. to_turn_exp", enemyID)
                 Turn.countDownTilTurnExpires(enemyID)
                 Hud.renderTurns(data.player)
             }
