@@ -52,7 +52,7 @@ var Sub = module.exports = (function(){
     Sub.unsub = function(chan, connID, zone){
         try {
             delete _zones[zone][connID]
-            H.log("INFO. Sub.unsub", chan, zone, H.length(_zones[zone]), connID)
+            H.log("INFO. Sub.unsub", chan, zone.toString(), H.length(_zones[zone]), connID)
         } catch (e){
             H.log("ERROR. Sub.unsub/catch: no such zone", zone, connID)
         }

@@ -184,7 +184,6 @@ var Console = (function(){
         Console.print("<span class='console_error'>" + text + "</span>")
     }
 
-    // mach
     function helloConsole(){
         Console.print("<h1>Welcome to M.M.O. Chess: Ragnarook!</h1>")
         Console.print("<hr>")
@@ -416,6 +415,7 @@ var Chat = (function(){
     var _chat = null
     var _socketAutoReconnectTimeout = null
     var _zone = [] // player's current zone, updated as she moves around the map
+    var _knownZones = {} // keeps track of known zones, but only for cosmetic things like drawing zone corners
 
     Chat.init = function(x, y){
         _chat = new SockJS('http://localhost:8080/chat');
@@ -445,7 +445,14 @@ var Chat = (function(){
         };
     }
 
-    // mach remove player's current zone sub and replace with the new zone
+    Chat.send = function(data){
+        try {
+            _chat.send(JSON.stringify(data))
+        } catch (e){
+            H.log("ERROR. Chat.send.catch", data)
+        }
+    }
+
     Chat.sub = function(x, y){
         var X = Chat.toZoneCoordinate(x)
         var Y = Chat.toZoneCoordinate(y)
@@ -455,15 +462,42 @@ var Chat = (function(){
         } else {
             _zone = zone
         }
-        _chat.send(JSON.stringify({chan:"sub", zone:_zone}))
+        Chat.send({chan:"sub", zone:_zone})
+        drawChatZoneCorners(X, Y)
     }
 
     Chat.pub = function(text){
-        _chat.send(JSON.stringify({chan:"pub", zone:_zone, text:text}))
+        Chat.send({chan:"pub", zone:_zone, text:text})
     }
 
     Chat.toZoneCoordinate = function(x){
         return H.toZoneCoordinate(x, Conf.chat_zone_size)
+    }
+
+    // Add cross hair corners around the chat zone
+    function drawChatZoneCorners(X, Y){
+        if (_knownZones[[X, Y]]) return // Check if we already rendered this zone
+        else _knownZones[[X, Y]] = true
+
+        var S = Conf.chat_zone_size
+        var l = 0.2
+        var h = 1.1 // NOTE. Raise the cross hair slightly so it's not hidden by the plane
+        var geometry = new THREE.Geometry()
+        addCrosshair(geometry, X    , Y    , l, h)
+        addCrosshair(geometry, X    , Y + S, l, h)
+        addCrosshair(geometry, X + S, Y + S, l, h)
+        addCrosshair(geometry, X + S, Y    , l, h)
+        var material = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.75, transparent:true});
+        var line = new THREE.Line(geometry, material, THREE.LinePieces);
+        Scene.add(line)
+        Scene.render()
+    }
+
+    function addCrosshair(geometry, X, Y, l, h){
+        geometry.vertices.push(new THREE.Vector3(X - l, Y,     h));
+        geometry.vertices.push(new THREE.Vector3(X + l, Y,     h));
+        geometry.vertices.push(new THREE.Vector3(X    , Y - l, h));
+        geometry.vertices.push(new THREE.Vector3(X    , Y + l, h));
     }
 
     return Chat
@@ -774,6 +808,10 @@ var Map = (function(){
 
     var _map = null
 
+    // keys are string representations of arrays, e.g. a[[1,2]] ==
+    // "asdf" means a = {"1,2":"asdf"}
+    var _knownZones = {}
+
     Map.init = function(x, y){
         _map = []
         Map.addMouseDragListener(function scrollHandler(){
@@ -809,10 +847,6 @@ var Map = (function(){
         });
     }
 
-    // keys are string representations of arrays, e.g. a[[1,2]] ==
-    // "asdf" means a = {"1,2":"asdf"}
-    Map.knownZones = {}
-
     // x and y are real game coordinates
     Map.loadZones = function(x, y){
         var S = Conf.zone_size
@@ -823,8 +857,8 @@ var Map = (function(){
                 var X = Map.toZoneCoordinate(x + i * S)
                 var Y = Map.toZoneCoordinate(y + j * S)
 
-                if (Map.knownZones[[X, Y]]) continue // Check if we already rendered this zone
-                else Map.knownZones[[X, Y]] = true
+                if (_knownZones[[X, Y]]) continue // Check if we already rendered this zone
+                else _knownZones[[X, Y]] = true
 
                 Map.loadZone(X, Y)
                 Obj.loadZone(X, Y, function(er){
@@ -837,6 +871,14 @@ var Map = (function(){
     // X and Y are game units rounded to nearest multiple of zone_size
     Map.loadZone = function(X, Y){
         var S = Conf.zone_size
+        var CS = Conf.chat_zone_size
+        Scene.add(makeZoneGrid(X, Y, S));
+        Scene.add(makeZoneBorder(X, Y, S));
+        Game.addObj(makeZonePlane(X, Y, S))
+        Scene.render()
+    }
+
+    function makeZoneGrid(X, Y, S){
 		var geometry = new THREE.Geometry();
 		for ( var i = 0; i < S; i++){
 			geometry.vertices.push(new THREE.Vector3(X + i, Y + 0, 1));
@@ -846,32 +888,30 @@ var Map = (function(){
 		}
 		var material = new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.5, transparent: true } );
 		var line = new THREE.Line( geometry, material, THREE.LinePieces );
+        return line
+    }
 
-        Scene.add(line);
-
-        // add thicker lines around the edges
-        geometry = new THREE.Geometry()
+    // add thicker border around the edges
+    function makeZoneBorder(X, Y, S){
+        var geometry = new THREE.Geometry()
         geometry.vertices.push(new THREE.Vector3(X + 0, Y + 0, 1));
         geometry.vertices.push(new THREE.Vector3(X + 0, Y + S, 1));
         geometry.vertices.push(new THREE.Vector3(X + S, Y + S, 1));
         geometry.vertices.push(new THREE.Vector3(X + S, Y + 0, 1));
-        material = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.8, transparent:true});
-        line = new THREE.Line( geometry, material, THREE.LineStrip );
+        var material = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.8, transparent:true});
+        var line = new THREE.Line( geometry, material, THREE.LineStrip );
+        return line
+    }
 
-        Scene.add(line);
-
-        geometry = new THREE.PlaneBufferGeometry(S, S);
-        // mach
-        // material = new THREE.MeshBasicMaterial({color:0x7B84A8});
-        material = new THREE.MeshBasicMaterial({color:0x7B84A8, transparent:true, opacity:0.9});
-		plane = new THREE.Mesh(geometry, material);
+    function makeZonePlane(X, Y, S){
+        var geometry = new THREE.PlaneBufferGeometry(S, S);
+        // var material = new THREE.MeshBasicMaterial({color:0x7B84A8});
+        var material = new THREE.MeshBasicMaterial({color:0x7B84A8, transparent:true, opacity:0.9});
+		var plane = new THREE.Mesh(geometry, material);
 		plane.visible = true;
         plane.receiveShadow = true;
         plane.position.set(X + S / 2, Y + S / 2, 1)
-
-        Game.addObj(plane)
-
-        Scene.render()
+        return plane
     }
 
     Map.toZoneCoordinate = function(x){
@@ -1149,6 +1189,13 @@ var Scene = (function(){
 
     Scene.add = function(obj){
         _scene.add(obj)
+    }
+
+    Scene.addObjs = function(objs){
+        if (!objs) return H.log("ERROR. Scene.addObjs: null objs")
+        for (var i = 0; i < objs.length; i++){
+            Scene.add(objs[i])
+        }
     }
 
     Scene.remove = function(obj){

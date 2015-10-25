@@ -1,7 +1,7 @@
 {
     "turn_timeout": 30000,
     "turn_timeout_ext": 2000,
-    "zone_size": 4,
+    "zone_size": 8,
     "chat_zone_size": 16,
     "code": {
         "no_more_turn": "no_more_turn",
