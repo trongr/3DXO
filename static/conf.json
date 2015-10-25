@@ -4,31 +4,7 @@
     "zone_size": 4,
     "chat_zone_size": 16,
     "code": {
-        "turn": {
-            "gameover": {
-                "code": "gameover",
-                "info": "ERROR. Can't request turn: gameover"
-            },
-            "enemy_dead": {
-                "code": "enemy_dead",
-                "info": "ERROR. Can't request turn: enemy dead"
-            },
-            "none": {
-                "code": "none",
-                "info": "ERROR. No more turn"
-            }
-        },
-        "move": {
-            "gameover": {
-                "code": "gameover",
-                "info": "ERROR. Can't move: gameover"
-            }
-        },
-        "gameover": {
-            "error": {
-                "code": "error",
-                "info": "ERROR. Unknown gameover error"
-            }
-        }
+        "no_more_turn": "no_more_turn",
+        "get_player": "get_player"
     }
 }

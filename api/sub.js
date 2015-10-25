@@ -38,22 +38,24 @@ var Sub = module.exports = (function(){
     });
 
     // mach validate zone and round down
-    Sub.sub = function(chan, connID, data, onChatMsgCallback){
+    Sub.sub = function(chan, connID, zone, onChatMsgCallback){
         try {
-            var zone = data.zone
             _zones[zone] = _zones[zone] || {}
             _zones[zone][connID] = onChatMsgCallback
-            H.log("INFO. Sub.sub", chan, zone, H.length(_zones[zone]), connID)
+            H.log("INFO. Sub.sub", chan, zone.toString(), H.length(_zones[zone]), connID)
         } catch (e){
             H.log("ERROR. Sub.sub.catch", chan, zone, connID)
         }
     }
 
-    // Remove connID from all zones
-    Sub.unsub = function(chan, connID){
-        // mach remove connID and its callback from _zones[zoneID]
-        // delete _zones[zoneID]
-        H.log("INFO. Sub.unsub:", chan, connID)
+    // Remove connID from zone
+    Sub.unsub = function(chan, connID, zone){
+        try {
+            delete _zones[zone][connID]
+            H.log("INFO. Sub.unsub", chan, zone, H.length(_zones[zone]), connID)
+        } catch (e){
+            H.log("ERROR. Sub.unsub/catch: no such zone", zone, connID)
+        }
     }
 
     return Sub

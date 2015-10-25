@@ -1,8 +1,6 @@
 var _ = require("lodash")
 var async = require("async")
 var express = require('express');
-// mach remove
-// var H = require("../lib/h.js")
 var H = require("../static/js/h.js")
 var K = require("../conf/k.js")
 var Conf = require("../static/conf.json") // shared with client
@@ -590,7 +588,7 @@ var Game = module.exports = (function(){
                         return done({info:"ERROR. Game.on.move: player.turn_index out of bounds", player:player})
                     }
                     if (!player.alive) return done({info: "ERROR. You are dead."})
-                    if (!Turn.hasTurn(player)) return done({info: "ERROR. No more turn."})
+                    if (!Turn.hasTurn(player)) return done({info: "ERROR. No more turn.", code:Conf.code.no_more_turn})
                     done(null)
                 },
                 function(done){
@@ -649,7 +647,7 @@ var Game = module.exports = (function(){
                 }
             ], function(er){
                 if (er){
-                    H.log("ERROR. Game.on.move", er)
+                    if (er.code != Conf.code.no_more_turn) H.log("ERROR. Game.on.move", er)
                     Pub.error(playerID, er.info || "ERROR. Game.on.move: unexpected error")
                 } else {
                     Pub.move(player, nPiece, from, to)

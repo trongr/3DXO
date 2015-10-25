@@ -7,16 +7,16 @@ var Pub = require("./api/pub.js")
 var Chat = module.exports = (function(){
     var Chat = {}
 
-    var server = null
+    var _server = null
 
-    Chat.init = function(_server){
-        server = sockjs.createServer({
+    Chat.init = function(server){
+        _server = sockjs.createServer({
             sockjs_url: "./lib/sockjs-0.3.min.js",
             // heartbeat_delay: 25000, // default 25 seconds
             disconnect_delay: 60000, // default 5 seconds
         });
-        server.on('connection', onConnection);
-        server.installHandlers(_server, {
+        _server.on('connection', onConnection);
+        _server.installHandlers(server, {
             prefix: '/chat'
         });
     }
@@ -30,7 +30,8 @@ var Chat = module.exports = (function(){
     // One connection from client to server. Multiple channels to
     // publish and subscribe to.
     function onConnection(conn){
-        H.log("INFO. Chat.onConnection", conn.id)
+        var connID = conn.id
+        H.log("INFO. Chat.onConnection", connID)
 
         // mach
         // Zone this connection subscribes to. Remove and add to when
@@ -38,16 +39,20 @@ var Chat = module.exports = (function(){
         //
         // todo maybe make it a small list of zones so player can
         // listen to and publish in multiple zones
-        var zone = [] // e.g. [0, 0]
+        var _zone = null // e.g. [0, 0]
 
+        // mach clean text and validate zone
         // Receiving data from client
         conn.on('data', function(msg) {
             try {
                 var data = JSON.parse(msg)
                 var chan = data.chan
-                // mach clean text and validate zone
+                var zone = data.zone
+                var prevZone = _zone
+                _zone = zone
                 if (chan == "sub"){
-                    Sub.sub("chat", conn.id, data, onChatMsgCallback)
+                    if (prevZone) Sub.unsub("chat", connID, prevZone)
+                    Sub.sub("chat", connID, _zone, onChatMsgCallback)
                 } else if (chan == "pub"){
                     Pub.chat(data)
                 } else {
@@ -59,8 +64,8 @@ var Chat = module.exports = (function(){
         });
 
         conn.on("close", function(){
-            Sub.unsub("chat", conn.id)
-            H.log("INFO. Chat.close", conn.id)
+            Sub.unsub("chat", connID)
+            H.log("INFO. Chat.close", connID)
         })
 
         function onChatMsgCallback(msg){

@@ -17,8 +17,12 @@ var Pub = module.exports = (function(){
     }
 
     Pub.chat = function(data){
-        H.log("INFO. Chat.pubChat", data.zone, data.text)
-        Pub.publish("chat", data)
+        try {
+            H.log("INFO. Pub.chat", data.zone.toString(), data.text)
+            Pub.publish("chat", data)
+        } catch (e){
+            H.log("ERROR. Pub.chat:catch", data)
+        }
     }
 
     Pub.error = function(playerID, info){

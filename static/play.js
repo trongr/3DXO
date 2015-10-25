@@ -1245,9 +1245,6 @@ var Scene = (function(){
 var Game = (function(){
     var Game = {}
 
-    // mach add this to conf.json and use it in players.js
-    var ERROR_GET_PLAYER_CODE = 404
-
     Game.init = function(done){
         var player, king = null
         var x = y = 0
@@ -1286,7 +1283,7 @@ var Game = (function(){
                 Events.init()
             },
         ], function(er){
-            if (er == ERROR_GET_PLAYER_CODE){
+            if (er == Conf.code.get_player){
                 window.location.href = "/"
             } else if (er) Console.error(er)
         })

@@ -1,8 +1,7 @@
 var async = require("async")
 var express = require('express');
 var H = require("../static/js/h.js")
-// mach remove
-// var H = require("../lib/h.js")
+var Conf = require("../static/conf.json") // shared with client
 var Player = require("../models/player.js")
 var Piece = require("../models/piece.js")
 
@@ -10,8 +9,6 @@ var Players = module.exports = (function(){
     Players = {
         router: express.Router()
     }
-
-    var ERROR_GET_PLAYER_CODE = 404
 
     Players.router.route("/")
         .get(function(req, res){
@@ -21,7 +18,7 @@ var Players = module.exports = (function(){
                 var player, king = null
             } catch (e){
                 H.log("ERROR. Players.get: invalid data", req.query, req.session)
-                return res.send({info:ERROR_GET_PLAYER_CODE})
+                return res.send({info:Conf.code.get_player})
             }
             async.waterfall([
                 function(done){
@@ -47,7 +44,7 @@ var Players = module.exports = (function(){
                     res.send({ok:true, player:player, king:king})
                 } else {
                     H.log("ERROR. Players.get", name)
-                    res.send({info:ERROR_GET_PLAYER_CODE})
+                    res.send({info:Conf.code.get_player})
                 }
             })
         })
