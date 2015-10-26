@@ -1,8 +1,6 @@
 var redis   = require('redis');
 var async = require("async")
 var express = require('express');
-// mach remove
-// var H = require("../lib/h.js")
 var H = require("../static/js/h.js")
 var Conf = require("../static/conf.json") // shared with client
 
@@ -18,24 +16,44 @@ var Sub = module.exports = (function(){
     // A zone's position is its lower left coordinate.  Each zone
     // stores onChatMsgCallback's keyed by connID's
     var _zones = {
-        // "0,0": {connID:onChatMsgCallback}
+        // "0,0": {
+        //     connID: onChatMsgCallback,
+        //     connID: onChatMsgCallback,
+        // }
     }
 
     // mach validate data.zone. maybe should validate that before pub.chat
     _subscriber.on("message", function(chan, msg){
         try {
-            // mach loop through nearby zones too, centered at zone
             var data = JSON.parse(msg)
-            var onChatMsgCallbacks = _zones[data.zone]
-            for (var connID in onChatMsgCallbacks){
-                if (onChatMsgCallbacks.hasOwnProperty(connID)){
-                    onChatMsgCallbacks[connID](msg)
-                }
-            }
+            callbackZonesCenteredAtZone(data.zone, msg)
         } catch (e){
-            H.log("ERROR. Sub.on.message.catch", chan, msg)
+            H.log("ERROR. Sub.on.message.catch", chan, msg, e)
         }
     });
+
+    function callbackZonesCenteredAtZone(zone, msg){
+        var S = Conf.chat_zone_size
+        var N = 1
+        var x = zone[0]
+        var y = zone[1]
+        for (var i = -N; i <= N; i++){
+            for (var j = -N; j <= N; j++){
+                var X = H.toZoneCoordinate(x + i * S, S)
+                var Y = H.toZoneCoordinate(y + j * S, S)
+                callbackZone([X, Y], msg)
+            }
+        }
+    }
+
+    function callbackZone(zone, msg){
+        var onChatMsgCallbacks = _zones[zone]
+        for (var connID in onChatMsgCallbacks){
+            if (onChatMsgCallbacks.hasOwnProperty(connID)){
+                onChatMsgCallbacks[connID](msg)
+            }
+        }
+    }
 
     // mach validate zone and round down
     Sub.sub = function(chan, connID, zone, onChatMsgCallback){
@@ -54,7 +72,7 @@ var Sub = module.exports = (function(){
             delete _zones[zone][connID]
             H.log("INFO. Sub.unsub", chan, zone.toString(), H.length(_zones[zone]), connID)
         } catch (e){
-            H.log("ERROR. Sub.unsub/catch: no such zone", zone, connID)
+            H.log("ERROR. Sub.unsub.catch", zone, connID)
         }
     }
 
