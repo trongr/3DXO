@@ -7,6 +7,7 @@ var logger = require('morgan');
 var bodyParser = require('body-parser');
 var path = require('path');
 var session = require('express-session')
+var RedisStore = require('connect-redis')(session);
 var Sock = require("./sock.js")
 var Chat = require("./chat.js")
 var DB = require("./db.js")
@@ -16,13 +17,32 @@ var Cells = require("./api/cells.js")
 var Players = require("./api/players.js")
 var Teams = require("./api/teams.js")
 var Game = require("./api/game.js")
+var H = require("./static/js/h.js")
 
-// mach use some other session store
 app.use(session({
-    secret: 'keyboard cat',       // mach change for prod
+    store: new RedisStore({
+        host: '127.0.0.1',
+        port: 6379,
+        // pass: "ajoidsjfoasdijfaosd" // todo
+        // db: 0, // Does it matter if you use a diff db number?
+        ttl: 1 * 24 * 3600, // in seconds. todo change to 7 days
+    }),
+    secret: 'keyboard cat', // todo change for prod
+    saveUninitialized: true,
     resave: false,
-    saveUninitialized: true
-}))
+}));
+// Error handling in case client (this server) loses connection to
+// remote redis, and a user logs in:
+app.use(function (req, res, next) {
+    if (!req.session) {
+        // If you see this a lot consider retrying right away. See
+        // https://github.com/tj/connect-redis and
+        // https://github.com/expressjs/session/issues/99#issuecomment-63853989
+        // for more info
+        return H.log("ERROR. server: losing connection to redis")
+    }
+    next() // otherwise continue
+})
 
 app.use(logger('dev'));
 app.use(bodyParser.json());
