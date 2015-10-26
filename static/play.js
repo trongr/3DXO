@@ -418,6 +418,8 @@ var Chat = (function(){
     var _knownZones = {} // keeps track of known zones, but only for cosmetic things like drawing zone corners
 
     Chat.init = function(x, y){
+        _zone = []
+        _knownZones = {}
         _chat = new SockJS('http://localhost:8080/chat');
 
         _chat.onopen = function() {
