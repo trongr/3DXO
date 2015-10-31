@@ -1,10 +1,9 @@
 {
-    "turn_timeout": 30000,
-    "turn_timeout_ext": 2000,
+    "recharge": 60000,
     "zone_size": 8,
     "chat_zone_size": 16,
+    "scout_range": 6,
     "code": {
-        "no_more_turn": "no_more_turn",
         "get_player": "get_player"
     }
 }

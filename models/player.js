@@ -1,5 +1,3 @@
-// mach account locking
-
 var mongoose = require('mongoose');
 var bcrypt = require("bcrypt")
 var SALT_WORK_FACTOR = 10;
@@ -15,16 +13,13 @@ var schema = mongoose.Schema({
     alive: {type: Boolean, default: false}, // alive false means player lost and has no control of his army
     created: {type: Date, default: Date.now},
     modified: {type: Date, default: Date.now},
-    turn_index: {type: Number, default: 0}, // index of the active turn token
-    turn_tokens: [{
+    enemies: [{
+        _id: false, // stop mongoose from creating default _id
         player: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Player'
         },
-        player_name: {type: String},
-        live: Boolean, // token in player possession i.e. can move if its index matches turn_index
-        // todo: what happens when you scale and have multiple servers with diff clocks?
-        t: {type: Date, default: Date.now}, // when this token was last turned on, to validate timeout requests
+        name: {type: String},
     }]
 });
 

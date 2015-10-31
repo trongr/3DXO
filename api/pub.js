@@ -21,7 +21,7 @@ var Pub = module.exports = (function(){
             H.log("INFO. Pub.chat", data.zone.toString(), data.text)
             Pub.publish("chat", data)
         } catch (e){
-            H.log("ERROR. Pub.chat:catch", data)
+            H.log("ERROR. Pub.chat.catch", data)
         }
     }
 
@@ -47,46 +47,12 @@ var Pub = module.exports = (function(){
         })
     }
 
-    Pub.new_enemies = function(player, enemies){
-        enemies.forEach(function(enemy){
-            Pub.to_new_turn(player, enemy, Conf.turn_timeout) // Player spent turn: timeout to new turn
-            Pub.to_turn_exp(enemy, player) // Enemy getting new turn: timeout to expire
-        })
-    }
-
-    Pub.to_turns = function(player, enemy){
-        H.log("INFO. Pub.to_new_turn", player.name, enemy.name)
-        H.log("INFO. Pub.to_turn_exp", enemy.name, player.name)
-        Pub.to_new_turn(player, enemy, Conf.turn_timeout)
-        Pub.to_turn_exp(enemy, player)
-    }
-
-    Pub.to_new_turn = function(player, enemy){
-        Pub.publish("to_new_turn", {
-            player: player,
-            enemy: enemy,
-            timeout: Conf.turn_timeout,
-        })
-    }
-
-    Pub.to_turn_exp = function(player, enemy){
-        Pub.publish("to_turn_exp", {
-            player: player,
-            enemy: enemy,
-        })
-    }
-
-    Pub.refresh_players_turns = function(players){
-        players.forEach(function(player){
-            Pub.refresh_turns(player)
-        })
-    }
-    // Refresh player tokens cause either they or one of their enemies died
-    Pub.refresh_turns = function(player){
-        Pub.publish("refresh_turns", {
-            player: player,
-        })
-    }
+    // todo do something here. see game.js/Pub.new_enemies
+    // Pub.new_enemies = function(player, enemies){
+    //     // enemies.forEach(function(enemy){
+    //     // todo
+    //     // })
+    // }
 
     Pub.gameover = function(player, enemy, you_win){
         Pub.publish("gameover", {

@@ -1,9 +1,6 @@
 var express = require('express');
 var Cell = require("../models/cell.js")
-// mach remove
-// var H = require("../lib/h.js")
 var H = require("../static/js/h.js")
-var K = require("../conf/k.js")
 var Conf = require("../static/conf.json")
 var Sanitize = require("../lib/sanitize.js")
 

@@ -23,6 +23,10 @@ var schema = mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    moved: {
+        type: Date,
+        default: null
+    }
 });
 
 // todo time this for performance
@@ -34,6 +38,13 @@ schema.statics.random = function(callback) {
         var rand = Math.floor(Math.random() * count);
         this.findOne().skip(rand).exec(callback);
     }.bind(this));
+};
+
+schema.statics.findOneByID = function(pieceID, done){
+    this.findById(pieceID, function(er, piece){
+        if (piece) done(null, piece)
+        else done({error:"Piece.findOneByID", pieceID:pieceID, er:er})
+    })
 };
 
 module.exports = mongoose.model('Piece', schema);

@@ -75,86 +75,58 @@ var Menu = (function(){
 var Hud = (function(){
     var Hud = {}
 
-    Hud.init = function(you){
-        Cache.tokens = {}
+    Hud.init = function(){
         var html = "<div id='hud_box'>"
-            +           "<div id='hud_turns'></div>"
+            +           "<div id='asdf'></div>"
             +      "</div>"
         $("body").append(html)
-        Hud.init_turns(you)
-    }
-
-    Hud.init_turns = function(you){
-        Hud.clearTurns()
-        Hud.renderTurns(you)
-    }
-
-    Hud.clearTurns = function(){
-        $("#hud_turns").html("")
-        Cache.tokens = {}
-    }
-
-    Hud.delete_turn = function(enemyID){
-        $("#" + enemyID + ".turn_box").remove()
-    }
-
-    Hud.renderTurns = function(you){
-        var tokens = you.turn_tokens
-        var activeTurnIndex = you.turn_index
-        upsertTokens(tokens)
-        highlightActiveTurn(activeTurnIndex, tokens)
-        cacheTokens(tokens) // so we can tell if a token has changed
-                            // and update / ignore it in the hud:
-    }
-
-    function upsertTokens(tokens){
-        tokens.forEach(function(token){
-            upsertToken(token)
-        })
-    }
-
-    function upsertToken(token){
-        var elmt = $("#" + token.player + ".turn_box")
-        if (elmt.length){ // token exists, re-render if changed
-            if (JSON.stringify(Cache.tokens[token.player]) != JSON.stringify(token)){
-                elmt.replaceWith(turn_box(token))
-            }
-        } else { // token doesn't exist, add to end of parent
-            $("#hud_turns").append(turn_box(token))
-        }
-    }
-
-    function cacheTokens(tokens){
-        tokens.forEach(function(token){
-            Cache.tokens[token.player] = token
-        })
-    }
-
-    function highlightActiveTurn(activeTurnIndex, tokens){
-        try {
-            if (!tokens.length) return
-            var activeTokenPlayerID = tokens[activeTurnIndex].player
-        } catch (e){
-            return H.log("ERROR. Hud.highlightActiveTurn: activeTurnIndex out of bounds", activeTurnIndex, tokens)
-        }
-        $("#hud_turns .active_turn").removeClass("active_turn")
-        $("#" + activeTokenPlayerID + ".turn_box .player_turn").addClass("active_turn")
-    }
-
-    function turn_box(token){
-        var ready_turn = (token.live ? "ready_turn" : "")
-        var player_name = token.player_name.slice(0, 19)
-        if (token.player_name.length > 19){
-            player_name += "..."
-        }
-        return "<div id='" + token.player + "' class='turn_box'>"
-            +     "<div class='player_turn'></div>"
-            +     "<div class='player_countdown " + ready_turn + "'></div>"
-            +     "<div class='player_name'>" + player_name + "</div>"
-            +  "</div>"
     }
 
     return Hud
+}())
+
+var Charge = (function(){
+    var Charge = {}
+
+    var CLOCK_COLOR = 0xFFFA66
+    var CLOCK_OPACITY = 0.8
+    var CLOCK_MAT = new THREE.MeshLambertMaterial({
+        color:CLOCK_COLOR, side:THREE.DoubleSide,
+        transparent:true, opacity:CLOCK_OPACITY
+    });
+
+    Charge.start = function(piece){
+        var total = Conf.recharge
+        var delta = 1000
+        var time = total
+        var clock = null
+        var interval = setInterval(function(){
+            removeOldClock(clock)
+            time = time - delta
+            clock = makeRechargeClock(piece.x, piece.y, 2, time / total)
+            Scene.add(clock)
+            if (time < 0){
+                clearInterval(interval)
+                removeOldClock(clock)
+            }
+        }, delta);
+    }
+
+    function removeOldClock(clock){
+        Scene.remove(clock)
+        if (clock) clock.geometry.dispose();
+    }
+
+    function makeRechargeClock(x, y, z, percent){
+        var clock_geo = new THREE.RingGeometry(0.45, 0.5, 32, 8, Math.PI / 2, 2 * Math.PI * (percent - 1));
+        var ring = new THREE.Mesh(clock_geo, CLOCK_MAT);
+        // NOTE. This moves to the center of cell xyz. If you need to
+        // adjust say z to raise the ring higher, use something else.
+        Obj.move(ring, new THREE.Vector3(x, y, z))
+        return ring
+    }
+
+    return Charge
 }())
 
 var Console = (function(){
@@ -185,20 +157,23 @@ var Console = (function(){
     }
 
     function helloConsole(){
-        Console.print("<h1>Welcome to M.M.O. Chess: Ragnarook!</h1>")
+        Console.print("<h1>Welcome to Chess 2.0: Ragnarook! <sup>[ pre-alpha ]</sup></h1>")
         Console.print("<hr>")
-        Console.print("Ragnarook is a <i><b>Massively Multiplayer Open World Strategy Game</b></i> based on Chess, "
-                      + "where players form Alliances, build Empires, and conquer the World. "
-                      + "Prepare to destroy your enemies in a turn-based fashion!")
+        Console.print("Ragnarook is a <i><b>Massively Multiplayer Open World Strategy Game</b></i> "
+                      + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
+                      + "Prepare to vanquish your enemies in a semi-turn-based fashion!")
+        // Console.print("Ragnarook is a <i><b>Massively Multiplayer Online Open World Exploration Creative Building Semi-Real Time Strategy Role-Playing Game</b></i> "
+        //               + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
+        //               + "Prepare to vanquish your enemies in a semi-turn-based fashion!")
         Console.print("<hr>")
         Console.print("<h2><u>HOW TO PLAY</u></h2>")
         Console.print("<ol>"
                       + '<li>Left mouse: move pieces.</li>'
-                      + "<li>Right mouse: navigate.</li>" // mach Make it mouse click navigate
-                      + "<li>The bottom right HUD will signal when you can move. "
-                      + "Type <code> /info rules </code> for details on how turns are allotted.</li>"
+                      + "<li>Right mouse: navigate map.</li>" // mach Make it mouse click navigate
+                      + "<li>You can move any number of pieces at any time, but once moved, each piece needs "
+                      + " one minute to recharge before it can move again.</li>"
                       + "</ol>")
-        Console.print("Type <code> /info game </code> in the chat box below to start learning more about the game, "
+        Console.print("Type <code> /info game </code> into the chat box below to start learning more about the game, "
                       + "or dive right in and figure it out as you go.")
     }
 
@@ -259,113 +234,6 @@ var Console = (function(){
     return Console
 }())
 
-var Turn = (function(){
-    var Turn = {}
-
-    var _timersForNewTurnRequest = {} // keyed by enemy._id. Time til sending new turn request
-    var _timersForNewTurn = {} // keyed by enemy._id. Time til new turn
-    var _timersForTurnExpire = {} // keyed by enemy._id. Time til turn expires
-
-    Turn.init = function(you){
-        _timersForNewTurnRequest = {}
-        _timersForNewTurn = {}
-        _timersForTurnExpire = {}
-        // Count down til new turns for dead tokens
-        initNewTurnCountDowns(you.turn_tokens)
-    }
-
-    // NOTE. For now we're only removing deleted turns
-    Turn.refresh_turns = function(you){
-        $.each(Cache.tokens, function(keyAsEnemyID, token){
-            if (!doesTokensContainEnemyID(you.turn_tokens, keyAsEnemyID)){
-                H.log("INFO. Deleting token", keyAsEnemyID)
-                delete_turn(keyAsEnemyID)
-            }
-        })
-    }
-
-    function doesTokensContainEnemyID(tokens, enemyID){
-        return tokens.filter(function(token){
-            if (token.player == enemyID){
-                return true
-            }
-            return false
-        }).length > 0
-    }
-
-    function delete_turn(enemyID){
-        clearEnemyTimers(enemyID)
-        Hud.delete_turn(enemyID)
-    }
-
-    Turn.countDownTilNewTurn = function(enemyID, timeout){
-        clearEnemyTimers(enemyID)
-        startTimerForNewTurnRequest(enemyID, timeout)
-        startTimerForNewTurn(enemyID, timeout)
-    }
-
-    Turn.countDownTilTurnExpires = function(enemyID){
-        clearEnemyTimers(enemyID)
-        startTimerForTurnExpire(enemyID)
-    }
-
-    function initNewTurnCountDowns(tokens){
-        tokens.forEach(function(token){
-            if (!token.live){
-                Turn.countDownTilNewTurn(token.player)
-            }
-        })
-    }
-
-    function clearEnemyTimers(enemyID){
-        clearTimerForNewTurn(enemyID)
-        clearTimerForTurnExpire(enemyID)
-        clearTimerForNewTurnRequest(enemyID)
-    }
-
-    function startTimerForNewTurnRequest(enemyID, timeout){
-        var you = Player.getPlayer()
-        var to = setTimeout(function(){
-            Sock.send("turn", {
-                playerID: you._id,
-                enemyID: enemyID,
-            })
-        }, timeout || Conf.turn_timeout)
-        _timersForNewTurnRequest[enemyID] = to
-    }
-    function clearTimerForNewTurnRequest(enemyID){
-        clearTimeout(_timersForNewTurnRequest[enemyID])
-    }
-
-    function startTimerForNewTurn(enemyID, timeout){
-        var time = (timeout || Conf.turn_timeout) / 1000
-        var interval = setInterval(function(){
-            $("#" + enemyID + " .player_countdown").html(H.s2mmss(time) + " til new turn against:")
-            time--
-            if (time < 0) clearTimerForNewTurn(enemyID)
-        }, 1000);
-        _timersForNewTurn[enemyID] = interval
-    }
-    function clearTimerForNewTurn(enemyID){
-        clearInterval(_timersForNewTurn[enemyID])
-    }
-
-    function startTimerForTurnExpire(enemyID){
-        var time = Conf.turn_timeout / 1000
-        var interval = setInterval(function(){
-            $("#" + enemyID + " .player_countdown").html(H.s2mmss(time) + " til turn expires")
-            time--
-            if (time < 0) clearTimerForTurnExpire(enemyID)
-        }, 1000);
-        _timersForTurnExpire[enemyID] = interval
-    }
-    function clearTimerForTurnExpire(enemyID){
-        clearInterval(_timersForTurnExpire[enemyID])
-    }
-
-    return Turn
-}())
-
 // todo rename to something else
 var Sock = (function(){
     var Sock = {}
@@ -382,7 +250,7 @@ var Sock = (function(){
         };
 
         // re.data should always be an obj and contain a channel
-        // (e.g. move, turn, er)
+        // (e.g. move, er)
         _sock.onmessage = function(re){
             try {
                 var data = JSON.parse(re.data)
@@ -416,6 +284,8 @@ var Chat = (function(){
     var _socketAutoReconnectTimeout = null
     var _zone = [] // player's current zone, updated as she moves around the map
     var _knownZones = {} // keeps track of known zones, but only for cosmetic things like drawing zone corners
+
+    var CHAT_ZONE_CORNER_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.75, transparent:true});
 
     Chat.init = function(x, y){
         _zone = []
@@ -482,24 +352,16 @@ var Chat = (function(){
         else _knownZones[[X, Y]] = true
 
         var S = Conf.chat_zone_size
-        var l = 0.2
+        var l = 0.25
         var h = 1.1 // NOTE. Raise the cross hair slightly so it's not hidden by the plane
         var geometry = new THREE.Geometry()
-        addCrosshair(geometry, X    , Y    , l, h)
-        addCrosshair(geometry, X    , Y + S, l, h)
-        addCrosshair(geometry, X + S, Y + S, l, h)
-        addCrosshair(geometry, X + S, Y    , l, h)
-        var material = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.75, transparent:true});
-        var line = new THREE.Line(geometry, material, THREE.LinePieces);
+        Map.addCrosshair(geometry, X    , Y    , l, h)
+        Map.addCrosshair(geometry, X    , Y + S, l, h)
+        Map.addCrosshair(geometry, X + S, Y + S, l, h)
+        Map.addCrosshair(geometry, X + S, Y    , l, h)
+        var line = new THREE.Line(geometry, CHAT_ZONE_CORNER_MAT, THREE.LinePieces);
         Scene.add(line)
         Scene.render()
-    }
-
-    function addCrosshair(geometry, X, Y, l, h){
-        geometry.vertices.push(new THREE.Vector3(X - l, Y,     h));
-        geometry.vertices.push(new THREE.Vector3(X + l, Y,     h));
-        geometry.vertices.push(new THREE.Vector3(X    , Y - l, h));
-        geometry.vertices.push(new THREE.Vector3(X    , Y + l, h));
     }
 
     return Chat
@@ -576,12 +438,6 @@ var Rollover = (function(){
     Rollover.hide = function(){
         Obj.move(_rollover, new THREE.Vector3(0, 0, -1000)) // just move the rollover out of sight
     }
-
-    // // ref.
-    // Rollover.setColor = function(color){
-    //     if (color == null) _rollover.material.color.setRGB(1, 0, 0)
-    //     else _rollover.material.color = color
-    // }
 
     return Rollover
 }())
@@ -808,11 +664,16 @@ var Obj = (function(){
 var Map = (function(){
     var Map = {}
 
-    var _map = null
+    var ZONE_BORDER_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.9, transparent:true});
+    var ZONE_GRID_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.7, transparent: true});
+    var ZONE_GRID_DIAGONAL_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.5, transparent: true});
+    // var ZONE_PLANE_MAT = new THREE.MeshBasicMaterial({color:0x7B84A8});
+    var ZONE_PLANE_MAT = new THREE.MeshBasicMaterial({color:0x7B84A8, transparent:true, opacity:0.9});
 
-    // keys are string representations of arrays, e.g. a[[1,2]] ==
-    // "asdf" means a = {"1,2":"asdf"}
-    var _knownZones = {}
+    var _map = []
+    var _knownZones = {} // keys are string representations of arrays,
+                         // e.g. a[[1,2]] == "asdf" means a =
+                         // {"1,2":"asdf"}
 
     Map.init = function(x, y){
         _map = []
@@ -852,8 +713,7 @@ var Map = (function(){
     // x and y are real game coordinates
     Map.loadZones = function(x, y){
         var S = Conf.zone_size
-        // also load the 8 neighbouring zones to x, y
-        var N = 1
+        var N = 1 // also load the 8 neighbouring zones to x, y
         for (var i = -N; i <= N; i++){
             for (var j = -N; j <= N; j++){
                 var X = Map.toZoneCoordinate(x + i * S)
@@ -863,18 +723,20 @@ var Map = (function(){
                 else _knownZones[[X, Y]] = true
 
                 Map.loadZone(X, Y)
-                Obj.loadZone(X, Y, function(er){
-                    if (er) Console.error(er)
-                })
+                Obj.loadZone(X, Y)
             }
         }
     }
 
+    // TODO obj.geometry.dispose when removing from scene, to avoid
+    // memory leak
+    // TODO cache materials
+    //
     // X and Y are game units rounded to nearest multiple of zone_size
     Map.loadZone = function(X, Y){
         var S = Conf.zone_size
-        var CS = Conf.chat_zone_size
         Scene.add(makeZoneGrid(X, Y, S));
+        // Scene.add(makeZoneGridDiagonals(X, Y, S)); // toggle for fancy grid
         Scene.add(makeZoneBorder(X, Y, S));
         Game.addObj(makeZonePlane(X, Y, S))
         Scene.render()
@@ -888,9 +750,29 @@ var Map = (function(){
 			geometry.vertices.push(new THREE.Vector3(X + 0, Y + i, 1));
 			geometry.vertices.push(new THREE.Vector3(X + S, Y + i, 1));
 		}
-		var material = new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.5, transparent: true } );
-		var line = new THREE.Line( geometry, material, THREE.LinePieces );
+		var line = new THREE.Line( geometry, ZONE_GRID_MAT, THREE.LinePieces );
         return line
+    }
+
+    function makeZoneGridDiagonals(X, Y, S){
+		var geometry = new THREE.Geometry();
+		for ( var i = 0; i < S; i++){
+            for (var j = 0; j < S; j++){
+                if ((i + j) % 2 == 0){
+                    addZoneGridDiagonal(geometry, X + i, Y + j, K.CUBE_SIZE, 1.2)
+                    Map.addCrosshair(geometry, X + i + K.CUBE_SIZE / 2, Y + j + K.CUBE_SIZE / 2, K.CUBE_SIZE / 2, 1.4)
+                }
+            }
+		}
+		var line = new THREE.Line(geometry, ZONE_GRID_DIAGONAL_MAT, THREE.LinePieces);
+        return line
+    }
+
+    function addZoneGridDiagonal(geometry, X, Y, w, h){
+        geometry.vertices.push(new THREE.Vector3(X    , Y    , h));
+        geometry.vertices.push(new THREE.Vector3(X + w, Y + w, h));
+        geometry.vertices.push(new THREE.Vector3(X + w, Y    , h));
+        geometry.vertices.push(new THREE.Vector3(X    , Y + w, h));
     }
 
     // add thicker border around the edges
@@ -900,20 +782,24 @@ var Map = (function(){
         geometry.vertices.push(new THREE.Vector3(X + 0, Y + S, 1));
         geometry.vertices.push(new THREE.Vector3(X + S, Y + S, 1));
         geometry.vertices.push(new THREE.Vector3(X + S, Y + 0, 1));
-        var material = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.8, transparent:true});
-        var line = new THREE.Line( geometry, material, THREE.LineStrip );
+        var line = new THREE.Line( geometry, ZONE_BORDER_MAT, THREE.LineStrip );
         return line
     }
 
     function makeZonePlane(X, Y, S){
         var geometry = new THREE.PlaneBufferGeometry(S, S);
-        // var material = new THREE.MeshBasicMaterial({color:0x7B84A8});
-        var material = new THREE.MeshBasicMaterial({color:0x7B84A8, transparent:true, opacity:0.9});
-		var plane = new THREE.Mesh(geometry, material);
+		var plane = new THREE.Mesh(geometry, ZONE_PLANE_MAT);
 		plane.visible = true;
         plane.receiveShadow = true;
         plane.position.set(X + S / 2, Y + S / 2, 1)
         return plane
+    }
+
+    Map.addCrosshair = function(geometry, X, Y, l, h){
+        geometry.vertices.push(new THREE.Vector3(X - l, Y,     h));
+        geometry.vertices.push(new THREE.Vector3(X + l, Y,     h));
+        geometry.vertices.push(new THREE.Vector3(X    , Y - l, h));
+        geometry.vertices.push(new THREE.Vector3(X    , Y + l, h));
     }
 
     Map.toZoneCoordinate = function(x){
@@ -1202,6 +1088,15 @@ var Scene = (function(){
 
     Scene.remove = function(obj){
         _scene.remove(obj)
+        // NOTE. Caller should dispose of their own geometry,
+        // e.g. Charge.start needs to create RingGeometry's with
+        // custom angles, so it has to dispose of that RingGeometry
+        // every time
+        //
+        // if (obj){
+        //     obj.geometry.dispose();
+        //     obj.material.dispose();
+        // }
     }
 
     Scene.getScene = function(){
@@ -1227,7 +1122,7 @@ var Scene = (function(){
     }
 
     function initRenderer(){
-        Scene.renderer = new THREE.WebGLRenderer( { antialias:false, alpha:true } );
+        Scene.renderer = new THREE.WebGLRenderer( { antialias:true, alpha:true } );
         Scene.renderer.setClearColor(0x02002B, 1);
         Scene.renderer.setPixelRatio( window.devicePixelRatio );
         Scene.renderer.setSize( window.innerWidth, window.innerHeight );
@@ -1238,7 +1133,7 @@ var Scene = (function(){
     }
 
     function initLights(){
-        var ambientLight = new THREE.AmbientLight(0xB080D1);
+        var ambientLight = new THREE.AmbientLight(0xffffff);
         Scene.add(ambientLight);
         Scene.add(createDirectionalLight(-20, 40, 50));
     }
@@ -1246,9 +1141,9 @@ var Scene = (function(){
     function createDirectionalLight(x, y, z){
         var d = 10;
         var s = 1024;
-        var light = new THREE.DirectionalLight(0xFFFB87);
+        var light = new THREE.DirectionalLight(0xFFE100);
         light.position.set(x, y, z);
-        light.intensity = 0.75;
+        light.intensity = 0.5;
 
         // light.castShadow = true
 
@@ -1267,9 +1162,9 @@ var Scene = (function(){
     }
 
     function animate() {
-        requestAnimationFrame( animate );
+        requestAnimationFrame(animate);
         Controls.update();
-        // Scene.render() // don't render on every frame unless you're really animating stuff
+        Scene.render() // don't render on every frame unless you're really animating stuff
     }
 
     Scene.render = function(){
@@ -1325,9 +1220,7 @@ var Game = (function(){
                 Obj.init()
                 Map.init(x, y)
                 Menu.init(player)
-                Hud.init(player)
                 Console.init()
-                Turn.init(player)
                 Controls.init(x, y)
                 Events.init()
             },
@@ -1385,47 +1278,16 @@ var Game = (function(){
 
         on.move = function(data){
             var you = Player.getPlayer()
-            var playerName = data.player.name
             Game.removeObjAtXY(data.to.x, data.to.y)
+            movePiece(data)
+            Charge.start(data.piece)
+            // Scene.render()
+        }
 
-            // move selected piece
+        function movePiece(data){
             var sel = Obj.findObjAtPosition(Math.floor(data.from.x), Math.floor(data.from.y), 1)
             sel.game.piece = data.piece // update piece with new position data
-            data.to.z = 1.5
             Obj.move(sel, data.to)
-
-            Scene.render()
-        }
-
-        on.to_new_turn = function(data){
-            var you = Player.getPlayer()
-            var enemyID = data.enemy._id
-            var timeout = data.timeout
-            if (isYourSock(you, data)){
-                H.log("INFO. to_new_turn", enemyID, timeout)
-                Turn.countDownTilNewTurn(enemyID, timeout)
-                Hud.renderTurns(data.player)
-            }
-        }
-
-        on.to_turn_exp = function(data){
-            var you = Player.getPlayer()
-            var enemyID = data.enemy._id
-            if (isYourSock(you, data)){
-                H.log("INFO. to_turn_exp", enemyID)
-                Turn.countDownTilTurnExpires(enemyID)
-                Hud.renderTurns(data.player)
-            }
-        }
-
-        // One of the enemy tokens is being removed so needs to
-        // refresh the hud
-        on.refresh_turns = function(data){
-            var you = Player.getPlayer()
-            var player = data.player
-            if (isYourSock(you, data)){
-                Turn.refresh_turns(player)
-            }
         }
 
         // todo big splash screen and menu for loser

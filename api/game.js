@@ -2,7 +2,6 @@ var _ = require("lodash")
 var async = require("async")
 var express = require('express');
 var H = require("../static/js/h.js")
-var K = require("../conf/k.js")
 var Conf = require("../static/conf.json") // shared with client
 var Cell = require("../models/cell.js")
 var Piece = require("../models/piece.js")
@@ -11,7 +10,6 @@ var Pub = require("../api/pub.js")
 var Cells = require("../api/cells.js")
 var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
-var Turn = require("./turn.js")
 var DB = require("../db.js")
 
 var Move = (function(){
@@ -276,7 +274,8 @@ var Move = (function(){
                 Piece.findOneAndUpdate(piece, { // update moving piece data
                     $set: {
                         x: to.x,
-                        y: to.y
+                        y: to.y,
+                        moved: new Date()
                     }
                 }, {
                     new: true,
@@ -564,6 +563,8 @@ var Game = module.exports = (function(){
     Game.on = (function(){
         var on = {}
 
+        var VALIDATE_PIECE_TIMEOUT = "VALIDATE_PIECE_TIMEOUT"
+
         on.move = function(data){
             try {
                 var player = data.player
@@ -577,8 +578,9 @@ var Game = module.exports = (function(){
                 var to = {
                     x: Math.floor(data.to.x),
                     y: Math.floor(data.to.y),
+                    z: 1.5, // NOTE. Assuming ground at 1
                 }
-                var enemy, captured, nEnemies = null
+                var captured = null
             } catch (e){
                 H.log("ERROR. Game.on.move: invalid input", data)
                 return
@@ -591,17 +593,11 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    try {
-                        if (player.turn_tokens.length){ // for debugging
-                            var enemyToken = player.turn_tokens[player.turn_index]
-                            H.log("INFO. Game.on.move", enemyToken.live, player.name, enemyToken.player_name)
-                        }
-                    } catch (e){
-                        return done({info:"ERROR. Game.on.move: player.turn_index out of bounds", player:player})
-                    }
                     if (!player.alive) return done({info: "ERROR. You are dead."})
-                    if (!Turn.hasTurn(player)) return done({info: "ERROR. No more turn.", code:Conf.code.no_more_turn})
-                    done(null)
+                    Pieces.validatePieceTimeout(piece, function(er){
+                        if (er) done({info:er, code:VALIDATE_PIECE_TIMEOUT})
+                        else done(null)
+                    })
                 },
                 function(done){
                     Move.validateMove(player, piece, from, to, function(er){
@@ -616,141 +612,27 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    // NOTE. enemy might not be the same as
-                    // enemyKing. You could be spending enemy's turn
-                    // token against someone else (enemyKing)
-                    Turn.update(playerID, function(er, _player, _enemy){
-                        player = _player
-                        enemy = _enemy // can be null if player free roaming
+                    Players.findNewEnemies(player, to, function(er, _player, _nEnemies){
+                        player = _player || player
+                        // todo do something with these new enemies
+                        // if (_nEnemies) Pub.new_enemies(player, _nEnemies)
                         done(er)
                     })
                 },
                 function(done){
-                    Turn.findNewEnemies(player, to, function(er, _player, _nEnemies){
-                        player = _player
-                        nEnemies = _nEnemies
-                        if (nEnemies) Pub.new_enemies(player, nEnemies)
-                        done(er)
-                    })
-                },
-                function(done){
-                    var enemyKing = null
                     if (captured && captured.kind == "king"){
-                        enemyKing = captured
-                    }
-                    if (enemy && enemyKing && enemyKing.player.equals(enemy._id)){
-                        // enemy and enemyKing are the same people
-                        Game.on.gameover(enemyKing.player, playerID)
-                    } else if (enemy && enemyKing){
-                        Game.on.gameover(enemyKing.player, playerID)
-                        // Using enemy's token against someone else
-                        // (enemyKing): maintain turn requests with
-                        // enemy
-                        Pub.to_turns(player, enemy)
-                    } else if (enemy && !enemyKing){ // Just a regular move: no king killing
-                        Pub.to_turns(player, enemy)
-                    } else if (!enemy && enemyKing){
-                        // enemy is null because player is free
-                        // roaming, and killing enemyKing on the first
-                        // move.
-                        Game.on.gameover(enemyKing.player, playerID)
+                        Game.on.gameover(captured.player, playerID)
                     }
                     done(null)
                 }
             ], function(er){
                 if (er){
-                    if (er.code != Conf.code.no_more_turn) H.log("ERROR. Game.on.move", er)
+                    if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.on.move", er)
                     Pub.error(playerID, er.info || "ERROR. Game.on.move: unexpected error")
                 } else {
                     Pub.move(player, nPiece, from, to)
                 }
             })
-        }
-
-        // player requesting token from enemy
-        on.turn = function(data){
-            try {
-                var playerID = data.playerID
-                var enemyID = data.enemyID
-                var player, enemy = null
-            } catch (e){
-                return H.log("ERROR. Game.on.turn: invalid input", data)
-            }
-            async.waterfall([
-                function(done){
-                    Player.findOneByID(playerID, function(er, _player){
-                        player = _player
-                        done(er)
-                    })
-                },
-                function(done){
-                    Player.findOneByID(enemyID, function(er, _enemy){
-                        enemy = _enemy
-                        done(er)
-                    })
-                },
-                function(done){
-                    H.log("INFO. Game.on.turn", player.name, enemy.name)
-                    if (player.alive && enemy.alive){
-                        done(null)
-                    } else {
-                        Pub.refresh_turns(player)
-                        done({info: "ERROR. Can't request turn: " + (!player.alive ? "player" : "enemy") + " dead."})
-                    }
-                },
-                function(done){
-                    validateTimeout(enemy, player, function(er){
-                        done(er)
-                    })
-                },
-                function(done){
-                    Turn.getTokenFromEnemy(playerID, enemyID, function(er, _player){
-                        player = _player
-                        done(er)
-                    })
-                },
-                function(done){
-                    Turn.unsetEnemyToken(playerID, enemyID, function(er, _enemy){
-                        enemy = _enemy
-                        done(er)
-                    })
-                },
-            ], function(er){
-                if (er){
-                    H.log("ERROR. Game.on.turn", er)
-                    Pub.error(playerID, er.info || "ERROR. Game.on.turn: unexpected error")
-                } else {
-                    Pub.to_turns(enemy, player)
-                }
-            })
-        }
-
-        function validateTimeout(enemy, player, done){
-            switch(Turn.validateTimeout(enemy, player._id)){
-            case Turn.code.ready:
-                done(null)
-                break;
-            case Turn.code.extended:
-                done(null)
-                break;
-            case Turn.code.early:
-                // TODO. Check how early the request was and
-                // send retry by that amount
-                H.log("INFO. Game.on.turn.to_new_turn", player.name, enemy.name)
-                // mach add to_turn_exp for enemy too, with Conf.turn_timeout_ext, and use Pub.to_turns
-                Pub.to_new_turn(player, enemy, Conf.turn_timeout_ext)
-                done({info: "ERROR. Can't request turn: too soon."})
-                break;
-            case Turn.code.dead:
-                // todo maybe notify the client to correct its states
-                done({info: "INFO. Turn.validateTimeout: live:false player:" + player.name + " enemy:" + enemy.name})
-                break;
-            case Turn.code.noncombat:
-                done({info: "ERROR. Requesting turn from nonexistent enemy."})
-                break;
-            default: // this should never happen
-                done({info: "ERROR. Unknown timeout code."})
-            }
         }
 
         // todo. A fraction (half?) of pieces convert to enemy,
@@ -785,8 +667,7 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Turn.clearTokens(playerID, function(er, player, enemies){
-                        Pub.refresh_players_turns(enemies.concat([player]))
+                    Players.resetEnemies(playerID, function(er, player){
                         done(er)
                     })
                     Pieces.defect(playerID, enemyID, function(er){

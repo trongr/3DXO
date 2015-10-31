@@ -2,9 +2,8 @@ var async = require("async")
 var request = require("request")
 var express = require('express');
 var Piece = require("../models/piece.js")
-// mach remove
-// var H = require("../lib/h.js")
 var H = require("../static/js/h.js")
+var Conf = require("../static/conf.json") // shared with client
 
 var Pieces = module.exports = (function(){
     Pieces = {
@@ -23,6 +22,27 @@ var Pieces = module.exports = (function(){
             multi: true,
         }, function(er, re){
             if (done) done(er)
+        })
+    }
+
+    Pieces.validatePieceTimeout = function(piece, done){
+        var pieceID = piece._id
+        var nPiece = null
+        Piece.findOneByID(pieceID, function(er, _piece){
+            nPiece = _piece
+            if (!nPiece){
+                H.log("ERROR. Pieces.validatePieceTimeout: piece not found", piece, er)
+                return done("ERROR. Piece not found.")
+            }
+            // piece.moved == null by default, so new Date(null) ==
+            // Start of Epoch, so if else check will work out: piece
+            // can move
+            var elapsed = new Date().getTime() - new Date(nPiece.moved).getTime()
+            if (elapsed >= Conf.recharge){
+                done(null)
+            } else {
+                done("Charging: ready in " + H.s2mmss((Conf.recharge - elapsed) / 1000))
+            }
         })
     }
 

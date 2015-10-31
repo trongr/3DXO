@@ -5,58 +5,12 @@ body {
     font-size: 12px;
 }
 
-/* begin hud css */
-/* begin hud css */
-/* begin hud css */
-
-#hud_box {
-    color: white;
-    margin: 0 0 10px 0;
-    position: fixed;
-    right: 0;
-    bottom: 0;
+hr {
+    border: none;
+    height: 1px;
+    color: #ffffff;
+    background-color: #ffffff;
 }
-
-#hud_turns {
-    display: table;
-}
-
-#hud_turns .turn_box {
-    display: table-row;
-}
-
-#hud_turns .turn_box div {
-    display: table-cell;
-}
-
-#hud_turns .turn_box .player_turn {
-    width: 10px;
-}
-
-#hud_turns .turn_box .player_name {
-    padding: 10px 15px 10px 15px;
-    background: rgba(96, 115, 96, 0.5);
-    color: white;
-}
-
-#hud_turns .turn_box .player_countdown {
-    padding: 10px 15px 10px 15px;
-    background: rgba(119, 150, 119, 0.5);
-    color: white;
-}
-
-#hud_turns .turn_box .ready_turn {
-    background: rgba(82, 219, 37, 0.5);
-}
-
-#hud_turns .turn_box .active_turn {
-    background: rgba(0, 255, 0, 0.5);
-    width: 10px;
-}
-
-/* end hud css */
-/* end hud css */
-/* end hud css */
 
 /* begin menu css */
 /* begin menu css */
@@ -138,14 +92,17 @@ body {
 
 .console_info {
     color: #A1FF9C;
+    font-weight: bold;
 }
 
 .console_warning {
     color: yellow;
+    font-weight: bold;
 }
 
 .console_error {
     color: #FF2B2B;
+    font-weight: bold;
 }
 
 /* end console css */

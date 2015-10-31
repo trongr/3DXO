@@ -64,8 +64,12 @@ var Chat = module.exports = (function(){
         });
 
         conn.on("close", function(){
-            Sub.unsub("chat", connID)
-            H.log("INFO. Chat.close", connID)
+            try {
+                Sub.unsub("chat", connID, _zone)
+                H.log("INFO. Chat.close", connID, _zone.toString())
+            } catch (e){
+                H.log("ERROR. Chat.close.catch", connID, _zone)
+            }
         })
 
         function onChatMsgCallback(msg){

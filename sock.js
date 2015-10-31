@@ -1,8 +1,6 @@
 var sockjs  = require('sockjs');
 var redis   = require('redis');
 var H = require("./static/js/h.js")
-// mach remove
-// var H = require("./lib/h.js")
 var Game = require("./api/game.js")
 
 var Sock = module.exports = (function(){
@@ -41,15 +39,8 @@ var Sock = module.exports = (function(){
         // https://github.com/NodeRedis/node_redis
         // http://redis.io/commands/PSUBSCRIBE
         client.subscribe('error');
-
         client.subscribe('new_army');
-
         client.subscribe('move');
-
-        client.subscribe('to_new_turn');
-        client.subscribe('to_turn_exp');
-        client.subscribe('refresh_turns');
-
         client.subscribe('gameover');
         client.subscribe('defect');
 

@@ -25,7 +25,7 @@ app.use(session({
         port: 6379,
         // pass: "ajoidsjfoasdijfaosd" // todo
         // db: 0, // Does it matter if you use a diff db number?
-        ttl: 1 * 24 * 3600, // in seconds. todo change to 7 days
+        ttl: 7 * 24 * 3600, // in seconds
     }),
     secret: 'keyboard cat', // todo change for prod
     saveUninitialized: true,
