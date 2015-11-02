@@ -33,12 +33,7 @@ var Chat = module.exports = (function(){
         var connID = conn.id
         H.log("INFO. Chat.onConnection", connID)
 
-        // mach
-        // Zone this connection subscribes to. Remove and add to when
-        // player scrolls
-        //
-        // todo maybe make it a small list of zones so player can
-        // listen to and publish in multiple zones
+        // Zones this connection subscribes to
         var _zone = null // e.g. [0, 0]
 
         // mach clean text and validate zone

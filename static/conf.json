@@ -1,5 +1,5 @@
 {
-    "recharge": 60000,
+    "recharge": 30000,
     "zone_size": 8,
     "chat_zone_size": 16,
     "scout_range": 6,

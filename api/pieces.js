@@ -41,7 +41,7 @@ var Pieces = module.exports = (function(){
             if (elapsed >= Conf.recharge){
                 done(null)
             } else {
-                done("Charging: ready in " + H.s2mmss((Conf.recharge - elapsed) / 1000))
+                done("Charging: ready in " + parseInt((Conf.recharge - elapsed) / 1000) + "s")
             }
         })
     }

@@ -88,37 +88,67 @@ var Hud = (function(){
 var Charge = (function(){
     var Charge = {}
 
-    var CLOCK_COLOR = 0xFFFA66
-    var CLOCK_OPACITY = 0.8
+    // Stores clocks by pieceID so you can remove them
+    var _clocks = {
+        // pieceID: {
+        //     clock: clock, // the THREEJS clock obj
+        //     interval: interval
+        // }
+    }
+
+    var CLOCK_OUTER_RADIUS = 0.5
+    var CLOCK_WIDTH = 0.1
+    var CLOCK_INNER_RADIUS = CLOCK_OUTER_RADIUS - CLOCK_WIDTH
     var CLOCK_MAT = new THREE.MeshLambertMaterial({
-        color:CLOCK_COLOR, side:THREE.DoubleSide,
-        transparent:true, opacity:CLOCK_OPACITY
+        color:0xFFFA66, side:THREE.DoubleSide, // Need DoubleSide otw ring won't render
+        transparent:true, opacity:0.8
     });
 
     Charge.start = function(piece){
+        var pieceID = piece._id
         var total = Conf.recharge
         var delta = 1000
         var time = total
-        var clock = null
-        var interval = setInterval(function(){
-            removeOldClock(clock)
+        resetPieceClock(pieceID)
+        _clocks[pieceID] = {}
+        _clocks[pieceID].interval = setInterval(function(){
+            removeClockMesh(pieceID)
             time = time - delta
-            clock = makeRechargeClock(piece.x, piece.y, 2, time / total)
+            var clock = makeRechargeClock(piece.x, piece.y, 2, time / total)
+            _clocks[pieceID].clock = clock
             Scene.add(clock)
-            if (time < 0){
-                clearInterval(interval)
-                removeOldClock(clock)
+            if (time < 1){
+                resetPieceClock(pieceID)
             }
         }, delta);
     }
 
-    function removeOldClock(clock){
-        Scene.remove(clock)
-        if (clock) clock.geometry.dispose();
+    // Removes piece's clock contained in obj, if any
+    Charge.resetObjClock = function(obj){
+        try {
+            resetPieceClock(obj.game.piece._id)
+        } catch (e){
+            // Do nothing here, cause obj can be null
+        }
+    }
+
+    function resetPieceClock(pieceID){
+        var clock = _clocks[pieceID]
+        if (clock){
+            clearInterval(clock.interval)
+            removeClockMesh(pieceID)
+            _clocks[pieceID] = {}
+        }
+    }
+
+    function removeClockMesh(pieceID){
+        var obj = _clocks[pieceID].clock
+        Scene.remove(obj)
+        if (obj) obj.geometry.dispose();
     }
 
     function makeRechargeClock(x, y, z, percent){
-        var clock_geo = new THREE.RingGeometry(0.45, 0.5, 32, 8, Math.PI / 2, 2 * Math.PI * (percent - 1));
+        var clock_geo = new THREE.RingGeometry(CLOCK_INNER_RADIUS, CLOCK_OUTER_RADIUS, 32, 8, Math.PI / 2, 2 * Math.PI * (percent - 1));
         var ring = new THREE.Mesh(clock_geo, CLOCK_MAT);
         // NOTE. This moves to the center of cell xyz. If you need to
         // adjust say z to raise the ring higher, use something else.
@@ -169,9 +199,9 @@ var Console = (function(){
         Console.print("<h2><u>HOW TO PLAY</u></h2>")
         Console.print("<ol>"
                       + '<li>Left mouse: move pieces.</li>'
-                      + "<li>Right mouse: navigate map.</li>" // mach Make it mouse click navigate
+                      + "<li>Right mouse: navigate map.</li>" // todo Make it mouse click navigate
                       + "<li>You can move any number of pieces at any time, but once moved, each piece needs "
-                      + " one minute to recharge before it can move again.</li>"
+                      + " 30 seconds to recharge before it can move again.</li>"
                       + "</ol>")
         Console.print("Type <code> /info game </code> into the chat box below to start learning more about the game, "
                       + "or dive right in and figure it out as you go.")
@@ -262,7 +292,7 @@ var Sock = (function(){
         };
 
         _sock.onclose = function() {
-            Console.warn("WARNING. Lost game connection. Retrying in 5s.")
+            Console.warn("Lost connection: retrying in 5s")
             setTimeout(function(){
                 Sock.init()
             }, 5000)
@@ -310,7 +340,7 @@ var Chat = (function(){
         };
 
         _chat.onclose = function() {
-            Console.warn("WARNING. Lost chat connection. Retrying in 5s.")
+            // Console.warn("WARNING. Lost chat connection. Retrying in 5s.")
             setTimeout(function(){
                 Chat.init(_zone[0], _zone[1])
             }, 5000)
@@ -664,11 +694,11 @@ var Obj = (function(){
 var Map = (function(){
     var Map = {}
 
-    var ZONE_BORDER_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.9, transparent:true});
-    var ZONE_GRID_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.7, transparent: true});
+    var ZONE_BORDER_MAT = new THREE.LineBasicMaterial({color: 0xffffff});
+    var ZONE_GRID_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.5, transparent: true});
     var ZONE_GRID_DIAGONAL_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.5, transparent: true});
-    // var ZONE_PLANE_MAT = new THREE.MeshBasicMaterial({color:0x7B84A8});
-    var ZONE_PLANE_MAT = new THREE.MeshBasicMaterial({color:0x7B84A8, transparent:true, opacity:0.9});
+    // var ZONE_PLANE_MAT = new THREE.MeshBasicMaterial({color:0x6491E8});
+    var ZONE_PLANE_MAT = new THREE.MeshBasicMaterial({color:0x698CD1, transparent:true, opacity:0.9});
 
     var _map = []
     var _knownZones = {} // keys are string representations of arrays,
@@ -1278,10 +1308,10 @@ var Game = (function(){
 
         on.move = function(data){
             var you = Player.getPlayer()
-            Game.removeObjAtXY(data.to.x, data.to.y)
+            var obj = Game.removeObjAtXY(data.to.x, data.to.y)
+            Charge.resetObjClock(obj)
             movePiece(data)
             Charge.start(data.piece)
-            // Scene.render()
         }
 
         function movePiece(data){
