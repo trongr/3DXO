@@ -36,6 +36,8 @@ THREE.TrackballControls = function ( object, domElement, zoom_domElement ) {
 
 	this.minDistance = 0;
 	this.maxDistance = Infinity;
+    // this.minDistance = 20;
+    // this.maxDistance = 50;
 
 	this.keys = [ 65 /*A*/, 83 /*S*/, 68 /*D*/ ];
 

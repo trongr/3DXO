@@ -1,11 +1,19 @@
+var _ = require("lodash")
 var redis   = require('redis');
 var async = require("async")
 var express = require('express');
 var H = require("../static/js/h.js")
 var Conf = require("../static/conf.json") // shared with client
+var Player = require("../models/player.js")
+var Piece = require("../models/piece.js")
+var Pub = require("./pub.js")
 
 var Sub = module.exports = (function(){
     Sub = {}
+
+    var ERROR_NO_NEIGHBOURS = "ERROR. Message not sent: you need to be within "
+        + Conf.scout_range + " cells of another army to talk to them. "
+        + "You can send a direct message to another player by including @TheirUsername in the message."
 
     // todo can use psubscribe and punsubscribe with pattern:
     // https://github.com/NodeRedis/node_redis
@@ -13,66 +21,69 @@ var Sub = module.exports = (function(){
     var _subscriber = redis.createClient();
     _subscriber.subscribe('chat');
 
-    // A zone's position is its lower left coordinate.  Each zone
-    // stores onChatMsgCallback's keyed by connID's
-    var _zones = {
-        // "0,0": {
-        //     connID: onChatMsgCallback,
-        //     connID: onChatMsgCallback,
-        // }
+    var _players = {
+        // playerID: onChatMsgCallback,
+        // playerID: onChatMsgCallback,
     }
 
-    // mach validate data.zone. maybe should validate that before pub.chat
+    // mach validate msg. maybe should validate that before pub.chat
     _subscriber.on("message", function(chan, msg){
         try {
             var data = JSON.parse(msg)
-            callbackZonesCenteredAtZone(data.zone, msg)
+            callbackNeighbours(data.playerID, msg)
         } catch (e){
             H.log("ERROR. Sub.on.message.catch", chan, msg, e)
         }
     });
 
-    function callbackZonesCenteredAtZone(zone, msg){
-        var S = Conf.chat_zone_size
-        var N = 1
-        var x = zone[0]
-        var y = zone[1]
-        for (var i = -N; i <= N; i++){
-            for (var j = -N; j <= N; j++){
-                var X = H.toZoneCoordinate(x + i * S, S)
-                var Y = H.toZoneCoordinate(y + j * S, S)
-                callbackZone([X, Y], msg)
+    // playerID is the player publishing the msg. We're calling back
+    // to her neighbours to publish msg to them
+    function callbackNeighbours(playerID, msg){
+        var player = null
+        async.waterfall([
+            function(done){
+                Player.findOneByID(playerID, function(er, _player){
+                    player = _player
+                    done(er)
+                })
+            },
+            function(done){
+                H.log("INFO. Sub.callbackNeighbours", player.name, playerID, player.enemies.length)
+                if (!player.enemies.length){
+                    return Pub.error(playerID, ERROR_NO_NEIGHBOURS)
+                }
+                player.enemies.forEach(function(enemy){
+                    callbackPlayer(enemy.player, msg)
+                })
+                done(null)
             }
+        ], function(er){
+            if (er) H.log("ERROR. sub.callbackNeighbours", playerID, msg, er)
+        })
+    }
+
+    function callbackPlayer(playerID, msg){
+        if (_players[playerID]){
+            _players[playerID](msg)
         }
     }
 
-    function callbackZone(zone, msg){
-        var onChatMsgCallbacks = _zones[zone]
-        for (var connID in onChatMsgCallbacks){
-            if (onChatMsgCallbacks.hasOwnProperty(connID)){
-                onChatMsgCallbacks[connID](msg)
-            }
-        }
-    }
-
-    // mach validate zone and round down
-    Sub.sub = function(chan, connID, zone, onChatMsgCallback){
+    Sub.sub = function(chan, playerID, onChatMsgCallback){
         try {
-            _zones[zone] = _zones[zone] || {}
-            _zones[zone][connID] = onChatMsgCallback
-            H.log("INFO. Sub.sub", chan, zone.toString(), H.length(_zones[zone]), connID)
+            _players[playerID] = onChatMsgCallback
+            H.log("INFO. Sub.sub", chan, playerID, H.length(_players))
         } catch (e){
-            H.log("ERROR. Sub.sub.catch", chan, zone, connID)
+            H.log("ERROR. Sub.sub.catch", chan, playerID)
         }
     }
 
-    // Remove connID from zone
-    Sub.unsub = function(chan, connID, zone){
+    // Remove player from pubsub
+    Sub.unsub = function(chan, playerID){
         try {
-            delete _zones[zone][connID]
-            H.log("INFO. Sub.unsub", chan, zone.toString(), H.length(_zones[zone]), connID)
+            delete _players[playerID]
+            H.log("INFO. Sub.unsub", chan, playerID, H.length(_players))
         } catch (e){
-            H.log("ERROR. Sub.unsub.catch", zone, connID)
+            H.log("ERROR. Sub.unsub.catch", playerID)
         }
     }
 

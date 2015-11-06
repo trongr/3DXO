@@ -24,30 +24,24 @@ var Chat = module.exports = (function(){
     // todo. authenticate client. right now there's no way to know if
     // a client is who they say they are
     //
-    // todo. how to scale pubsub? encode channel names with
-    // coordinates?
-    //
     // One connection from client to server. Multiple channels to
     // publish and subscribe to.
     function onConnection(conn){
-        var connID = conn.id
-        H.log("INFO. Chat.onConnection", connID)
+        H.log("INFO. Chat.onConnection")
+        var playerID = null
 
-        // Zones this connection subscribes to
-        var _zone = null // e.g. [0, 0]
-
-        // mach clean text and validate zone
+        // mach clean text
+        // don't forward everything client sends through to other users
         // Receiving data from client
         conn.on('data', function(msg) {
             try {
                 var data = JSON.parse(msg)
                 var chan = data.chan
-                var zone = data.zone
-                var prevZone = _zone
-                _zone = zone
-                if (chan == "sub"){
-                    if (prevZone) Sub.unsub("chat", connID, prevZone)
-                    Sub.sub("chat", connID, _zone, onChatMsgCallback)
+                // mach validate playerID with socket auth (todo)
+                playerID = data.playerID
+                if (chan == "sub"){ // This should only happen once when client connects the first time
+                    Sub.unsub("chat", playerID)
+                    Sub.sub("chat", playerID, onChatMsgCallback)
                 } else if (chan == "pub"){
                     Pub.chat(data)
                 } else {
@@ -60,10 +54,10 @@ var Chat = module.exports = (function(){
 
         conn.on("close", function(){
             try {
-                Sub.unsub("chat", connID, _zone)
-                H.log("INFO. Chat.close", connID, _zone.toString())
+                H.log("INFO. Chat.close", playerID)
+                Sub.unsub("chat", playerID)
             } catch (e){
-                H.log("ERROR. Chat.close.catch", connID, _zone)
+                H.log("ERROR. Chat.close.catch", playerID)
             }
         })
 

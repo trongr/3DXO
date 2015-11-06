@@ -240,6 +240,7 @@ var Console = (function(){
     function processConsoleInput(){
         var text = _console_in.val(); _console_in.val("")
         if (!text) return
+        Console.print(text)
         Chat.pub(text)
     }
 
@@ -314,10 +315,12 @@ var Chat = (function(){
     var _socketAutoReconnectTimeout = null
     var _zone = [] // player's current zone, updated as she moves around the map
     var _knownZones = {} // keeps track of known zones, but only for cosmetic things like drawing zone corners
+    var playerID = null
 
     var CHAT_ZONE_CORNER_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.75, transparent:true});
 
     Chat.init = function(x, y){
+        playerID = Player.getPlayer()._id
         _zone = []
         _knownZones = {}
         _chat = new SockJS('http://localhost:8080/chat');
@@ -325,7 +328,8 @@ var Chat = (function(){
         _chat.onopen = function() {
             // Console.info("INFO. Connected to chat.")
             clearTimeout(_socketAutoReconnectTimeout)
-            Chat.sub(x, y)
+            Chat.updateZone(x, y)
+            Chat.sub()
         };
 
         _chat.onmessage = function(re){
@@ -355,7 +359,7 @@ var Chat = (function(){
         }
     }
 
-    Chat.sub = function(x, y){
+    Chat.updateZone = function(x, y){
         var X = Chat.toZoneCoordinate(x)
         var Y = Chat.toZoneCoordinate(y)
         var zone = [X, Y]
@@ -364,12 +368,15 @@ var Chat = (function(){
         } else {
             _zone = zone
         }
-        Chat.send({chan:"sub", zone:_zone})
         drawChatZoneCorners(X, Y)
     }
 
+    Chat.sub = function(){
+        Chat.send({chan:"sub", playerID:playerID})
+    }
+
     Chat.pub = function(text){
-        Chat.send({chan:"pub", zone:_zone, text:text})
+        Chat.send({chan:"pub", playerID:playerID, text:text})
     }
 
     Chat.toZoneCoordinate = function(x){
@@ -711,7 +718,7 @@ var Map = (function(){
             var x = Scene.camera.position.x
             var y = Scene.camera.position.y
             Map.loadZones(x, y)
-            Chat.sub(x, y)
+            Chat.updateZone(x, y)
         })
         Map.loadZones(x, y) // load map wherever player spawns
     }
@@ -1063,6 +1070,8 @@ var Controls = (function(){
         _controls.noRotate = true;
         _controls.noZoom = false;
         _controls.noPan = false;
+	    _controls.minDistance = 20;
+        _controls.maxDistance = 40;
         _controls.staticMoving = true;
         _controls.dynamicDampingFactor = 0.3;
         _controls.keys = [ 65, 83, 68 ];
