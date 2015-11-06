@@ -589,11 +589,19 @@ var Obj = (function(){
         for (var i = 0; i < 6; i++){
             materials.push(new THREE.MeshPhongMaterial({color:otherFacesColor, shading:THREE.FlatShading, side:THREE.DoubleSide}))
         } // use colors for non image faces
-        materials[4] = new THREE.MeshLambertMaterial({
-            map:THREE.ImageUtils.loadTexture(TEXTURES_ROOT + textureName + "4.png", {}, function(){
-                Scene.render()
-            })
-        })
+
+        var texture = THREE.ImageUtils.loadTexture(TEXTURES_ROOT + textureName + ".png", {})
+        texture.needsUpdate = true
+        var uniforms = {
+            color: { type: "c", value: new THREE.Color(otherFacesColor) },
+            texture: { type: "t", value: texture },
+        };
+        materials[4] = new THREE.ShaderMaterial({
+            uniforms        : uniforms,
+            vertexShader    : document.getElementById( 'vertex_shader' ).textContent,
+            fragmentShader  : document.getElementById( 'fragment_shader' ).textContent
+        });
+
         return materials
     }
 
@@ -604,8 +612,9 @@ var Obj = (function(){
             var piece = pieces[i]
             Obj.KIND[piece] = {
                 material: [
-                    new THREE.MeshFaceMaterial(loadFaceTextures("p0" + piece, 0xff4545)),
-                    new THREE.MeshFaceMaterial(loadFaceTextures("p1" + piece, 0x0060ff)),
+                    // 0 is the chess set id
+                    new THREE.MeshFaceMaterial(loadFaceTextures(piece + "0", 0xff4545)),
+                    new THREE.MeshFaceMaterial(loadFaceTextures(piece + "0", 0x0060ff)),
                 ],
             }
         }
@@ -1210,7 +1219,7 @@ var Scene = (function(){
         try {
             Scene.renderer.render(_scene, Scene.camera);
         } catch (e){
-            Console.warn("Renderer not ready", 2)
+            // Console.warn("Renderer not ready")
         }
     }
 

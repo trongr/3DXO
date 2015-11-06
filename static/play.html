@@ -11,6 +11,22 @@
         <!-- <script src="/static/js/sockjs.min.js"></script> -->
         <script src="//cdn.jsdelivr.net/sockjs/1.0.0/sockjs.min.js"></script>
 		<script src="/static/js/three.min.js"></script>
+        <script type="x-shader/x-vertex" id="vertex_shader">
+            varying vec2 vUv;
+            void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="fragment_shader">
+            uniform vec3 color;
+            uniform sampler2D texture;
+            varying vec2 vUv;
+            void main() {
+                vec4 tColor = texture2D( texture, vUv );
+                gl_FragColor = vec4( mix( color, tColor.rgb, tColor.a ), 1.0 );
+            }
+        </script>
 		<script src="/static/js/TrackballControls.js"></script>
 		<script src="/static/js/Detector.js"></script>
 		<script src="/static/js/async.js"></script>
