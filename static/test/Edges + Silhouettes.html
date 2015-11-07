@@ -3,11 +3,11 @@
 <link rel="icon" type="image/jpeg" href="http://ar3f.in/img/favicon.jpg">
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta property="fb:admins" content="500107897">
-<link href="Gooch%20Shading%20+%20Canny%20Edge_files/css.css" rel="stylesheet" type="text/css">
+<link href="Edges%20+%20Silhouettes_files/css.css" rel="stylesheet" type="text/css">
 
 <style>
 	body {
-		background-color: #000000;
+		background-color: #ffffff;
 		margin: 0px;
 		overflow: hidden;
 		color: #000000;
@@ -16,7 +16,7 @@
 	#topbar {
 		font-family: 'Ropa Sans', sans-serif;
 		font-size: 16px;
-		color: #000000;
+		color: #ffffff;
 		background-color: #edc10e;
 		display : block;
 		padding: 2px;
@@ -162,32 +162,71 @@
 		padding: 10px;
 	}
 </style>
-<title>Gooch Shading + Canny Edge</title>
-<meta name="description" content="Gooch shading + canny edge detection">
 
-<script type="text/javascript" src="Gooch%20Shading%20+%20Canny%20Edge_files/three.js"></script>
-<script type="text/javascript" src="Gooch%20Shading%20+%20Canny%20Edge_files/RequestAnimationFrame.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/CopyShader.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/FXAAShader.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/EffectComposer.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/MaskPass.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/RenderPass.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/ShaderPass.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/CannyEdgeFilterPass.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/InvertThreshholdPass.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/MultiplyBlendShader.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/TexturePass.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/GoochShader.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/MedianFilter.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/NormalShader.js"></script>
-<script src="Gooch%20Shading%20+%20Canny%20Edge_files/BinaryLoader.js"></script>
+<script id="vertexShader" type="x-shader/x-vertex">
+// Written with great difficulty by graphics n00b Arefin Mohiuddin. Would appreciate a little credit :)
+uniform float offset;
+uniform float delta; // <-- needs a bit of tweaking for different shape types. Should be 0.0 by default
+attribute vec3 vn;
+attribute vec3 f1n;
+attribute vec3 f2n;
+void main() {
+
+	vec4 mvPosition = modelViewMatrix * vec4( position , 1.0);
+	vec4 viewVec = normalize(mvPosition);
+
+	vec4 transNorm = ( modelViewMatrix * vec4 ( vn, 0.0));
+	//transNorm = normalize( transNorm );
+
+	vec4 transf1n = modelViewMatrix * vec4 ( f1n, 0.0);
+	transf1n = normalize(transf1n);
+
+	vec4 transf2n = modelViewMatrix * vec4 ( f2n, 0.0);
+	transf2n = normalize(transf2n);
+
+
+
+	float dot1 = dot( transf1n, viewVec );
+	float dot2 = dot( transf2n, viewVec );
+
+	float vOff ;
+
+	if (dot1 * dot2 < delta ){ vOff = 1.0;} else {vOff = 0.0;}
+
+
+
+
+	vec4 disp = (transNorm * offset * vOff ) + mvPosition;
+	gl_Position = projectionMatrix * disp;
+
+
+
+}
+</script>
+
+<script id="fragmentShader" type="x-shader/x-fragment">
+
+void main() {
+
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+
+}
+
+</script>
+<title>Edges + Silhouettes</title>
+<meta name="description" content="Object space edges + silhouettes">
+
+<script type="text/javascript" src="Edges%20+%20Silhouettes_files/three.js"></script>
+<script type="text/javascript" src="Edges%20+%20Silhouettes_files/RequestAnimationFrame.js"></script>
+<script src="Edges%20+%20Silhouettes_files/GoochShader.js"></script>
+<script src="Edges%20+%20Silhouettes_files/BinaryLoader.js"></script>
 
 
 <meta property="og:type" content="website">
-<meta property="og:title" content="Gooch shading + Canny edge detection">
-<meta property="og:image" content="http://i.imgur.com/yVemDr7.png">
+<meta property="og:title" content="Object space edges + silhouettes">
+<meta property="og:image" content="http://i.imgur.com/DkvA7UK.png">
 
-<meta property="og:description" content="Gooch shading + canny edge detection">
+<meta property="og:description" content="Object space edges + silhouettes">
 </head>
 <body bgcolor="black">
 <div id="fb-root"></div>
@@ -203,13 +242,11 @@
 	<li><a>&nbsp;:.::</a></li>
 	<li><a href="http://ar3f.in/index.html">&nbsp;+ strange attractors</a></li>
 	<li><a href="http://ar3f.in/hdrify.html">&nbsp;+ HDRify<sup style="color: red;"></sup></a></li>
-	<li><a href="http://ar3f.in/edges_silhouettes.html">&nbsp;+ Edges + Silhouettes<sup style="color: red;">new</sup></a></li>
+	<li><a href="http://ar3f.in/goochShading.html">&nbsp;+ Gooch Shading<sup style="color: red;">update</sup></a></li>
 	<li><a href="http://ar3f.in/wireframe.html">&nbsp;+ Single-pass wireframe<sup style="color: red;">new</sup></a></li>
 	<li><a href="http://ar3f.in/ga_viz.html">&nbsp;+ Genetic Algorithm<sup style="color: red;">new</sup></a></li>
 </ul>
-<div id="attr-name">Gooch Shading + Canny Edge Detection<div id="details">A
- Non-Photorealistic Lighting Model For Automatic Technical Illustration
-by Gooch et al + Profile edges using Canny Edge detection <br> 1. The model is first rendered with object-space normals <br>2. Since Canny edge detection is susceptible to noise, I used a median filter to blur out facets<br>3. Canny edge detection is used on this <br>4.Then the image is inverted and threshholded (sic) to get black lines <br> 5. This is multiplied with the model rendered on a white background with the Gooch Shader <br>6. As evident, surfaces with same normals show no edges. <br></div></div>
+<div id="attr-name">Edges + Silhouettes<div id="details">Using quad-fins described in <br><a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.65.4558">NPR with Pixel and Vertex Shaders by Mitchell and Card</a></div></div>
 <div id="button">
 <ul>
 	<li><a>-</a></li>
@@ -220,7 +257,7 @@ by Gooch et al + Profile edges using Canny Edge detection <br> 1. The model is f
 <div id="social">
 <ul>
 	<li><div class="fb-like" data-href="http://facebook.com/ar3fin.3d " data-send="true" data-layout="button_count" data-width="10" data-show-faces="false" data-font="lucida grande"></div></li>
-	<li><div id="___plusone_0" style="text-indent: 0px; margin: 0px; padding: 0px; background: transparent none repeat scroll 0% 0%; border-style: none; float: none; line-height: normal; font-size: 1px; vertical-align: baseline; display: inline-block; width: 300px; height: 24px;"><iframe title="+1" data-gapiattached="true" src="Gooch%20Shading%20+%20Canny%20Edge_files/fastbutton.htm" name="I0_1446910130300" id="I0_1446910130300" vspace="0" tabindex="0" style="position: static; top: 0px; width: 300px; margin: 0px; border-style: none; left: 0px; visibility: visible; height: 24px;" scrolling="no" marginwidth="0" marginheight="0" hspace="0" frameborder="0" width="100%"></iframe></div></li>
+	<li><div id="___plusone_0" style="text-indent: 0px; margin: 0px; padding: 0px; background: transparent none repeat scroll 0% 0%; border-style: none; float: none; line-height: normal; font-size: 1px; vertical-align: baseline; display: inline-block; width: 300px; height: 24px;"><iframe title="+1" data-gapiattached="true" src="Edges%20+%20Silhouettes_files/fastbutton.htm" name="I0_1446897565206" id="I0_1446897565206" vspace="0" tabindex="0" style="position: static; top: 0px; width: 300px; margin: 0px; border-style: none; left: 0px; visibility: visible; height: 24px;" scrolling="no" marginwidth="0" marginheight="0" hspace="0" frameborder="0" width="100%"></iframe></div></li>
 		<script type="text/javascript">
 		  (function() {
 			var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
@@ -235,7 +272,7 @@ by Gooch et al + Profile edges using Canny Edge detection <br> 1. The model is f
 </ul>
 </div>
 
-<script type="text/javascript" src="Gooch%20Shading%20+%20Canny%20Edge_files/goochShading.js"></script>
+<script type="text/javascript" src="Edges%20+%20Silhouettes_files/hardwareEdges.js"></script>
 
 
 <div id="bottombar">
@@ -250,4 +287,4 @@ by Gooch et al + Profile edges using Canny Edge detection <br> 1. The model is f
 </div>
 
 
-</div><div><canvas style="width: 838px; height: 605px;" height="789" width="1093"></canvas></div><iframe tabindex="-1" style="width: 1px; height: 1px; position: absolute; top: -100px;" src="Gooch%20Shading%20+%20Canny%20Edge_files/postmessageRelay.htm" id="oauth2relay1117699941" name="oauth2relay1117699941"></iframe></body></html>
+</div><div><canvas style="width: 1227px; height: 605px;" height="789" width="1600"></canvas></div><iframe tabindex="-1" style="width: 1px; height: 1px; position: absolute; top: -100px;" src="Edges%20+%20Silhouettes_files/postmessageRelay.htm" id="oauth2relay346757152" name="oauth2relay346757152"></iframe></body></html>

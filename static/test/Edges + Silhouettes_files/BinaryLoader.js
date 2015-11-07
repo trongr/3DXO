@@ -44,6 +44,7 @@ THREE.BinaryLoader.prototype.loadAjaxJSON = function ( context, url, callback, t
 		if ( xhr.readyState == 4 ) {
 
 			if ( xhr.status == 200 || xhr.status == 0 ) {
+
 				var json = JSON.parse( xhr.responseText );
 				context.loadAjaxBuffers( json, callback, binaryPath, texturePath, callbackProgress );
 
