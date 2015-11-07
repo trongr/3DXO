@@ -1,19 +1,10 @@
-var camera, scene, sceneDiffuse, renderer, composer, composer2, loader;
+var camera, scene, sceneDiffuse, renderer, composer, composer2;
 var effectFXAA, cannyEdge, multiplyPass, texturePass;
 var renderTargetEdge, renderTargetDiffuse;
-var object, objectDiffuse;
-var meshList = [];
 init();
 animate();
 function init() {
 
-	var d = document.getElementById("attr-name");
-	d.innerHTML = "Gooch Shading + Canny Edge Detection";
-	var e = document.createElement("div");
-    e.id = "details";
-	d.appendChild(e);
-	e.innerHTML = "A Non-Photorealistic Lighting Model For Automatic Technical Illustration by Gooch et al + Profile edges using Canny Edge detection <br> 1. The model is first rendered with object-space normals <br>2. Since Canny edge detection is susceptible to noise, I used a median filter to blur out facets<br>3. Canny edge detection is used on this <br>4.Then the image is inverted and threshholded (sic) to get black lines <br> 5. This is multiplied with the model rendered on a white background with the Gooch Shader <br>6. As evident, surfaces with same normals show no edges. <br>";
-	//document.getElementById("attr-name").innerHTML = "Gooch Shading + Canny Edge Detection";
     var b;
     b = document.createElement("div");
     document.body.appendChild(b);
@@ -29,8 +20,6 @@ function init() {
 
 	scene = new THREE.Scene();
 	sceneDiffuse = new THREE.Scene();
-	object = new THREE.Object3D();
-	objectDiffuse = new THREE.Object3D();
 
 	var materials = {
 		"diffuse": new THREE.ShaderMaterial(THREE.GoochShader),
@@ -44,7 +33,7 @@ function init() {
 	materials.diffuse.side = THREE.DoubleSide;
 	materials.diffuse.wireframe = false;
 
-	loader = new THREE.BinaryLoader();
+	var loader = new THREE.BinaryLoader();
 	var callback = function(geometry) {
         createScene(geometry, materials, new THREE.Vector3(0,0,0))
     };
@@ -109,6 +98,7 @@ function init() {
 	window.addEventListener( 'resize', onWindowResize, false );
 
 }
+
 function onWindowResize() {
 
 	camera.aspect = window.innerWidth / window.innerHeight;
@@ -116,7 +106,7 @@ function onWindowResize() {
 
 	renderer.setSize( window.innerWidth, window.innerHeight );
 	effectFXAA.uniforms.resolution.value.set(1 / window.innerWidth, 1 / window.innerHeight);
-	//cannyEdge.uniforms.uWindow.value.set(parseFloat(window.innerWidth), parseFloat(window.innerHeight));
+	// cannyEdge.uniforms.uWindow.value.set(parseFloat(window.innerWidth), parseFloat(window.innerHeight));
 	composer.reset();
 	composer2.reset();
 	renderTargetEdge.width = renderTargetDiffuse.width = parseFloat(window.innerWidth);
@@ -128,35 +118,22 @@ function onWindowResize() {
 }
 
 function createScene(geometry, materials, position){
-
-	var m = new THREE.Matrix4();
-	m.makeScale(1,1,1);
-	geometry.applyMatrix(m);
+	// var m = new THREE.Matrix4();
+	// m.makeScale(1,1,1);
+	// geometry.applyMatrix(m);
 
 	geometryDiffuse = geometry.clone();
 	meshDiffuse = new THREE.Mesh(geometryDiffuse,materials.diffuse);
 	meshDiffuse.position = position.clone();
 	sceneDiffuse.add(meshDiffuse);
-	meshList.push(meshDiffuse);
 
 	mesh = new THREE.Mesh(geometry,materials.edge);
 	mesh.position = position.clone();
 	scene.add(mesh);
-	meshList.push(mesh);
 }
 
 function animate() {
-
 	requestAnimationFrame( animate );
-
-	var time = Date.now();
 	composer.render(0.5);
 	composer2.render(0.5);
-	for(var i =0; i < meshList.length; i = i + 2){
-		meshList[i].rotation.y += 0.005;
-
-		meshList[i+1].rotation.y += 0.005;
-
-	}
-
 }

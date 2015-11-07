@@ -27,6 +27,10 @@
 //
 // free roaming lets you move any piece to a neighbouring grid, but no
 // farther
+var clock = new THREE.Clock()
+var camera, _scene, scene, sceneDiffuse, renderer, composer, composer2;
+var effectFXAA, cannyEdge, texturePass;
+var renderTargetEdge, renderTargetDiffuse;
 
 var K = (function(){
 
@@ -730,7 +734,141 @@ var Map = (function(){
             Chat.updateZone(x, y)
         })
         Map.loadZones(x, y) // load map wherever player spawns
-        loadTest()
+        goochTest()
+        // loadTest()
+    }
+
+    function createScene(geometry, materials, position){
+        // mach
+	    // var m = new THREE.Matrix4();
+        // var scale = 0.1
+	    // m.makeScale(scale, scale, scale);
+	    // geometry.applyMatrix(m);
+
+        var scale = 1
+        // var angle = Math.PI / 2.5
+        var angle = Math.PI / 3
+	    geometryDiffuse = geometry.clone();
+
+	    meshDiffuse = new THREE.Mesh(geometryDiffuse,materials.diffuse);
+        meshDiffuse.scale.set(scale, scale, scale)
+        Obj.move(meshDiffuse, new THREE.Vector3(0, 0, 1))
+        meshDiffuse.rotation.x = angle // fake 3D in real 3D!!! LOL
+        sceneDiffuse.add(meshDiffuse);
+
+        mesh = new THREE.Mesh(geometry,materials.edge);
+        mesh.scale.set(scale, scale, scale)
+        Obj.move(mesh, new THREE.Vector3(0, 0, 1))
+        mesh.rotation.x = angle // fake 3D in real 3D!!! LOL
+        scene.add(mesh);
+    }
+
+    function goochTest(){
+        scene = new THREE.Scene()
+	    // sceneDiffuse = new THREE.Scene();
+
+	    var materials = {
+		    "diffuse": new THREE.ShaderMaterial(THREE.GoochShader),
+		    "edge"	 : new THREE.ShaderMaterial(THREE.NormalShader)
+	    };
+
+	    materials.diffuse.uniforms.WarmColor.value = new THREE.Vector3(1.0, 0.5, 0.0);
+	    materials.diffuse.uniforms.CoolColor.value = new THREE.Vector3(0,0,0.7);
+	    materials.diffuse.uniforms.SurfaceColor.value = new THREE.Vector3(0.0, 0.0, 0.8);
+	    materials.diffuse.uniforms.LightPosition.value.copy(new THREE.Vector3(100.0, 500, 200));
+	    materials.diffuse.side = THREE.DoubleSide;
+	    materials.diffuse.wireframe = false;
+
+	    var loader = new THREE.BinaryLoader();
+	    loader.load("static/models/king0.js", function(geometry) {
+            createScene(geometry, materials, new THREE.Vector3(0,0,0))
+        });
+
+	    // postprocessing
+
+	    var renderTargetParameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat, stencilBuffer: false, generateMipmaps: false };
+
+	    renderTargetEdge = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetParameters);
+	    renderTargetEdge.generateMipmaps = false;
+
+	    composer = new THREE.EffectComposer( renderer, renderTargetEdge );
+
+	    var effect = new THREE.RenderPass( scene, camera );
+	    effect.renderToScreen = false;
+	    composer.addPass( effect );
+
+	    var blur = new THREE.ShaderPass(THREE.MedianFilter);
+	    blur.uniforms.dim.value.copy(new THREE.Vector2(1.0 / window.innerWidth, 1.0 / window.innerHeight));
+	    blur.renderToScreen = false;
+	    composer.addPass(blur);
+
+
+	    cannyEdge = new THREE.ShaderPass(THREE.CannyEdgeFilterPass);
+	    cannyEdge.renderToScreen = false;
+	    composer.addPass(cannyEdge);
+
+	    var effect = new THREE.ShaderPass( THREE.InvertThreshholdPass );
+	    effect.renderToScreen = false;
+	    composer.addPass( effect );
+
+	    var effect = new THREE.ShaderPass(THREE.CopyShader);
+	    effect.renderToScreen = false;
+	    composer.addPass(effect);
+
+	    renderTargetDiffuse = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetParameters);
+
+	    composer2 = new THREE.EffectComposer(renderer, renderTargetDiffuse);
+
+	    var renderDiffuse = new THREE.RenderPass(sceneDiffuse, camera);
+	    renderDiffuse.renderToScreen = false;
+	    composer2.addPass(renderDiffuse);
+
+	    var multiplyPass = new THREE.ShaderPass(THREE.MultiplyBlendShader);
+	    multiplyPass.renderToScreen = false;
+	    multiplyPass.uniforms["tEdge"].value = composer.renderTarget2;
+	    multiplyPass.needsSwap = true;
+	    composer2.addPass(multiplyPass);
+
+	    effectFXAA = new THREE.ShaderPass(THREE.FXAAShader);
+	    var e = window.innerWidth || 2;
+	    var a = window.innerHeight || 2;
+	    effectFXAA.uniforms.resolution.value.set(1/e,1/a);
+	    effectFXAA.renderToScreen = false;
+	    composer2.addPass(effectFXAA);
+
+	    var effect = new THREE.ShaderPass(THREE.CopyShader);
+	    effect.renderToScreen = true;
+	    composer2.addPass(effect);
+
+    }
+
+    // mach
+    function loadTest(){
+		var onProgress = function ( xhr ) {
+			if ( xhr.lengthComputable ) {
+				var percentComplete = xhr.loaded / xhr.total * 100;
+				console.log( Math.round(percentComplete, 2) + '% downloaded' );
+			}
+		};
+
+		var onError = function ( xhr ) {
+            console.log("onError", xhr)
+		};
+
+		var loader = new THREE.OBJMTLLoader();
+		loader.load( 'static/models/king.obj', 'static/models/king.mtl', function ( object ) {
+            object.traverse( function ( child ) {
+                if ( child instanceof THREE.Mesh ) {
+                    child.material.side = THREE.DoubleSide
+                    // child.castShadow = true;
+                    // child.receiveShadow = true
+                }
+            } );
+            // var newObj = object.clone() // todo reuse this model e.g. for other pieces
+            Obj.move(object, new THREE.Vector3(0, 0, 1))
+            object.rotation.x = Math.PI / 2.5 // fake 3D in real 3D!!! LOL
+			Scene.add( object );
+		}, onProgress, onError );
     }
 
     // obj = {x:asdf, y:asdf, z:asdf}
@@ -787,35 +925,6 @@ var Map = (function(){
         Scene.add(makeZoneBorder(X, Y, S));
         Game.addObj(makeZonePlane(X, Y, S))
         Scene.render()
-    }
-
-    function loadTest(){
-		var onProgress = function ( xhr ) {
-			if ( xhr.lengthComputable ) {
-				var percentComplete = xhr.loaded / xhr.total * 100;
-				console.log( Math.round(percentComplete, 2) + '% downloaded' );
-			}
-		};
-
-		var onError = function ( xhr ) {
-            console.log("onError", xhr)
-		};
-
-        // mach
-		var loader = new THREE.OBJMTLLoader();
-		loader.load( 'static/models/king.obj', 'static/models/king.mtl', function ( object ) {
-            object.traverse( function ( child ) {
-                if ( child instanceof THREE.Mesh ) {
-                    child.material.side = THREE.DoubleSide
-                    // child.castShadow = true;
-                    // child.receiveShadow = true
-                }
-            } );
-            // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(0, 0, 1))
-            object.rotation.x = Math.PI / 2.5 // fake 3D in real 3D!!! LOL
-			Scene.add( object );
-		}, onProgress, onError );
     }
 
     function makeZoneGrid(X, Y, S){
@@ -1110,8 +1219,8 @@ var Controls = (function(){
         // _controls.noRotate = false;
         _controls.noZoom = false;
         _controls.noPan = false;
-	    _controls.minDistance = 40;
-        _controls.maxDistance = 80;
+	    _controls.minDistance = 50;
+        _controls.maxDistance = 70;
         _controls.staticMoving = true;
         _controls.dynamicDampingFactor = 0.3;
         _controls.keys = [ 65, 83, 68 ];
@@ -1136,10 +1245,10 @@ var Scene = (function(){
         camera: null
     }
 
-    var _scene
-
     Scene.init = function(x, y){
-        _scene = new THREE.Scene();
+        // mach
+        sceneDiffuse = _scene = new THREE.Scene();
+        // _scene = new THREE.Scene();
 
         // be careful about ordering of these methods. might need to refactor
         initContainer()
@@ -1194,14 +1303,18 @@ var Scene = (function(){
         var near = 1
         var far = 1000
         var init_cam_pos = 60
-        Scene.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+        // mach
+        camera = Scene.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
         Scene.camera.position.z = init_cam_pos
         Scene.camera.position.x = x
         Scene.camera.position.y = y
     }
 
     function initRenderer(){
-        Scene.renderer = new THREE.WebGLRenderer( { antialias:true, alpha:true } );
+        // mach
+        renderer = Scene.renderer = new THREE.WebGLRenderer( { antialias:true, alpha:true } );
+        Scene.renderer.autoClear = false;
+        renderer.autoClear = false
         Scene.renderer.setClearColor(0x02002B, 1);
         Scene.renderer.setPixelRatio( window.devicePixelRatio );
         Scene.renderer.setSize( window.innerWidth, window.innerHeight );
@@ -1243,23 +1356,49 @@ var Scene = (function(){
     function animate() {
         requestAnimationFrame(animate);
         Controls.update();
-        Scene.render() // don't render on every frame unless you're really animating stuff
+        Scene.render() // mach can you toggle this?
     }
 
+    // mach
     Scene.render = function(){
         try {
-            Scene.renderer.render(_scene, Scene.camera);
+            // renderer.clear();
+            // renderer.render(_scene, Scene.camera);
+            // renderer.clearDepth();
+
+            var delta = clock.getDelta()
+	        composer.render(delta);
+            composer2.render(delta);
+
+            // renderer.render(scene, Scene.camera)
+            // renderer.render(sceneDiffuse, Scene.camera)
         } catch (e){
-            // Console.warn("Renderer not ready")
+            console.log("Renderer not ready")
         }
     }
 
     Scene.refresh = function(){
-        Scene.camera.aspect = window.innerWidth / window.innerHeight;
-        Scene.camera.updateProjectionMatrix();
-        Scene.renderer.setSize(window.innerWidth, window.innerHeight);
-        Controls.handleResize();
-        Scene.render();
+        // Scene.camera.aspect = window.innerWidth / window.innerHeight;
+        // Scene.camera.updateProjectionMatrix();
+        // Scene.renderer.setSize(window.innerWidth, window.innerHeight);
+        // Controls.handleResize();
+
+        // Scene.render();
+
+	    camera.aspect = window.innerWidth / window.innerHeight;
+	    camera.updateProjectionMatrix();
+
+	    renderer.setSize( window.innerWidth, window.innerHeight );
+	    effectFXAA.uniforms.resolution.value.set(1 / window.innerWidth, 1 / window.innerHeight);
+	    // cannyEdge.uniforms.uWindow.value.set(parseFloat(window.innerWidth), parseFloat(window.innerHeight));
+	    composer.reset();
+	    composer2.reset();
+	    renderTargetEdge.width = renderTargetDiffuse.width = parseFloat(window.innerWidth);
+	    renderTargetEdge.height = renderTargetDiffuse.height = parseFloat(window.innerHeight);
+
+	    composer.render();
+	    composer2.render();
+
     }
 
     return Scene
