@@ -730,6 +730,7 @@ var Map = (function(){
             Chat.updateZone(x, y)
         })
         Map.loadZones(x, y) // load map wherever player spawns
+        loadTest()
     }
 
     // obj = {x:asdf, y:asdf, z:asdf}
@@ -786,6 +787,35 @@ var Map = (function(){
         Scene.add(makeZoneBorder(X, Y, S));
         Game.addObj(makeZonePlane(X, Y, S))
         Scene.render()
+    }
+
+    function loadTest(){
+		var onProgress = function ( xhr ) {
+			if ( xhr.lengthComputable ) {
+				var percentComplete = xhr.loaded / xhr.total * 100;
+				console.log( Math.round(percentComplete, 2) + '% downloaded' );
+			}
+		};
+
+		var onError = function ( xhr ) {
+            console.log("onError", xhr)
+		};
+
+        // mach
+		var loader = new THREE.OBJMTLLoader();
+		loader.load( 'static/models/king.obj', 'static/models/king.mtl', function ( object ) {
+            object.traverse( function ( child ) {
+                if ( child instanceof THREE.Mesh ) {
+                    child.material.side = THREE.DoubleSide
+                    // child.castShadow = true;
+                    // child.receiveShadow = true
+                }
+            } );
+            // var newObj = object.clone() // todo reuse this model e.g. for other pieces
+            Obj.move(object, new THREE.Vector3(0, 0, 1))
+            object.rotation.x = Math.PI / 2.5 // fake 3D in real 3D!!! LOL
+			Scene.add( object );
+		}, onProgress, onError );
     }
 
     function makeZoneGrid(X, Y, S){
@@ -1073,18 +1103,19 @@ var Controls = (function(){
     Controls.init = function(x, y){
         _controls = new THREE.TrackballControls(Scene.camera, document, Scene.container);
         _controls.target = new THREE.Vector3(x, y, 0)
-        _controls.rotateSpeed = 2.5;
+        _controls.rotateSpeed = 5.0;
         _controls.zoomSpeed = 1.5;
-        _controls.panSpeed = 0.5;
+        _controls.panSpeed = 0.2;
         _controls.noRotate = true;
+        // _controls.noRotate = false;
         _controls.noZoom = false;
         _controls.noPan = false;
-	    _controls.minDistance = 20;
-        _controls.maxDistance = 40;
+	    _controls.minDistance = 40;
+        _controls.maxDistance = 80;
         _controls.staticMoving = true;
         _controls.dynamicDampingFactor = 0.3;
         _controls.keys = [ 65, 83, 68 ];
-        _controls.addEventListener('change', Scene.render);
+        // _controls.addEventListener('change', Scene.render);
     }
 
     Controls.update = function(){
@@ -1158,11 +1189,11 @@ var Scene = (function(){
     }
 
     function initCamera(x, y){
-        var fov = 30
+        var fov = 10
         var aspect = window.innerWidth / window.innerHeight
         var near = 1
         var far = 1000
-        var init_cam_pos = 30
+        var init_cam_pos = 60
         Scene.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
         Scene.camera.position.z = init_cam_pos
         Scene.camera.position.x = x
