@@ -3,21 +3,21 @@
     "metadata" :
     {
         "formatVersion" : 3.1,
-        "sourceFile"    : "bishop0.obj",
+        "sourceFile"    : "knight1.obj",
         "generatedBy"   : "OBJConverter",
-        "vertices"      : 1058,
-        "faces"         : 2341,
+        "vertices"      : 423,
+        "faces"         : 911,
         "normals"       : 0,
-        "uvs"           : 4344,
+        "uvs"           : 1758,
         "materials"     : 1
     },
 
     "materials": [	{
 	"DbgColor" : 15658734,
 	"DbgIndex" : 0,
-	"DbgName" : "Color_A04.014",
+	"DbgName" : "Color_F11",
 	"colorAmbient" : [0.0, 0.0, 0.0],
-	"colorDiffuse" : [0.8, 0.48, 0.48],
+	"colorDiffuse" : [0.238431, 0.48, 0.0],
 	"colorSpecular" : [0.165, 0.165, 0.165],
 	"illumination" : 2,
 	"opacity" : 0.0,
@@ -26,6 +26,6 @@
 	"transparent" : true
 	}],
 
-    "buffers": "bishop0.bin"
+    "buffers": "knight1.bin"
 
 }

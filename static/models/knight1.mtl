@@ -1,10 +1,10 @@
-# Blender MTL File: 'None'
+# Blender MTL File: 'knight1.blend'
 # Material Count: 1
 
-newmtl Color_A04.014
+newmtl Color_F11
 Ns 96.078431
 Ka 0.000000 0.000000 0.000000
-Kd 0.800000 0.480000 0.480000
+Kd 0.238431 0.480000 0.000000
 Ks 0.165000 0.165000 0.165000
 Ni 1.000000
 d 1.000000

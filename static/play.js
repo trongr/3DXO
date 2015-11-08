@@ -40,8 +40,42 @@ var K = (function(){
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
     }
 
+    shearGeo(K.CUBE_GEO)
+
     return K
 }())
+
+// shear models to fake 3D top down perspective
+function shearGeo(geometry){
+    var Syx = 0,
+    Szx = 0,
+    Sxy = 0,
+    Szy = 0.3,
+    Sxz = 0,
+    Syz = 0;
+    var matrix = new THREE.Matrix4();
+    matrix.set(   1,   Syx,  Szx,  0,
+                  Sxy,     1,  Szy,  0,
+                  Sxz,   Syz,   1,   0,
+                  0,     0,   0,   1  );
+    geometry.applyMatrix( matrix );
+}
+
+function shearModel(geometry){
+    // // mach
+    var Syx = 0,
+    Szx = 0,
+    Sxy = 0,
+    Szy = 0.1,
+    Sxz = 0,
+    Syz = -0.4;
+    var matrix = new THREE.Matrix4();
+    matrix.set(   1,   Syx,  Szx,  0,
+                  Sxy,     1,  Szy,  0,
+                  Sxz,   Syz,   1,   0,
+                  0,     0,   0,   1  );
+    geometry.applyMatrix( matrix );
+}
 
 var Conf = {} // set on load from server
 
@@ -157,6 +191,7 @@ var Charge = (function(){
         // NOTE. This moves to the center of cell xyz. If you need to
         // adjust say z to raise the ring higher, use something else.
         Obj.move(ring, new THREE.Vector3(x, y, z))
+        ring.position.z = z + 0.2
         return ring
     }
 
@@ -464,10 +499,12 @@ var Rollover = (function(){
 
     var ROLLOVER_MATERIAL = new THREE.MeshLambertMaterial({color:0xffffff, shading:THREE.FlatShading, opacity:0.3, transparent:true})
     var ROLLOVER_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01) // 0.01 extra to prevent highlight from clipping with cube surface
+    shearGeo(ROLLOVER_GEOMETRY)
     var _rollover = null
 
     Rollover.init = function(){
         _rollover = new THREE.Mesh(ROLLOVER_GEOMETRY, ROLLOVER_MATERIAL);
+        _rollover.isABox = true
         Rollover.hide()
         Scene.add(_rollover)
     }
@@ -653,6 +690,10 @@ var Obj = (function(){
             .divideScalar( K.CUBE_SIZE ).floor()
             .multiplyScalar( K.CUBE_SIZE )
             .addScalar( K.CUBE_SIZE / 2 );
+        // mach
+        if (obj.isABox){
+            obj.position.y = obj.position.y + 0.15
+        }
     }
 
     Obj.highlight = function(obj, isHigh){
@@ -663,10 +704,12 @@ var Obj = (function(){
 
     Obj.makeBox = function(position, material){
         var box = new THREE.Mesh(K.CUBE_GEO, material);
-        box.position.copy(position);
-        box.position.divideScalar( K.CUBE_SIZE ).floor().multiplyScalar( K.CUBE_SIZE ).addScalar( K.CUBE_SIZE / 2 );
+        // box.position.copy(position);
+        // box.position.divideScalar( K.CUBE_SIZE ).floor().multiplyScalar( K.CUBE_SIZE ).addScalar( K.CUBE_SIZE / 2 );
         box.castShadow = true;
         box.receiveShadow = true;
+        box.isABox = true
+        Obj.move(box, position)
         return box
     }
 
@@ -735,7 +778,7 @@ var Map = (function(){
         })
         Map.loadZones(x, y) // load map wherever player spawns
         goochTest()
-        // loadTest()
+        loadTest()
     }
 
     function createScene(geometry, materials, position){
@@ -746,19 +789,24 @@ var Map = (function(){
 	    // geometry.applyMatrix(m);
 
         var scale = 1
+        var angle = Math.PI / 2
         // var angle = Math.PI / 2.5
-        var angle = Math.PI / 3
+        // var angle = Math.PI / 3
         // var angle = Math.PI / 4
 	    geometryDiffuse = geometry.clone();
+        shearModel(geometryDiffuse)
 
 	    meshDiffuse = new THREE.Mesh(geometryDiffuse,materials.diffuse);
-        meshDiffuse.scale.set(scale, scale, scale)
+        // meshDiffuse.scale.set(scale, scale, scale)
         Obj.move(meshDiffuse, position)
         meshDiffuse.rotation.x = angle // fake 3D in real 3D!!! LOL
         sceneDiffuse.add(meshDiffuse);
 
-        mesh = new THREE.Mesh(geometry,materials.edge);
-        mesh.scale.set(scale, scale, scale)
+        geometryEdge = geometry.clone()
+        shearModel(geometryEdge)
+
+        mesh = new THREE.Mesh(geometryEdge,materials.edge);
+        // mesh.scale.set(scale, scale, scale)
         Obj.move(mesh, position)
         mesh.rotation.x = angle // fake 3D in real 3D!!! LOL
         scene.add(mesh);
@@ -776,29 +824,55 @@ var Map = (function(){
 	    materials.diffuse.uniforms.WarmColor.value = new THREE.Vector3(1.0, 0.5, 0.0);
 	    materials.diffuse.uniforms.CoolColor.value = new THREE.Vector3(0,0,0.7);
 	    materials.diffuse.uniforms.SurfaceColor.value = new THREE.Vector3(0.0, 0.0, 0.8);
-	    materials.diffuse.uniforms.LightPosition.value.copy(new THREE.Vector3(100.0, 500, 200));
+	    materials.diffuse.uniforms.LightPosition.value.copy(new THREE.Vector3(-300, 400, 900));
 	    materials.diffuse.side = THREE.DoubleSide;
 	    materials.diffuse.wireframe = false;
 
 	    var loader = new THREE.BinaryLoader();
+	    loader.load("static/models/knight1.js", function(geometry) {
+            createScene(geometry, materials, new THREE.Vector3(0, 4, 1))
+        });
+
 	    loader.load("static/models/king0.js", function(geometry) {
             createScene(geometry, materials, new THREE.Vector3(0, 0, 1))
+            createScene(geometry, materials, new THREE.Vector3(0, 1, 1))
+            createScene(geometry, materials, new THREE.Vector3(0, 2, 1))
+            createScene(geometry, materials, new THREE.Vector3(0, 3, 1))
         });
 
 	    loader.load("static/models/queen0.js", function(geometry) {
             createScene(geometry, materials, new THREE.Vector3(1, 0, 1))
+            createScene(geometry, materials, new THREE.Vector3(1, 1, 1))
+            createScene(geometry, materials, new THREE.Vector3(1, 2, 1))
+            createScene(geometry, materials, new THREE.Vector3(1, 3, 1))
         });
 
 	    loader.load("static/models/bishop0.js", function(geometry) {
             createScene(geometry, materials, new THREE.Vector3(2, 0, 1))
+            createScene(geometry, materials, new THREE.Vector3(2, 1, 1))
+            createScene(geometry, materials, new THREE.Vector3(2, 2, 1))
+            createScene(geometry, materials, new THREE.Vector3(2, 3, 1))
+        });
+
+	    loader.load("static/models/knight0.js", function(geometry) {
+            createScene(geometry, materials, new THREE.Vector3(3, 0, 1))
+            createScene(geometry, materials, new THREE.Vector3(3, 1, 1))
+            createScene(geometry, materials, new THREE.Vector3(3, 2, 1))
+            createScene(geometry, materials, new THREE.Vector3(3, 3, 1))
         });
 
 	    loader.load("static/models/rook0.js", function(geometry) {
             createScene(geometry, materials, new THREE.Vector3(4, 0, 1))
+            createScene(geometry, materials, new THREE.Vector3(4, 1, 1))
+            createScene(geometry, materials, new THREE.Vector3(4, 2, 1))
+            createScene(geometry, materials, new THREE.Vector3(4, 3, 1))
         });
 
 	    loader.load("static/models/pawn0.js", function(geometry) {
             createScene(geometry, materials, new THREE.Vector3(5, 0, 1))
+            createScene(geometry, materials, new THREE.Vector3(5, 1, 1))
+            createScene(geometry, materials, new THREE.Vector3(5, 2, 1))
+            createScene(geometry, materials, new THREE.Vector3(5, 3, 1))
         });
 
 	    // postprocessing
@@ -873,7 +947,7 @@ var Map = (function(){
 		};
 
 		var loader = new THREE.OBJMTLLoader();
-		loader.load( 'static/models/king.obj', 'static/models/king.mtl', function ( object ) {
+		loader.load( 'static/models/knight0.obj', 'static/models/knight0.mtl', function ( object ) {
             object.traverse( function ( child ) {
                 if ( child instanceof THREE.Mesh ) {
                     child.material.side = THREE.DoubleSide
@@ -882,8 +956,8 @@ var Map = (function(){
                 }
             } );
             // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(0, 0, 1))
-            object.rotation.x = Math.PI / 2.5 // fake 3D in real 3D!!! LOL
+            Obj.move(object, new THREE.Vector3(1, 4, 1))
+            object.rotation.x = Math.PI / 3 // fake 3D in real 3D!!! LOL
 			Scene.add( object );
 		}, onProgress, onError );
     }
@@ -1237,11 +1311,21 @@ var Controls = (function(){
         _controls.noZoom = false;
         _controls.noPan = false;
 	    _controls.minDistance = 50;
-        _controls.maxDistance = 70;
+        _controls.maxDistance = 100;
         _controls.staticMoving = true;
         _controls.dynamicDampingFactor = 0.3;
         _controls.keys = [ 65, 83, 68 ];
-        // _controls.addEventListener('change', Scene.render);
+        // _controls.addEventListener('change', controlsOnChange);
+    }
+
+    // todo make directional light follow the camera. can make it
+    // follow but it's changing the shadow directions even with fixed
+    // light direction = position - target
+    function controlsOnChange(){
+        // if (_sun){
+        //     var p = new THREE.Vector3().copy(_sun_origin).add(Scene.camera.position)
+        //     _sun.position.copy(p)
+        // }
     }
 
     Controls.update = function(){
@@ -1269,8 +1353,8 @@ var Scene = (function(){
 
         // be careful about ordering of these methods. might need to refactor
         initContainer()
-        initLights()
         initCamera(x, y)
+        initLights()
         initRenderer()
 
         Rollover.init()
@@ -1344,17 +1428,22 @@ var Scene = (function(){
     function initLights(){
         var ambientLight = new THREE.AmbientLight(0xffffff);
         Scene.add(ambientLight);
-        Scene.add(createDirectionalLight(-20, 40, 50));
+        var sun = createDirectionalLight(-20, 40, 50)
+        Scene.add(sun);
     }
 
     function createDirectionalLight(x, y, z){
         var d = 10;
         var s = 1024;
         var light = new THREE.DirectionalLight(0xFFE100);
-        light.position.set(x, y, z);
-        light.intensity = 0.5;
+        light.position.set(x, y, z)
+        // mach target.updateMatrixWorld was the bug!!!
+        // can make a moving directional light now!
+        light.target.position.set(0, 0, 0)
+        light.target.updateMatrixWorld() // important
 
-        // light.castShadow = true
+        light.castShadow = true
+        // light.shadowCameraVisible = true
 
         light.shadowCameraLeft = -d;
         light.shadowCameraRight = d;
@@ -1366,7 +1455,7 @@ var Scene = (function(){
 
         light.shadowCameraFar = 100;
         light.shadowDarkness = 0.1;
-
+        light.intensity = 0.5;
         return light
     }
 

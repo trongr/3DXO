@@ -16,11 +16,11 @@ THREE.GoochShader = {
 	vertexShader: [
 
 		"uniform vec3 LightPosition;",
-		
+
 		"varying float NdotL;",
 		"varying vec3 ReflectVec;",
 		"varying vec3 ViewVec;",
-		
+
 		"void main() {",
 
 			"vec3 EyePos = (modelViewMatrix * vec4(position, 1.0)).xyz;",
@@ -48,7 +48,7 @@ THREE.GoochShader = {
 		"varying vec3  ViewVec;",
 
 		"void main(void) {",
-		
+
 		  "vec3 kcool    = min (CoolColor + DiffuseCool * SurfaceColor, 1.0);",
 		  "vec3 kwarm    = min (WarmColor + DiffuseWarm * SurfaceColor, 1.0);",
 		  "vec3 kfinal   = mix (kcool, kwarm, NdotL);",
