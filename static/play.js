@@ -746,19 +746,21 @@ var Map = (function(){
 	    // geometry.applyMatrix(m);
 
         var scale = 1
+        // var angle = Math.PI / 2
         // var angle = Math.PI / 2.5
         var angle = Math.PI / 3
+        // var angle = Math.PI / 4
 	    geometryDiffuse = geometry.clone();
 
 	    meshDiffuse = new THREE.Mesh(geometryDiffuse,materials.diffuse);
         meshDiffuse.scale.set(scale, scale, scale)
-        Obj.move(meshDiffuse, new THREE.Vector3(0, 0, 1))
+        Obj.move(meshDiffuse, position)
         meshDiffuse.rotation.x = angle // fake 3D in real 3D!!! LOL
         sceneDiffuse.add(meshDiffuse);
 
         mesh = new THREE.Mesh(geometry,materials.edge);
         mesh.scale.set(scale, scale, scale)
-        Obj.move(mesh, new THREE.Vector3(0, 0, 1))
+        Obj.move(mesh, position)
         mesh.rotation.x = angle // fake 3D in real 3D!!! LOL
         scene.add(mesh);
     }
@@ -781,7 +783,15 @@ var Map = (function(){
 
 	    var loader = new THREE.BinaryLoader();
 	    loader.load("static/models/king0.js", function(geometry) {
-            createScene(geometry, materials, new THREE.Vector3(0,0,0))
+            createScene(geometry, materials, new THREE.Vector3(0, 0, 1))
+        });
+
+	    loader.load("static/models/queen0.js", function(geometry) {
+            createScene(geometry, materials, new THREE.Vector3(1, 0, 1))
+        });
+
+	    loader.load("static/models/bishop0.js", function(geometry) {
+            createScene(geometry, materials, new THREE.Vector3(0, 1, 1))
         });
 
 	    // postprocessing
