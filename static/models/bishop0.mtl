@@ -1,7 +1,7 @@
 # Blender MTL File: 'bishop.blend'
 # Material Count: 2
 
-newmtl Color_A04.003
+newmtl Color_A04.001
 Ns 96.078431
 Ka 0.000000 0.000000 0.000000
 Kd 0.800000 0.480000 0.480000
@@ -10,7 +10,7 @@ Ni 1.000000
 d 1.000000
 illum 2
 
-newmtl FrontColor.003
+newmtl FrontColor.001
 Ns 96.078431
 Ka 0.000000 0.000000 0.000000
 Kd 0.800000 0.800000 0.800000

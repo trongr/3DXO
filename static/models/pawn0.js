@@ -3,19 +3,19 @@
     "metadata" :
     {
         "formatVersion" : 3.1,
-        "sourceFile"    : "queen0.obj",
+        "sourceFile"    : "pawn0.obj",
         "generatedBy"   : "OBJConverter",
-        "vertices"      : 1308,
-        "faces"         : 2920,
+        "vertices"      : 696,
+        "faces"         : 1580,
         "normals"       : 0,
-        "uvs"           : 5520,
+        "uvs"           : 2758,
         "materials"     : 1
     },
 
     "materials": [	{
 	"DbgColor" : 15658734,
 	"DbgIndex" : 0,
-	"DbgName" : "Color_A04.001",
+	"DbgName" : "Color_A04.002",
 	"colorAmbient" : [0.0, 0.0, 0.0],
 	"colorDiffuse" : [0.8, 0.48, 0.48],
 	"colorSpecular" : [0.165, 0.165, 0.165],
@@ -26,6 +26,6 @@
 	"transparent" : true
 	}],
 
-    "buffers": "queen0.bin"
+    "buffers": "pawn0.bin"
 
 }

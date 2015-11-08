@@ -15,7 +15,7 @@
     "materials": [	{
 	"DbgColor" : 15658734,
 	"DbgIndex" : 0,
-	"DbgName" : "Color_A04.003",
+	"DbgName" : "Color_A04.001",
 	"colorAmbient" : [0.0, 0.0, 0.0],
 	"colorDiffuse" : [0.8, 0.48, 0.48],
 	"colorSpecular" : [0.165, 0.165, 0.165],
@@ -29,7 +29,7 @@
 	{
 	"DbgColor" : 15597568,
 	"DbgIndex" : 1,
-	"DbgName" : "FrontColor.003",
+	"DbgName" : "FrontColor.001",
 	"colorAmbient" : [0.0, 0.0, 0.0],
 	"colorDiffuse" : [0.8, 0.8, 0.8],
 	"colorSpecular" : [0.165, 0.165, 0.165],

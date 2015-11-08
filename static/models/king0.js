@@ -8,14 +8,14 @@
         "vertices"      : 1400,
         "faces"         : 3128,
         "normals"       : 0,
-        "uvs"           : 0,
+        "uvs"           : 5840,
         "materials"     : 1
     },
 
     "materials": [	{
 	"DbgColor" : 15658734,
 	"DbgIndex" : 0,
-	"DbgName" : "Color_A04.007",
+	"DbgName" : "Color_A04.001",
 	"colorAmbient" : [0.0, 0.0, 0.0],
 	"colorDiffuse" : [0.8, 0.48, 0.48],
 	"colorSpecular" : [0.165, 0.165, 0.165],

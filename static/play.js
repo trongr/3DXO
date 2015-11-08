@@ -746,7 +746,6 @@ var Map = (function(){
 	    // geometry.applyMatrix(m);
 
         var scale = 1
-        // var angle = Math.PI / 2
         // var angle = Math.PI / 2.5
         var angle = Math.PI / 3
         // var angle = Math.PI / 4
@@ -791,7 +790,15 @@ var Map = (function(){
         });
 
 	    loader.load("static/models/bishop0.js", function(geometry) {
-            createScene(geometry, materials, new THREE.Vector3(0, 1, 1))
+            createScene(geometry, materials, new THREE.Vector3(2, 0, 1))
+        });
+
+	    loader.load("static/models/rook0.js", function(geometry) {
+            createScene(geometry, materials, new THREE.Vector3(4, 0, 1))
+        });
+
+	    loader.load("static/models/pawn0.js", function(geometry) {
+            createScene(geometry, materials, new THREE.Vector3(5, 0, 1))
         });
 
 	    // postprocessing
