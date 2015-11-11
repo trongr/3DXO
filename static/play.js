@@ -607,28 +607,21 @@ var Player = (function(){
     return Player
 }())
 
-var Obj = (function(){
-    var Obj = {}
+var Piece = (function(){
+    var Piece = {}
+
+    Piece.KIND = {}
 
     var TEXTURES_ROOT = "/static/images/small/"
-    // dummy origin and direction, near==0, far==1 because we only
-    // want to find the ground adjacent to an obj
-    var _groundRaycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(), 0, 1)
-    var _objects
-
-    Obj.KIND = {
-        ground0: {
-            material: new THREE.MeshPhongMaterial({color:0xffffff, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
-        },
-        ground1: {
-            material: new THREE.MeshPhongMaterial({color:0xb78e5d, shading:THREE.FlatShading, side:THREE.DoubleSide, reflectivity:0.5}),
-        },
-    }
 
     function loadFaceTextures(textureName, otherFacesColor){
         var materials = []
         for (var i = 0; i < 6; i++){
-            materials.push(new THREE.MeshPhongMaterial({color:otherFacesColor, shading:THREE.FlatShading, side:THREE.DoubleSide}))
+            materials.push(new THREE.MeshPhongMaterial({
+                color:otherFacesColor,
+                shading:THREE.FlatShading,
+                side:THREE.DoubleSide
+            }))
         } // use colors for non image faces
 
         var texture = THREE.ImageUtils.loadTexture(TEXTURES_ROOT + textureName + ".png", {})
@@ -646,12 +639,11 @@ var Obj = (function(){
         return materials
     }
 
-    Obj.init = function(){
-        _objects = []
+    Piece.init = function(){
         var pieces = ["pawn", "rook", "knight", "bishop", "queen", "king"]
         for (var i = 0; i < pieces.length; i++){
             var piece = pieces[i]
-            Obj.KIND[piece] = {
+            Piece.KIND[piece] = {
                 material: [
                     // 0 is the chess set id
                     new THREE.MeshFaceMaterial(loadFaceTextures(piece + "0", 0xff4545)),
@@ -661,6 +653,44 @@ var Obj = (function(){
         }
     }
 
+    Piece.make = function(piece){
+        var mat = getMaterial(piece)
+        var obj = makeBox(mat)
+        obj.game = {
+            piece: piece,
+        }
+        Obj.move(obj, new THREE.Vector3(piece.x, piece.y, 1))
+        return obj
+    }
+
+    function makeBox(material){
+        var box = new THREE.Mesh(K.CUBE_GEO, material);
+        box.castShadow = true;
+        box.receiveShadow = true;
+        box.isABox = true
+        return box
+    }
+
+    function getMaterial(piece){
+        var isFriendly = Player.isFriendly(piece)
+        return Piece.KIND[piece.kind].material[isFriendly]
+    }
+
+    return Piece
+}())
+
+var Obj = (function(){
+    var Obj = {}
+
+    // dummy origin and direction, near==0, far==1 because we only
+    // want to find the ground adjacent to an obj
+    var _groundRaycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(), 0, 1)
+    var _objects
+
+    Obj.init = function(){
+        _objects = []
+    }
+
     Obj.loadZone = function(x, y, done){
         API.Pieces.get({x:x, y:y, r:10}, function(er, _pieces){
             if (er && done) return done(er)
@@ -668,20 +698,6 @@ var Obj = (function(){
             Scene.render()
             if (done) done(null)
         })
-    }
-
-    Obj.getMaterial = function(piece){
-        var isFriendly = Player.isFriendly(piece)
-        return Obj.KIND[piece.kind].material[isFriendly]
-    }
-
-    Obj.make = function(piece){
-        var mat = Obj.getMaterial(piece)
-        var obj = Obj.makeBox(new THREE.Vector3(piece.x, piece.y, 1), mat)
-        obj.game = {
-            piece: piece,
-        }
-        return obj
     }
 
     Obj.move = function(obj, point){
@@ -700,17 +716,6 @@ var Obj = (function(){
         if (!obj) return
         if (isHigh) Obj.move(Rollover.getMesh(), obj.position)
         else Rollover.hide()
-    }
-
-    Obj.makeBox = function(position, material){
-        var box = new THREE.Mesh(K.CUBE_GEO, material);
-        // box.position.copy(position);
-        // box.position.divideScalar( K.CUBE_SIZE ).floor().multiplyScalar( K.CUBE_SIZE ).addScalar( K.CUBE_SIZE / 2 );
-        box.castShadow = true;
-        box.receiveShadow = true;
-        box.isABox = true
-        Obj.move(box, position)
-        return box
     }
 
     // todo. Store objs in dictionary for faster get
@@ -760,8 +765,7 @@ var Map = (function(){
     var ZONE_BORDER_MAT = new THREE.LineBasicMaterial({color: 0xffffff});
     var ZONE_GRID_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.5, transparent: true});
     var ZONE_GRID_DIAGONAL_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.5, transparent: true});
-    // var ZONE_PLANE_MAT = new THREE.MeshBasicMaterial({color:0x6491E8});
-    var ZONE_PLANE_MAT = new THREE.MeshBasicMaterial({color:0x698CD1, transparent:true, opacity:0.9});
+    var ZONE_PLANE_MAT = new THREE.MeshLambertMaterial({color:0x4179E8, transparent:true, opacity:0.9});
 
     var _map = []
     var _knownZones = {} // keys are string representations of arrays,
@@ -1362,9 +1366,9 @@ var Sun = (function(){
         _sun.shadowMapWidth = s
         _sun.shadowMapHeight = s
         _sun.shadowCameraFar = 100;
-        _sun.shadowDarkness = 0.1;
+        _sun.shadowDarkness = 0.2;
         _sun.intensity = 0.5;
-
+        // mach
         Sun.update()
 
         Scene.add(ambientLight);
@@ -1553,6 +1557,7 @@ var Game = (function(){
                 Chat.init(x, y)
                 Scene.init(x, y)
                 Obj.init()
+                Piece.init()
                 Map.init(x, y)
                 Menu.init(player)
                 Console.init()
@@ -1664,7 +1669,7 @@ var Game = (function(){
     Game.loadPieces = function(pieces){
         var objs = []
         for (var i = 0; i < pieces.length; i++){
-            objs.push(Obj.make(pieces[i]))
+            objs.push(Piece.make(pieces[i]))
         }
         Game.addObjs(objs)
     }

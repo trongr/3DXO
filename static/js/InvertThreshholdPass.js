@@ -33,6 +33,7 @@ THREE.InvertThreshholdPass = {
 			"vec4 invert = vec4(1.0 - colorSum.r, 1.0 - colorSum.g, 1.0 - colorSum.b, 1.0 );",
 			"vec3 threshhold;",
         // old value: 0.985
+        // use 0.990 for a stand alone chess set
 			"if(invert.r < 0.960 || invert.g < 0.960 || invert.b < 0.960){",
 			"	threshhold = vec3(0.0);",
 			"	} else {",

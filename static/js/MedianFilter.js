@@ -32,7 +32,7 @@ THREE.MedianFilter = {
 		"void main() {",
 			"vec2 onePixel = vec2(1.0, 1.0) / dim;",
 			"vec4 colorSum = 	",
-
+        // use 2.00 for standalone chess set
 			"	texture2D(tDiffuse, vUv + (     onePixel * vec2( 0.0,  0.0)                  )) * 1.00 + ",
 			"	texture2D(tDiffuse, vUv + ( max(onePixel * vec2( 1.0,  0.0), vec2(1.0, 1.0)) )) * 1.00 + ",
 			"	texture2D(tDiffuse, vUv + ( max(onePixel * vec2( 1.0,  1.0), vec2(1.0, 1.0)) )) * 1.00 + ",
