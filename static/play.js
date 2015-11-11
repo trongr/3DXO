@@ -1315,17 +1315,14 @@ var Controls = (function(){
         _controls.staticMoving = true;
         _controls.dynamicDampingFactor = 0.3;
         _controls.keys = [ 65, 83, 68 ];
-        // _controls.addEventListener('change', controlsOnChange);
+        _controls.addEventListener('change', controlsOnChange);
     }
 
     // todo make directional light follow the camera. can make it
     // follow but it's changing the shadow directions even with fixed
     // light direction = position - target
     function controlsOnChange(){
-        // if (_sun){
-        //     var p = new THREE.Vector3().copy(_sun_origin).add(Scene.camera.position)
-        //     _sun.position.copy(p)
-        // }
+        Sun.update() // update sun's position when user navigates map
     }
 
     Controls.update = function(){
@@ -1341,6 +1338,55 @@ var Controls = (function(){
     return Controls
 }())
 
+var Sun = (function(){
+    var Sun = {}
+
+    var _sun
+    var _sun_height = 50
+    var _sun_direction = new THREE.Vector3(20, -40, -_sun_height)
+
+    Sun.init = function(){
+        var d = 20;
+        var s = 1024;
+        var ambientLight = new THREE.AmbientLight(0xffffff);
+
+        _sun = new THREE.DirectionalLight(0xFFE100);
+        _sun.castShadow = true
+        // _sun.shadowCameraVisible = true
+
+        _sun.shadowCameraLeft = -d;
+        _sun.shadowCameraRight = d;
+        _sun.shadowCameraTop = d;
+        _sun.shadowCameraBottom = -d;
+
+        _sun.shadowMapWidth = s
+        _sun.shadowMapHeight = s
+        _sun.shadowCameraFar = 100;
+        _sun.shadowDarkness = 0.1;
+        _sun.intensity = 0.5;
+
+        Sun.update()
+
+        Scene.add(ambientLight);
+        Scene.add(_sun)
+
+    }
+
+    Sun.update = function(){
+        updateSunPosition()
+    }
+
+    function updateSunPosition(){
+        // The sun is coming from the top left corner and points
+        // towards the ground z == 0 at camera position xy
+        _sun.target.position.set(Scene.camera.position.x, Scene.camera.position.y, 0)
+        _sun.target.updateMatrixWorld() // important
+        _sun.position.copy(_sun.target.position.clone().sub(_sun_direction))
+    }
+
+    return Sun
+}())
+
 var Scene = (function(){
     var Scene = {
         camera: null
@@ -1354,8 +1400,8 @@ var Scene = (function(){
         // be careful about ordering of these methods. might need to refactor
         initContainer()
         initCamera(x, y)
-        initLights()
         initRenderer()
+        Sun.init(x, y)
 
         Rollover.init()
         Select.init()
@@ -1402,9 +1448,8 @@ var Scene = (function(){
         var fov = 10
         var aspect = window.innerWidth / window.innerHeight
         var near = 1
-        var far = 1000
+        var far = 200
         var init_cam_pos = 60
-        // mach
         camera = Scene.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
         Scene.camera.position.z = init_cam_pos
         Scene.camera.position.x = x
@@ -1423,40 +1468,6 @@ var Scene = (function(){
         Scene.renderer.shadowMapSoft = true
         Scene.renderer.shadowMapType = THREE.PCFSoftShadowMap
         Scene.container.appendChild( Scene.renderer.domElement );
-    }
-
-    function initLights(){
-        var ambientLight = new THREE.AmbientLight(0xffffff);
-        Scene.add(ambientLight);
-        var sun = createDirectionalLight(-20, 40, 50)
-        Scene.add(sun);
-    }
-
-    function createDirectionalLight(x, y, z){
-        var d = 10;
-        var s = 1024;
-        var light = new THREE.DirectionalLight(0xFFE100);
-        light.position.set(x, y, z)
-        // mach target.updateMatrixWorld was the bug!!!
-        // can make a moving directional light now!
-        light.target.position.set(0, 0, 0)
-        light.target.updateMatrixWorld() // important
-
-        light.castShadow = true
-        // light.shadowCameraVisible = true
-
-        light.shadowCameraLeft = -d;
-        light.shadowCameraRight = d;
-        light.shadowCameraTop = d;
-        light.shadowCameraBottom = -d;
-
-        light.shadowMapWidth = s
-        light.shadowMapHeight = s
-
-        light.shadowCameraFar = 100;
-        light.shadowDarkness = 0.1;
-        light.intensity = 0.5;
-        return light
     }
 
     function animate() {
