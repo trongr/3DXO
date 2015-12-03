@@ -230,16 +230,16 @@ var Console = (function(){
         Console.print("<hr>")
         Console.print("Ragnarook is a <i><b>Massively Multiplayer Open World Strategy Game</b></i> "
                       + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
-                      + "Prepare to vanquish your enemies in a semi-turn-based fashion!")
+                      + "Prepare to destroy your enemies in a semi-turn-based fashion!")
         // Console.print("Ragnarook is a <i><b>Massively Multiplayer Online Open World Exploration Creative Building Semi-Real Time Strategy Role-Playing Game</b></i> "
         //               + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
-        //               + "Prepare to vanquish your enemies in a semi-turn-based fashion!")
+        //               + "Prepare to destroy your enemies in a semi-turn-based fashion!")
         Console.print("<hr>")
         Console.print("<h2><u>HOW TO PLAY</u></h2>")
         Console.print("<ol>"
                       + '<li>Left mouse: move pieces.</li>'
                       + "<li>Right mouse: navigate map.</li>" // todo Make it mouse click navigate
-                      + "<li>You can move any number of pieces at any time, but once moved, each piece needs "
+                      + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
                       + " 30 seconds to recharge before it can move again.</li>"
                       + "</ol>")
         Console.print("Type <code> /info game </code> into the chat box below to start learning more about the game, "
@@ -598,21 +598,37 @@ var Player = (function(){
         else return Player.isFriendly(obj.game.piece)
     }
 
-    // Object materials are indexed by 0:ENEMY 1:FRIENDLY
     Player.isFriendly = function(piece){
-        if (piece.player == _player._id) return 1
-        else return 0
+        return piece.player == _player._id
     }
 
     return Player
 }())
 
-var Piece = (function(){
-    var Piece = {}
-
-    Piece.KIND = {}
+var BlueBox = (function(){
+    var BlueBox = {}
 
     var TEXTURES_ROOT = "/static/images/small/"
+    var _mats = {} // e.g. knight: material
+
+    BlueBox.init = function(){
+        var pieces = ["pawn", "rook", "knight", "bishop", "queen", "king"]
+        for (var i = 0; i < pieces.length; i++){
+            var piece = pieces[i]
+            // 0 is the chess set id
+            _mats[piece] = new THREE.MeshFaceMaterial(loadFaceTextures(piece + "0", 0x0060ff))
+            // new THREE.MeshFaceMaterial(loadFaceTextures(piece + "0", 0xff4545))
+        }
+    }
+
+    BlueBox.make = function(pieceKind){
+        var mat = _mats[pieceKind]
+        var box = new THREE.Mesh(K.CUBE_GEO, mat);
+        box.castShadow = true;
+        box.receiveShadow = true;
+        box.isABox = true
+        return box
+    }
 
     function loadFaceTextures(textureName, otherFacesColor){
         var materials = []
@@ -639,41 +655,48 @@ var Piece = (function(){
         return materials
     }
 
+    return BlueBox
+}())
+
+var Piece = (function(){
+    var Piece = {}
+
+    var CHESSSETS = {
+        BlueBox: BlueBox,
+        // RedBox: RedBox,
+    }
+    var CHESSSETIDS = Object.keys(CHESSSETS)
+    var _armies = {} // e.g. playerID: chessSetID // keeps track of players and their chess set ID
+
     Piece.init = function(){
-        var pieces = ["pawn", "rook", "knight", "bishop", "queen", "king"]
-        for (var i = 0; i < pieces.length; i++){
-            var piece = pieces[i]
-            Piece.KIND[piece] = {
-                material: [
-                    // 0 is the chess set id
-                    new THREE.MeshFaceMaterial(loadFaceTextures(piece + "0", 0xff4545)),
-                    new THREE.MeshFaceMaterial(loadFaceTextures(piece + "0", 0x0060ff)),
-                ],
-            }
-        }
+        BlueBox.init()
     }
 
     Piece.make = function(piece){
-        var mat = getMaterial(piece)
-        var obj = makeBox(mat)
-        obj.game = {
-            piece: piece,
-        }
+        // var chessSetID = getChessSetID(piece)
+        var obj = BlueBox.make(piece.kind)
+        obj.game = {piece:piece}
         Obj.move(obj, new THREE.Vector3(piece.x, piece.y, 1))
         return obj
     }
 
-    function makeBox(material){
-        var box = new THREE.Mesh(K.CUBE_GEO, material);
-        box.castShadow = true;
-        box.receiveShadow = true;
-        box.isABox = true
-        return box
+    // TODO. use all possible chess sets before reusing
+    // duplicate. better yet dynamically generate chess materials so
+    // you never run out
+    function getChessSetID(piece){
+        var playerID = piece.player
+        var chessSetID = _armies[playerID]
+        if (!chessSetID){
+            chessSetID = randomChessSetID()
+            _armies[playerID] = chessSetID
+        }
+        return chessSetID
     }
 
-    function getMaterial(piece){
-        var isFriendly = Player.isFriendly(piece)
-        return Piece.KIND[piece.kind].material[isFriendly]
+    // TODO. Don't load all the chess sets on init, i.e. load them here
+    // when you need them
+    function randomChessSetID(){
+        return CHESSSETIDS[Math.floor(Math.random() * CHESSSETIDS.length)];
     }
 
     return Piece
