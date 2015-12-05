@@ -38,6 +38,9 @@ var K = (function(){
     var K = {
         CUBE_SIZE: S,
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
+        CAM_DIST_MAX: 100,
+        CAM_DIST_MIN: 50,
+        CAM_DIST_INIT: 80,
     }
 
     shearGeo(K.CUBE_GEO)
@@ -138,7 +141,8 @@ var Charge = (function(){
     var CLOCK_WIDTH = 0.1
     var CLOCK_INNER_RADIUS = CLOCK_OUTER_RADIUS - CLOCK_WIDTH
     var CLOCK_MAT = new THREE.MeshLambertMaterial({
-        color:0xFFFA66, side:THREE.DoubleSide, // Need DoubleSide otw ring won't render
+        color:0xFFFA66,
+        side:THREE.DoubleSide, // Need DoubleSide otw ring won't render
         transparent:true, opacity:0.8
     });
 
@@ -226,7 +230,8 @@ var Console = (function(){
     }
 
     function helloConsole(){
-        Console.print("<h1>Welcome to Chess 2.0: Ragnarook! <sup>[ pre-alpha ]</sup></h1>")
+        Console.print("<span style='font-size:3em'>Ragnarook</span>")
+        Console.print("[ Pre-alpha release ]")
         Console.print("<hr>")
         Console.print("Ragnarook is a <i><b>Massively Multiplayer Open World Strategy Game</b></i> "
                       + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
@@ -605,23 +610,20 @@ var Player = (function(){
     return Player
 }())
 
-var BlueBox = (function(){
-    var BlueBox = {}
-
+var BoxChessSet = function(color){
     var TEXTURES_ROOT = "/static/images/small/"
     var _mats = {} // e.g. knight: material
 
-    BlueBox.init = function(){
+    function init(){
         var pieces = ["pawn", "rook", "knight", "bishop", "queen", "king"]
         for (var i = 0; i < pieces.length; i++){
             var piece = pieces[i]
             // 0 is the chess set id
-            _mats[piece] = new THREE.MeshFaceMaterial(loadFaceTextures(piece + "0", 0x0060ff))
-            // new THREE.MeshFaceMaterial(loadFaceTextures(piece + "0", 0xff4545))
+            _mats[piece] = new THREE.MeshFaceMaterial(loadFaceTextures(piece + "0", color))
         }
     }
 
-    BlueBox.make = function(pieceKind){
+    this.make = function(pieceKind){
         var mat = _mats[pieceKind]
         var box = new THREE.Mesh(K.CUBE_GEO, mat);
         box.castShadow = true;
@@ -632,14 +634,17 @@ var BlueBox = (function(){
 
     function loadFaceTextures(textureName, otherFacesColor){
         var materials = []
+
+        // use colors for all sides
         for (var i = 0; i < 6; i++){
             materials.push(new THREE.MeshPhongMaterial({
                 color:otherFacesColor,
                 shading:THREE.FlatShading,
                 side:THREE.DoubleSide
             }))
-        } // use colors for non image faces
+        }
 
+        // use shader to apply texture on top face
         var texture = THREE.ImageUtils.loadTexture(TEXTURES_ROOT + textureName + ".png", {})
         texture.needsUpdate = true
         var uniforms = {
@@ -655,26 +660,27 @@ var BlueBox = (function(){
         return materials
     }
 
-    return BlueBox
-}())
+    init()
+}
 
 var Piece = (function(){
     var Piece = {}
 
-    var CHESSSETS = {
-        BlueBox: BlueBox,
-        // RedBox: RedBox,
-    }
-    var CHESSSETIDS = Object.keys(CHESSSETS)
+    var CHESSSETS = {} // BlueBoxChessSet: new BoxChessSet(0x0060ff)
+    var CHESSSETIDS = [] // keys of CHESSSETS, e.g. BlueBoxChessSet
     var _armies = {} // e.g. playerID: chessSetID // keeps track of players and their chess set ID
 
     Piece.init = function(){
-        BlueBox.init()
+        CHESSSETS = {
+            BlueBoxChessSet: new BoxChessSet(0x0060ff),
+            RedBoxChessSet: new BoxChessSet(0xff4545),
+        }
+        CHESSSETIDS = Object.keys(CHESSSETS)
     }
 
     Piece.make = function(piece){
         // var chessSetID = getChessSetID(piece)
-        var obj = BlueBox.make(piece.kind)
+        var obj = CHESSSETS.BlueBoxChessSet.make(piece.kind)
         obj.game = {piece:piece}
         Obj.move(obj, new THREE.Vector3(piece.x, piece.y, 1))
         return obj
@@ -1337,8 +1343,8 @@ var Controls = (function(){
         // _controls.noRotate = false;
         _controls.noZoom = false;
         _controls.noPan = false;
-	    _controls.minDistance = 50;
-        _controls.maxDistance = 100;
+	    _controls.minDistance = K.CAM_DIST_MIN;
+        _controls.maxDistance = K.CAM_DIST_MAX;
         _controls.staticMoving = true;
         _controls.dynamicDampingFactor = 0.3;
         _controls.keys = [ 65, 83, 68 ];
@@ -1476,9 +1482,8 @@ var Scene = (function(){
         var aspect = window.innerWidth / window.innerHeight
         var near = 1
         var far = 200
-        var init_cam_pos = 60
         camera = Scene.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-        Scene.camera.position.z = init_cam_pos
+        Scene.camera.position.z = K.CAM_DIST_INIT
         Scene.camera.position.x = x
         Scene.camera.position.y = y
     }
