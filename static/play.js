@@ -610,18 +610,18 @@ var Player = (function(){
     return Player
 }())
 
-var BoxChessSet = function(color){
+var BoxSet = function(color){
     var TEXTURES_ROOT = "/static/images/small/"
     var _mats = {} // e.g. knight: material
 
-    function init(){
+    ;(function init(){
         var pieces = ["pawn", "rook", "knight", "bishop", "queen", "king"]
         for (var i = 0; i < pieces.length; i++){
             var piece = pieces[i]
             // 0 is the chess set id
             _mats[piece] = new THREE.MeshFaceMaterial(loadFaceTextures(piece + "0", color))
         }
-    }
+    }());
 
     this.make = function(pieceKind){
         var mat = _mats[pieceKind]
@@ -659,28 +659,32 @@ var BoxChessSet = function(color){
 
         return materials
     }
-
-    init()
 }
 
 var Piece = (function(){
     var Piece = {}
 
-    var CHESSSETS = {} // BlueBoxChessSet: new BoxChessSet(0x0060ff)
-    var CHESSSETIDS = [] // keys of CHESSSETS, e.g. BlueBoxChessSet
+    var CHESSSETS = {} // BlueBoxSet: new BoxSet(0x0060ff)
+    var CHESSSETIDS = [] // keys of CHESSSETS, e.g. BlueBoxSet
     var _armies = {} // e.g. playerID: chessSetID // keeps track of players and their chess set ID
 
+    // mach more colors
     Piece.init = function(){
         CHESSSETS = {
-            BlueBoxChessSet: new BoxChessSet(0x0060ff),
-            RedBoxChessSet: new BoxChessSet(0xff4545),
+            BlueBoxSet: new BoxSet(0x0060ff),
+            RedBoxSet: new BoxSet(0xff4545),
+            YellowBoxSet: new BoxSet(0xFFB245),
+            GreenBoxSet: new BoxSet(0x1FD125),
+            PurpleBoxSet: new BoxSet(0xC02EE8),
+            CyanBoxSet: new BoxSet(0x25DBDB),
         }
         CHESSSETIDS = Object.keys(CHESSSETS)
     }
 
     Piece.make = function(piece){
         // var chessSetID = getChessSetID(piece)
-        var obj = CHESSSETS.BlueBoxChessSet.make(piece.kind)
+        // var obj = CHESSSETS.BlueBoxSet.make(piece.kind)
+        var obj = CHESSSETS.CyanBoxSet.make(piece.kind)
         obj.game = {piece:piece}
         Obj.move(obj, new THREE.Vector3(piece.x, piece.y, 1))
         return obj
@@ -1397,7 +1401,7 @@ var Sun = (function(){
         _sun.shadowCameraFar = 100;
         _sun.shadowDarkness = 0.2;
         _sun.intensity = 0.5;
-        // mach
+
         Sun.update()
 
         Scene.add(ambientLight);
@@ -1409,6 +1413,8 @@ var Sun = (function(){
         updateSunPosition()
     }
 
+    // makes the sun move with the camera instead of staying in one
+    // place so you have shadows everywhere you go
     function updateSunPosition(){
         // The sun is coming from the top left corner and points
         // towards the ground z == 0 at camera position xy
@@ -1585,8 +1591,8 @@ var Game = (function(){
                 Chat.init(x, y)
                 Scene.init(x, y)
                 Obj.init()
-                Piece.init()
-                Map.init(x, y)
+                Piece.init() // load piece textures
+                Map.init(x, y) // load map and pieces
                 Menu.init(player)
                 Console.init()
                 Controls.init(x, y)
