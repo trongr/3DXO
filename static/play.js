@@ -27,8 +27,13 @@
 //
 // free roaming lets you move any piece to a neighbouring grid, but no
 // farther
+
+function log(msg, er){
+    console.log(new Date(), msg, er)
+}
+
 var clock = new THREE.Clock()
-var camera, _scene, scene, sceneDiffuse, renderer, composer, composer2;
+var camera, _scene, sceneEdge, sceneDiffuse, renderer, composer, composer2;
 var effectFXAA, cannyEdge, texturePass;
 var renderTargetEdge, renderTargetDiffuse;
 
@@ -49,7 +54,7 @@ var K = (function(){
 }())
 
 // shear models to fake 3D top down perspective
-function shearGeo(geometry){
+function shearGeo(geo){
     var Syx = 0,
     Szx = 0,
     Sxy = 0,
@@ -61,10 +66,10 @@ function shearGeo(geometry){
                   Sxy,     1,  Szy,  0,
                   Sxz,   Syz,   1,   0,
                   0,     0,   0,   1  );
-    geometry.applyMatrix( matrix );
+    geo.applyMatrix( matrix );
 }
 
-function shearModel(geometry){
+function shearModel(geo){
     // // mach
     var Syx = 0,
     Szx = 0,
@@ -77,7 +82,7 @@ function shearModel(geometry){
                   Sxy,     1,  Szy,  0,
                   Sxz,   Syz,   1,   0,
                   0,     0,   0,   1  );
-    geometry.applyMatrix( matrix );
+    geo.applyMatrix( matrix );
 }
 
 var Conf = {} // set on load from server
@@ -399,7 +404,7 @@ var Chat = (function(){
         try {
             _chat.send(JSON.stringify(data))
         } catch (e){
-            H.log("ERROR. Chat.send.catch", data)
+            log("ERROR. Chat.send.catch", data)
         }
     }
 
@@ -435,12 +440,12 @@ var Chat = (function(){
         var S = Conf.chat_zone_size
         var l = 0.25
         var h = 1.1 // NOTE. Raise the cross hair slightly so it's not hidden by the plane
-        var geometry = new THREE.Geometry()
-        Map.addCrosshair(geometry, X    , Y    , l, h)
-        Map.addCrosshair(geometry, X    , Y + S, l, h)
-        Map.addCrosshair(geometry, X + S, Y + S, l, h)
-        Map.addCrosshair(geometry, X + S, Y    , l, h)
-        var line = new THREE.Line(geometry, CHAT_ZONE_CORNER_MAT, THREE.LinePieces);
+        var geo = new THREE.Geometry()
+        Map.addCrosshair(geo, X    , Y    , l, h)
+        Map.addCrosshair(geo, X    , Y + S, l, h)
+        Map.addCrosshair(geo, X + S, Y + S, l, h)
+        Map.addCrosshair(geo, X + S, Y    , l, h)
+        var line = new THREE.Line(geo, CHAT_ZONE_CORNER_MAT, THREE.LinePieces);
         Scene.add(line)
         Scene.render()
     }
@@ -623,12 +628,13 @@ var BoxSet = function(color){
         }
     }());
 
-    this.make = function(pieceKind){
+    this.make = function(pieceKind, pos){
         var mat = _mats[pieceKind]
         var box = new THREE.Mesh(K.CUBE_GEO, mat);
         box.castShadow = true;
         box.receiveShadow = true;
         box.isABox = true
+        Obj.move(mesh, pos)
         return box
     }
 
@@ -661,6 +667,143 @@ var BoxSet = function(color){
     }
 }
 
+// mach color
+var ClassicSet = function(color){
+    var _geos = {} // e.g. knight: geometry
+    var _mats = {} // e.g. knight: material
+    var _material // one color. mach put this in _mats
+
+    ;(function init(){
+        initComposer()
+        initMaterials()
+        initGeometries()
+    }());
+
+    // mach
+    this.make = function(pieceKind, pos){
+        log("INFO. ClassicSet.make", pieceKind)
+        var scale = 1
+        var angle = Math.PI / 2
+        // var angle = Math.PI / 2.5
+        // var angle = Math.PI / 3
+        // var angle = Math.PI / 4
+
+        var geo = _geos[pieceKind]
+        var mat = _mats[pieceKind]
+
+        geoDiffuse = geo.clone();
+        shearModel(geoDiffuse)
+        meshDiffuse = new THREE.Mesh(geoDiffuse, _material.diffuse);
+        // meshDiffuse.scale.set(scale, scale, scale)
+        meshDiffuse.rotation.x = angle // fake 3D in real 3D!!! LOL
+        sceneDiffuse.add(meshDiffuse);
+        Obj.move(meshDiffuse, pos)
+
+        // mach uncomment to enable edge:
+        //
+        // geoEdge = geo.clone()
+        // shearModel(geoEdge)
+        // mesh = new THREE.Mesh(geoEdge,_material.edge);
+        // // mesh.scale.set(scale, scale, scale)
+        // Obj.move(mesh, pos)
+        // mesh.rotation.x = angle // fake 3D in real 3D!!! LOL
+        // sceneEdge.add(mesh);
+
+        // mach cast shadows
+        // meshDiffuse.castShadow = true;
+        // meshDiffuse.receiveShadow = true;
+
+        // NOTE. Only returning one mesh here. If you want to turn on
+        // edge you need to figure out how to handle that
+        return meshDiffuse
+    }
+
+    // mach callback when geometries are all loaded. then init pieces
+    function initGeometries(){
+        log("INFO. ClassicSet.initGeometries")
+        var loader = new THREE.BinaryLoader();
+        var pieces = ["pawn", "rook", "knight", "bishop", "queen", "king"]
+        pieces.forEach(function(piece){
+            loader.load("static/models/" + piece + "0.js", function(geo) {
+                log("INFO. ClassicSet.loaded", piece)
+                _geos[piece] = geo
+            });
+        })
+    }
+
+    function initMaterials(){
+        _material = {
+            "diffuse": new THREE.ShaderMaterial(THREE.GoochShader),
+            "edge"   : new THREE.ShaderMaterial(THREE.NormalShader)
+        };
+        _material.diffuse.uniforms.WarmColor.value = new THREE.Vector3(1.0, 0.5, 0.0);
+        _material.diffuse.uniforms.CoolColor.value = new THREE.Vector3(0,0,0.7);
+        _material.diffuse.uniforms.SurfaceColor.value = new THREE.Vector3(0.0, 0.0, 0.8);
+        _material.diffuse.uniforms.LightPosition.value.copy(new THREE.Vector3(-300, 400, 900));
+        _material.diffuse.side = THREE.DoubleSide;
+        _material.diffuse.wireframe = false;
+    }
+
+    function initComposer(){
+        sceneEdge = new THREE.Scene()
+        // sceneDiffuse = new THREE.Scene();
+
+        var renderTargetParameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat, stencilBuffer: false, generateMipmaps: false };
+
+        renderTargetEdge = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetParameters);
+        renderTargetEdge.generateMipmaps = false;
+
+        composer = new THREE.EffectComposer( renderer, renderTargetEdge );
+
+        var effect = new THREE.RenderPass( sceneEdge, camera );
+        effect.renderToScreen = false;
+        composer.addPass( effect );
+
+        var blur = new THREE.ShaderPass(THREE.MedianFilter);
+        blur.uniforms.dim.value.copy(new THREE.Vector2(1.0 / window.innerWidth, 1.0 / window.innerHeight));
+        blur.renderToScreen = false;
+        composer.addPass(blur);
+
+
+        cannyEdge = new THREE.ShaderPass(THREE.CannyEdgeFilterPass);
+        cannyEdge.renderToScreen = false;
+        composer.addPass(cannyEdge);
+
+        var effect = new THREE.ShaderPass( THREE.InvertThreshholdPass );
+        effect.renderToScreen = false;
+        composer.addPass( effect );
+
+        var effect = new THREE.ShaderPass(THREE.CopyShader);
+        effect.renderToScreen = false;
+        composer.addPass(effect);
+
+        renderTargetDiffuse = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetParameters);
+
+        composer2 = new THREE.EffectComposer(renderer, renderTargetDiffuse);
+
+        var renderDiffuse = new THREE.RenderPass(sceneDiffuse, camera);
+        renderDiffuse.renderToScreen = false;
+        composer2.addPass(renderDiffuse);
+
+        var multiplyPass = new THREE.ShaderPass(THREE.MultiplyBlendShader);
+        multiplyPass.renderToScreen = false;
+        multiplyPass.uniforms["tEdge"].value = composer.renderTarget2;
+        multiplyPass.needsSwap = true;
+        composer2.addPass(multiplyPass);
+
+        effectFXAA = new THREE.ShaderPass(THREE.FXAAShader);
+        var e = window.innerWidth || 2;
+        var a = window.innerHeight || 2;
+        effectFXAA.uniforms.resolution.value.set(1/e,1/a);
+        effectFXAA.renderToScreen = false;
+        composer2.addPass(effectFXAA);
+
+        var effect = new THREE.ShaderPass(THREE.CopyShader);
+        effect.renderToScreen = true;
+        composer2.addPass(effect);
+    }
+}
+
 var Piece = (function(){
     var Piece = {}
 
@@ -668,7 +811,7 @@ var Piece = (function(){
     var CHESSSETIDS = [] // keys of CHESSSETS, e.g. BlueBoxSet
     var _armies = {} // e.g. playerID: chessSetID // keeps track of players and their chess set ID
 
-    // mach more colors
+    // mach randomize colors once you run out of these colors
     Piece.init = function(){
         CHESSSETS = {
             BlueBoxSet: new BoxSet(0x0060ff),
@@ -677,16 +820,19 @@ var Piece = (function(){
             GreenBoxSet: new BoxSet(0x1FD125),
             PurpleBoxSet: new BoxSet(0xC02EE8),
             CyanBoxSet: new BoxSet(0x25DBDB),
+            WhiteClassicSet: new ClassicSet(0xffffff), // mach
         }
         CHESSSETIDS = Object.keys(CHESSSETS)
     }
 
+    // mach manage player chess sets: player always the first set, and
+    // enemies cycle through the remaining sets
     Piece.make = function(piece){
         // var chessSetID = getChessSetID(piece)
-        // var obj = CHESSSETS.BlueBoxSet.make(piece.kind)
-        var obj = CHESSSETS.CyanBoxSet.make(piece.kind)
+        var pos = new THREE.Vector3(piece.x, piece.y, 1)
+        // var obj = CHESSSETS.BlueBoxSet.make(piece.kind, pos)
+        var obj = CHESSSETS.WhiteClassicSet.make(piece.kind, pos)
         obj.game = {piece:piece}
-        Obj.move(obj, new THREE.Vector3(piece.x, piece.y, 1))
         return obj
     }
 
@@ -814,177 +960,24 @@ var Map = (function(){
             Chat.updateZone(x, y)
         })
         Map.loadZones(x, y) // load map wherever player spawns
-        goochTest()
-        loadTest()
-    }
-
-    function createScene(geometry, materials, position){
-        // mach
-	    // var m = new THREE.Matrix4();
-        // var scale = 0.1
-	    // m.makeScale(scale, scale, scale);
-	    // geometry.applyMatrix(m);
-
-        var scale = 1
-        var angle = Math.PI / 2
-        // var angle = Math.PI / 2.5
-        // var angle = Math.PI / 3
-        // var angle = Math.PI / 4
-	    geometryDiffuse = geometry.clone();
-        shearModel(geometryDiffuse)
-
-	    meshDiffuse = new THREE.Mesh(geometryDiffuse,materials.diffuse);
-        // meshDiffuse.scale.set(scale, scale, scale)
-        Obj.move(meshDiffuse, position)
-        meshDiffuse.rotation.x = angle // fake 3D in real 3D!!! LOL
-        sceneDiffuse.add(meshDiffuse);
-
-        geometryEdge = geometry.clone()
-        shearModel(geometryEdge)
-
-        mesh = new THREE.Mesh(geometryEdge,materials.edge);
-        // mesh.scale.set(scale, scale, scale)
-        Obj.move(mesh, position)
-        mesh.rotation.x = angle // fake 3D in real 3D!!! LOL
-        scene.add(mesh);
-    }
-
-    function goochTest(){
-        scene = new THREE.Scene()
-	    // sceneDiffuse = new THREE.Scene();
-
-	    var materials = {
-		    "diffuse": new THREE.ShaderMaterial(THREE.GoochShader),
-		    "edge"	 : new THREE.ShaderMaterial(THREE.NormalShader)
-	    };
-
-	    materials.diffuse.uniforms.WarmColor.value = new THREE.Vector3(1.0, 0.5, 0.0);
-	    materials.diffuse.uniforms.CoolColor.value = new THREE.Vector3(0,0,0.7);
-	    materials.diffuse.uniforms.SurfaceColor.value = new THREE.Vector3(0.0, 0.0, 0.8);
-	    materials.diffuse.uniforms.LightPosition.value.copy(new THREE.Vector3(-300, 400, 900));
-	    materials.diffuse.side = THREE.DoubleSide;
-	    materials.diffuse.wireframe = false;
-
-	    var loader = new THREE.BinaryLoader();
-	    loader.load("static/models/knight1.js", function(geometry) {
-            createScene(geometry, materials, new THREE.Vector3(0, 4, 1))
-        });
-
-	    loader.load("static/models/king0.js", function(geometry) {
-            createScene(geometry, materials, new THREE.Vector3(0, 0, 1))
-            createScene(geometry, materials, new THREE.Vector3(0, 1, 1))
-            createScene(geometry, materials, new THREE.Vector3(0, 2, 1))
-            createScene(geometry, materials, new THREE.Vector3(0, 3, 1))
-        });
-
-	    loader.load("static/models/queen0.js", function(geometry) {
-            createScene(geometry, materials, new THREE.Vector3(1, 0, 1))
-            createScene(geometry, materials, new THREE.Vector3(1, 1, 1))
-            createScene(geometry, materials, new THREE.Vector3(1, 2, 1))
-            createScene(geometry, materials, new THREE.Vector3(1, 3, 1))
-        });
-
-	    loader.load("static/models/bishop0.js", function(geometry) {
-            createScene(geometry, materials, new THREE.Vector3(2, 0, 1))
-            createScene(geometry, materials, new THREE.Vector3(2, 1, 1))
-            createScene(geometry, materials, new THREE.Vector3(2, 2, 1))
-            createScene(geometry, materials, new THREE.Vector3(2, 3, 1))
-        });
-
-	    loader.load("static/models/knight0.js", function(geometry) {
-            createScene(geometry, materials, new THREE.Vector3(3, 0, 1))
-            createScene(geometry, materials, new THREE.Vector3(3, 1, 1))
-            createScene(geometry, materials, new THREE.Vector3(3, 2, 1))
-            createScene(geometry, materials, new THREE.Vector3(3, 3, 1))
-        });
-
-	    loader.load("static/models/rook0.js", function(geometry) {
-            createScene(geometry, materials, new THREE.Vector3(4, 0, 1))
-            createScene(geometry, materials, new THREE.Vector3(4, 1, 1))
-            createScene(geometry, materials, new THREE.Vector3(4, 2, 1))
-            createScene(geometry, materials, new THREE.Vector3(4, 3, 1))
-        });
-
-	    loader.load("static/models/pawn0.js", function(geometry) {
-            createScene(geometry, materials, new THREE.Vector3(5, 0, 1))
-            createScene(geometry, materials, new THREE.Vector3(5, 1, 1))
-            createScene(geometry, materials, new THREE.Vector3(5, 2, 1))
-            createScene(geometry, materials, new THREE.Vector3(5, 3, 1))
-        });
-
-	    // postprocessing
-
-	    var renderTargetParameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat, stencilBuffer: false, generateMipmaps: false };
-
-	    renderTargetEdge = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetParameters);
-	    renderTargetEdge.generateMipmaps = false;
-
-	    composer = new THREE.EffectComposer( renderer, renderTargetEdge );
-
-	    var effect = new THREE.RenderPass( scene, camera );
-	    effect.renderToScreen = false;
-	    composer.addPass( effect );
-
-	    var blur = new THREE.ShaderPass(THREE.MedianFilter);
-	    blur.uniforms.dim.value.copy(new THREE.Vector2(1.0 / window.innerWidth, 1.0 / window.innerHeight));
-	    blur.renderToScreen = false;
-	    composer.addPass(blur);
-
-
-	    cannyEdge = new THREE.ShaderPass(THREE.CannyEdgeFilterPass);
-	    cannyEdge.renderToScreen = false;
-	    composer.addPass(cannyEdge);
-
-	    var effect = new THREE.ShaderPass( THREE.InvertThreshholdPass );
-	    effect.renderToScreen = false;
-	    composer.addPass( effect );
-
-	    var effect = new THREE.ShaderPass(THREE.CopyShader);
-	    effect.renderToScreen = false;
-	    composer.addPass(effect);
-
-	    renderTargetDiffuse = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetParameters);
-
-	    composer2 = new THREE.EffectComposer(renderer, renderTargetDiffuse);
-
-	    var renderDiffuse = new THREE.RenderPass(sceneDiffuse, camera);
-	    renderDiffuse.renderToScreen = false;
-	    composer2.addPass(renderDiffuse);
-
-	    var multiplyPass = new THREE.ShaderPass(THREE.MultiplyBlendShader);
-	    multiplyPass.renderToScreen = false;
-	    multiplyPass.uniforms["tEdge"].value = composer.renderTarget2;
-	    multiplyPass.needsSwap = true;
-	    composer2.addPass(multiplyPass);
-
-	    effectFXAA = new THREE.ShaderPass(THREE.FXAAShader);
-	    var e = window.innerWidth || 2;
-	    var a = window.innerHeight || 2;
-	    effectFXAA.uniforms.resolution.value.set(1/e,1/a);
-	    effectFXAA.renderToScreen = false;
-	    composer2.addPass(effectFXAA);
-
-	    var effect = new THREE.ShaderPass(THREE.CopyShader);
-	    effect.renderToScreen = true;
-	    composer2.addPass(effect);
-
+        // loadTest() // loads simple model
     }
 
     // mach
     function loadTest(){
-		var onProgress = function ( xhr ) {
-			if ( xhr.lengthComputable ) {
-				var percentComplete = xhr.loaded / xhr.total * 100;
-				console.log( Math.round(percentComplete, 2) + '% downloaded' );
-			}
-		};
+        var onProgress = function ( xhr ) {
+            if ( xhr.lengthComputable ) {
+                var percentComplete = xhr.loaded / xhr.total * 100;
+                log("INFO. play.loadTest.onProgress", Math.round(percentComplete, 2) + '% downloaded');
+            }
+        };
 
-		var onError = function ( xhr ) {
-            console.log("onError", xhr)
-		};
+        var onError = function ( xhr ) {
+            log("ERROR. play.loadTest.onError", xhr)
+        };
 
-		var loader = new THREE.OBJMTLLoader();
-		loader.load( 'static/models/knight0.obj', 'static/models/knight0.mtl', function ( object ) {
+        var loader = new THREE.OBJMTLLoader();
+        loader.load( 'static/models/knight0.obj', 'static/models/knight0.mtl', function ( object ) {
             object.traverse( function ( child ) {
                 if ( child instanceof THREE.Mesh ) {
                     child.material.side = THREE.DoubleSide
@@ -995,8 +988,8 @@ var Map = (function(){
             // var newObj = object.clone() // todo reuse this model e.g. for other pieces
             Obj.move(object, new THREE.Vector3(1, 4, 1))
             object.rotation.x = Math.PI / 3 // fake 3D in real 3D!!! LOL
-			Scene.add( object );
-		}, onProgress, onError );
+            Scene.add( object );
+        }, onProgress, onError );
     }
 
     // obj = {x:asdf, y:asdf, z:asdf}
@@ -1056,63 +1049,63 @@ var Map = (function(){
     }
 
     function makeZoneGrid(X, Y, S){
-		var geometry = new THREE.Geometry();
-		for ( var i = 0; i < S; i++){
-			geometry.vertices.push(new THREE.Vector3(X + i, Y + 0, 1));
-			geometry.vertices.push(new THREE.Vector3(X + i, Y + S, 1));
-			geometry.vertices.push(new THREE.Vector3(X + 0, Y + i, 1));
-			geometry.vertices.push(new THREE.Vector3(X + S, Y + i, 1));
-		}
-		var line = new THREE.Line( geometry, ZONE_GRID_MAT, THREE.LinePieces );
+        var geo = new THREE.Geometry();
+        for ( var i = 0; i < S; i++){
+            geo.vertices.push(new THREE.Vector3(X + i, Y + 0, 1));
+            geo.vertices.push(new THREE.Vector3(X + i, Y + S, 1));
+            geo.vertices.push(new THREE.Vector3(X + 0, Y + i, 1));
+            geo.vertices.push(new THREE.Vector3(X + S, Y + i, 1));
+        }
+        var line = new THREE.Line( geo, ZONE_GRID_MAT, THREE.LinePieces );
         return line
     }
 
     function makeZoneGridDiagonals(X, Y, S){
-		var geometry = new THREE.Geometry();
-		for ( var i = 0; i < S; i++){
+        var geo = new THREE.Geometry();
+        for ( var i = 0; i < S; i++){
             for (var j = 0; j < S; j++){
                 if ((i + j) % 2 == 0){
-                    addZoneGridDiagonal(geometry, X + i, Y + j, K.CUBE_SIZE, 1.2)
-                    Map.addCrosshair(geometry, X + i + K.CUBE_SIZE / 2, Y + j + K.CUBE_SIZE / 2, K.CUBE_SIZE / 2, 1.4)
+                    addZoneGridDiagonal(geo, X + i, Y + j, K.CUBE_SIZE, 1.2)
+                    Map.addCrosshair(geo, X + i + K.CUBE_SIZE / 2, Y + j + K.CUBE_SIZE / 2, K.CUBE_SIZE / 2, 1.4)
                 }
             }
-		}
-		var line = new THREE.Line(geometry, ZONE_GRID_DIAGONAL_MAT, THREE.LinePieces);
+        }
+        var line = new THREE.Line(geo, ZONE_GRID_DIAGONAL_MAT, THREE.LinePieces);
         return line
     }
 
-    function addZoneGridDiagonal(geometry, X, Y, w, h){
-        geometry.vertices.push(new THREE.Vector3(X    , Y    , h));
-        geometry.vertices.push(new THREE.Vector3(X + w, Y + w, h));
-        geometry.vertices.push(new THREE.Vector3(X + w, Y    , h));
-        geometry.vertices.push(new THREE.Vector3(X    , Y + w, h));
+    function addZoneGridDiagonal(geo, X, Y, w, h){
+        geo.vertices.push(new THREE.Vector3(X    , Y    , h));
+        geo.vertices.push(new THREE.Vector3(X + w, Y + w, h));
+        geo.vertices.push(new THREE.Vector3(X + w, Y    , h));
+        geo.vertices.push(new THREE.Vector3(X    , Y + w, h));
     }
 
     // add thicker border around the edges
     function makeZoneBorder(X, Y, S){
-        var geometry = new THREE.Geometry()
-        geometry.vertices.push(new THREE.Vector3(X + 0, Y + 0, 1));
-        geometry.vertices.push(new THREE.Vector3(X + 0, Y + S, 1));
-        geometry.vertices.push(new THREE.Vector3(X + S, Y + S, 1));
-        geometry.vertices.push(new THREE.Vector3(X + S, Y + 0, 1));
-        var line = new THREE.Line( geometry, ZONE_BORDER_MAT, THREE.LineStrip );
+        var geo = new THREE.Geometry()
+        geo.vertices.push(new THREE.Vector3(X + 0, Y + 0, 1));
+        geo.vertices.push(new THREE.Vector3(X + 0, Y + S, 1));
+        geo.vertices.push(new THREE.Vector3(X + S, Y + S, 1));
+        geo.vertices.push(new THREE.Vector3(X + S, Y + 0, 1));
+        var line = new THREE.Line( geo, ZONE_BORDER_MAT, THREE.LineStrip );
         return line
     }
 
     function makeZonePlane(X, Y, S){
-        var geometry = new THREE.PlaneBufferGeometry(S, S);
-		var plane = new THREE.Mesh(geometry, ZONE_PLANE_MAT);
-		plane.visible = true;
+        var geo = new THREE.PlaneBufferGeometry(S, S);
+        var plane = new THREE.Mesh(geo, ZONE_PLANE_MAT);
+        plane.visible = true;
         plane.receiveShadow = true;
         plane.position.set(X + S / 2, Y + S / 2, 1)
         return plane
     }
 
-    Map.addCrosshair = function(geometry, X, Y, l, h){
-        geometry.vertices.push(new THREE.Vector3(X - l, Y,     h));
-        geometry.vertices.push(new THREE.Vector3(X + l, Y,     h));
-        geometry.vertices.push(new THREE.Vector3(X    , Y - l, h));
-        geometry.vertices.push(new THREE.Vector3(X    , Y + l, h));
+    Map.addCrosshair = function(geo, X, Y, l, h){
+        geo.vertices.push(new THREE.Vector3(X - l, Y,     h));
+        geo.vertices.push(new THREE.Vector3(X + l, Y,     h));
+        geo.vertices.push(new THREE.Vector3(X    , Y - l, h));
+        geo.vertices.push(new THREE.Vector3(X    , Y + l, h));
     }
 
     Map.toZoneCoordinate = function(x){
@@ -1347,7 +1340,7 @@ var Controls = (function(){
         // _controls.noRotate = false;
         _controls.noZoom = false;
         _controls.noPan = false;
-	    _controls.minDistance = K.CAM_DIST_MIN;
+        _controls.minDistance = K.CAM_DIST_MIN;
         _controls.maxDistance = K.CAM_DIST_MAX;
         _controls.staticMoving = true;
         _controls.dynamicDampingFactor = 0.3;
@@ -1454,7 +1447,7 @@ var Scene = (function(){
     }
 
     Scene.addObjs = function(objs){
-        if (!objs) return H.log("ERROR. Scene.addObjs: null objs")
+        if (!objs) return log("ERROR. Scene.addObjs: null objs")
         for (var i = 0; i < objs.length; i++){
             Scene.add(objs[i])
         }
@@ -1511,7 +1504,7 @@ var Scene = (function(){
     function animate() {
         requestAnimationFrame(animate);
         Controls.update();
-        Scene.render() // mach can you toggle this?
+        Scene.render()
     }
 
     // mach
@@ -1522,13 +1515,13 @@ var Scene = (function(){
             // renderer.clearDepth();
 
             var delta = clock.getDelta()
-	        composer.render(delta);
+            composer.render(delta);
             composer2.render(delta);
 
-            // renderer.render(scene, Scene.camera)
+            // renderer.render(sceneEdge, Scene.camera)
             // renderer.render(sceneDiffuse, Scene.camera)
         } catch (e){
-            console.log("Renderer not ready")
+            log("ERROR. Renderer not ready")
         }
     }
 
@@ -1540,19 +1533,19 @@ var Scene = (function(){
 
         // Scene.render();
 
-	    camera.aspect = window.innerWidth / window.innerHeight;
-	    camera.updateProjectionMatrix();
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
 
-	    renderer.setSize( window.innerWidth, window.innerHeight );
-	    effectFXAA.uniforms.resolution.value.set(1 / window.innerWidth, 1 / window.innerHeight);
-	    // cannyEdge.uniforms.uWindow.value.set(parseFloat(window.innerWidth), parseFloat(window.innerHeight));
-	    composer.reset();
-	    composer2.reset();
-	    renderTargetEdge.width = renderTargetDiffuse.width = parseFloat(window.innerWidth);
-	    renderTargetEdge.height = renderTargetDiffuse.height = parseFloat(window.innerHeight);
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        effectFXAA.uniforms.resolution.value.set(1 / window.innerWidth, 1 / window.innerHeight);
+        // cannyEdge.uniforms.uWindow.value.set(parseFloat(window.innerWidth), parseFloat(window.innerHeight));
+        composer.reset();
+        composer2.reset();
+        renderTargetEdge.width = renderTargetDiffuse.width = parseFloat(window.innerWidth);
+        renderTargetEdge.height = renderTargetDiffuse.height = parseFloat(window.innerHeight);
 
-	    composer.render();
-	    composer2.render();
+        composer.render();
+        composer2.render();
 
     }
 
@@ -1640,7 +1633,7 @@ var Game = (function(){
             var you = Player.getPlayer()
             if (isYourSock(you, data)){
                 Console.error(data.info || data.error) // TODO. Should stick with .info
-                H.log("ERROR. Game.on.error", data)
+                log("ERROR. Game.on.error", data)
             }
         }
 
