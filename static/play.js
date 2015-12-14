@@ -668,19 +668,21 @@ var BoxSet = function(color){
 }
 
 // mach color
-var ClassicSet = function(color){
+var ClassicSet = (function(){
+    var ClassicSet = {}
+
     var _geos = {} // e.g. knight: geometry
     var _mats = {} // e.g. knight: material
     var _material // one color. mach put this in _mats
 
-    ;(function init(){
+    ClassicSet.init = function(done){
         initComposer()
         initMaterials()
-        initGeometries()
-    }());
+        initGeometries(done)
+    }
 
-    // mach
-    this.make = function(pieceKind, pos){
+    // mach. color
+    ClassicSet.make = function(pieceKind, color, pos){
         log("INFO. ClassicSet.make", pieceKind)
         var scale = 1
         var angle = Math.PI / 2
@@ -693,6 +695,7 @@ var ClassicSet = function(color){
 
         geoDiffuse = geo.clone();
         shearModel(geoDiffuse)
+        // mach _material: diff colors
         meshDiffuse = new THREE.Mesh(geoDiffuse, _material.diffuse);
         // meshDiffuse.scale.set(scale, scale, scale)
         meshDiffuse.rotation.x = angle // fake 3D in real 3D!!! LOL
@@ -719,15 +722,18 @@ var ClassicSet = function(color){
     }
 
     // mach callback when geometries are all loaded. then init pieces
-    function initGeometries(){
+    function initGeometries(done){
         log("INFO. ClassicSet.initGeometries")
         var loader = new THREE.BinaryLoader();
         var pieces = ["pawn", "rook", "knight", "bishop", "queen", "king"]
-        pieces.forEach(function(piece){
-            loader.load("static/models/" + piece + "0.js", function(geo) {
+        async.each(pieces, function(piece, done){
+            loader.load("static/models/" + piece + "0.js", function(geo){
                 log("INFO. ClassicSet.loaded", piece)
                 _geos[piece] = geo
+                done(null)
             });
+        }, function(er){
+            done(null)
         })
     }
 
@@ -802,7 +808,9 @@ var ClassicSet = function(color){
         effect.renderToScreen = true;
         composer2.addPass(effect);
     }
-}
+
+    return ClassicSet
+}())
 
 var Piece = (function(){
     var Piece = {}
@@ -820,7 +828,7 @@ var Piece = (function(){
             GreenBoxSet: new BoxSet(0x1FD125),
             PurpleBoxSet: new BoxSet(0xC02EE8),
             CyanBoxSet: new BoxSet(0x25DBDB),
-            WhiteClassicSet: new ClassicSet(0xffffff), // mach
+            WhiteClassicSet: ClassicSet, // mach
         }
         CHESSSETIDS = Object.keys(CHESSSETS)
     }
@@ -831,7 +839,8 @@ var Piece = (function(){
         // var chessSetID = getChessSetID(piece)
         var pos = new THREE.Vector3(piece.x, piece.y, 1)
         // var obj = CHESSSETS.BlueBoxSet.make(piece.kind, pos)
-        var obj = CHESSSETS.WhiteClassicSet.make(piece.kind, pos)
+        // mach ClassicSet color
+        var obj = CHESSSETS.WhiteClassicSet.make(piece.kind, 0xffffff, pos)
         obj.game = {piece:piece}
         return obj
     }
@@ -1583,14 +1592,24 @@ var Game = (function(){
                 Sock.init()
                 Chat.init(x, y)
                 Scene.init(x, y)
+            },
+            function(done){
+                // ClassicSet needs the renderer to finish loading from
+                // Scene.init to init its composers
+                ClassicSet.init(function(er){
+                    done(er)
+                })
+            },
+            function(done){
                 Obj.init()
+                // Piece.init needs the ClassicSet.init to load the models
                 Piece.init() // load piece textures
                 Map.init(x, y) // load map and pieces
                 Menu.init(player)
                 Console.init()
                 Controls.init(x, y)
                 Events.init()
-            },
+            }
         ], function(er){
             if (er == Conf.code.get_player){
                 window.location.href = "/"
