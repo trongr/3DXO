@@ -37,18 +37,6 @@ var camera, _scene, sceneEdge, sceneDiffuse, renderer, composer, composer2;
 var effectFXAA, cannyEdge, texturePass;
 var renderTargetEdge, renderTargetDiffuse;
 
-var COLORS = {
-        white: "white",
-        gray: "gray",
-        black: "black",
-        red: "red",
-        yellow: "yellow",
-        green: "green",
-        aqua: "aqua",
-        blue: "blue",
-        purple: "purple",
-}
-
 var K = (function(){
 
     var S = 1
@@ -261,9 +249,11 @@ var Console = (function(){
         Console.print("<ol>"
                       + '<li>Left mouse: move pieces.</li>'
                       + "<li>Right mouse: navigate map.</li>" // todo Make it mouse click navigate
-                      + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
-                      + " 30 seconds to recharge before it can move again.</li>"
+                      + "<li>After each move, you must wait at least 15 seconds before you can move again.</li>"
                       + "</ol>")
+        Console.print("Rule 3 means that you will most likely lose if two other people decide "
+                      + "to gang up on you, so an important part of the game is to form alliances "
+                      + "and help defend each other from attackers.")
         Console.print("Type <code> /info game </code> into the chat box below to start learning more about the game, "
                       + "or dive right in and figure it out as you go.")
     }
@@ -680,22 +670,32 @@ var BoxSet = function(color){
 }
 
 // mach for now only using a finite number of named colors:
-// white gray black red yellow green aqua blue purple
-//
 // TODO. random colors that look nice
 var ClassicSet = (function(){
     var ClassicSet = {}
 
-    var _colors = {
-        white: new THREE.Vector3(0.9, 0.9, 0.9),
-        gray: new THREE.Vector3(0.7, 0.7, 0.7),
-        black: new THREE.Vector3(0.3, 0.3, 0.3),
-        red: new THREE.Vector3(1, 0.3, 0.3),
+    ClassicSet.COLORS = {
+        white: "white",
+        grey: "grey",
+        black: "black",
+        red: "red",
+        yellow: "yellow",
+        green: "green",
+        cyan: "cyan",
+        blue: "blue",
+        purple: "purple",
+    }
+
+    var _colors = { // NOTE. these color names should be the same as ClassicSet.COLORS
+        white: new THREE.Vector3(0.95, 0.9, 0.85),
+        grey: new THREE.Vector3(0.75, 0.7, 0.65),
+        black: new THREE.Vector3(0.35, 0.4, 0.45),
+        red: new THREE.Vector3(1, 0.4, 0.4),
         yellow: new THREE.Vector3(1, 0.8, 0.3),
-        green: new THREE.Vector3(0.3, 0.9, 0.4),
-        aqua: new THREE.Vector3(0.5, 0.9, 1),
-        blue: new THREE.Vector3(0, 0.4, 1),
-        purple: new THREE.Vector3(0.6, 0.4, 1),
+        green: new THREE.Vector3(0.3, 0.8, 0.35),
+        cyan: new THREE.Vector3(0.3, 0.9, 0.9),
+        blue: new THREE.Vector3(0.1, 0.5, 1),
+        purple: new THREE.Vector3(0.8, 0.4, 1),
     }
 
     var _geos = {} // e.g. knight: geometry
@@ -724,6 +724,8 @@ var ClassicSet = (function(){
         meshDiffuse = new THREE.Mesh(geoDiffuse, mat.diffuse);
         // meshDiffuse.scale.set(scale, scale, scale)
         meshDiffuse.rotation.x = angle // fake 3D in real 3D!!! LOL
+        meshDiffuse.castShadow = true;
+        meshDiffuse.receiveShadow = true;
         sceneDiffuse.add(meshDiffuse);
         Obj.move(meshDiffuse, pos)
 
@@ -736,10 +738,6 @@ var ClassicSet = (function(){
         // Obj.move(mesh, pos)
         // mesh.rotation.x = angle // fake 3D in real 3D!!! LOL
         // sceneEdge.add(mesh);
-
-        // mach cast shadows
-        // meshDiffuse.castShadow = true;
-        // meshDiffuse.receiveShadow = true;
 
         // NOTE. Only returning one mesh here. If you want to turn on
         // edge you need to figure out how to handle that
@@ -763,8 +761,8 @@ var ClassicSet = (function(){
     }
 
     function initMaterials(){
-        for (var color in COLORS) {
-            if (COLORS.hasOwnProperty(color)){
+        for (var color in ClassicSet.COLORS) {
+            if (ClassicSet.COLORS.hasOwnProperty(color)){
                 initMat(color)
             }
         }
@@ -777,7 +775,8 @@ var ClassicSet = (function(){
         };
         mat.diffuse.uniforms.WarmColor.value = _colors[color]
         mat.diffuse.uniforms.CoolColor.value = new THREE.Vector3(0,0,0);
-        mat.diffuse.uniforms.SurfaceColor.value = new THREE.Vector3(0.1, 0.1, 0.1);
+        // mat.diffuse.uniforms.SurfaceColor.value = new THREE.Vector3(0.1, 0.1, 0.1);
+        mat.diffuse.uniforms.SurfaceColor.value = new THREE.Vector3(0, 0, 0);
         mat.diffuse.uniforms.LightPosition.value.copy(new THREE.Vector3(-300, 400, 900));
         mat.diffuse.side = THREE.DoubleSide;
         mat.diffuse.wireframe = false;
@@ -857,31 +856,28 @@ var Piece = (function(){
     var Piece = {}
 
     var CHESSSETS = {} // BlueBoxSet: new BoxSet(0x0060ff)
-    var CHESSSETIDS = [] // keys of CHESSSETS, e.g. BlueBoxSet
-    var _armies = {} // e.g. playerID: chessSetID // keeps track of players and their chess set ID
+    var _fatigues = {} // e.g. playerID: {csid:chessSetID, color:color} // keeps track of players and their chess set ID and color
 
     // mach randomize colors once you run out of these colors
     Piece.init = function(){
         CHESSSETS = {
-            BlueBoxSet: new BoxSet(0x0060ff),
-            RedBoxSet: new BoxSet(0xff4545),
-            YellowBoxSet: new BoxSet(0xFFB245),
-            GreenBoxSet: new BoxSet(0x1FD125),
-            PurpleBoxSet: new BoxSet(0xC02EE8),
-            CyanBoxSet: new BoxSet(0x25DBDB),
-            ClassicSet: ClassicSet, // mach
+            // BlueBoxSet: new BoxSet(0x0060ff),
+            // RedBoxSet: new BoxSet(0xff4545),
+            // YellowBoxSet: new BoxSet(0xFFB245),
+            // GreenBoxSet: new BoxSet(0x1FD125),
+            // PurpleBoxSet: new BoxSet(0xC02EE8),
+            // CyanBoxSet: new BoxSet(0x25DBDB),
+            ClassicSet: ClassicSet,
         }
-        CHESSSETIDS = Object.keys(CHESSSETS)
     }
 
     // mach manage player chess sets: player always the first set, and
     // enemies cycle through the remaining sets
+    // mach
     Piece.make = function(piece){
-        // var chessSetID = getChessSetID(piece)
+        var fatigues = getPlayerFatigues(piece.player)
         var pos = new THREE.Vector3(piece.x, piece.y, 1)
-        // var obj = CHESSSETS.BlueBoxSet.make(piece.kind, pos)
-        // mach
-        var obj = CHESSSETS.ClassicSet.make(piece.kind, COLORS.yellow, pos)
+        var obj = CHESSSETS[fatigues.csid].make(piece.kind, fatigues.color, pos)
         obj.game = {piece:piece}
         return obj
     }
@@ -889,20 +885,24 @@ var Piece = (function(){
     // TODO. use all possible chess sets before reusing
     // duplicate. better yet dynamically generate chess materials so
     // you never run out
-    function getChessSetID(piece){
-        var playerID = piece.player
-        var chessSetID = _armies[playerID]
-        if (!chessSetID){
-            chessSetID = randomChessSetID()
-            _armies[playerID] = chessSetID
+    function getPlayerFatigues(playerID){
+        var fatigues = _fatigues[playerID]
+        if (!fatigues){
+            fatigues = randomFatigues()
+            _fatigues[playerID] = fatigues
         }
-        return chessSetID
+        return fatigues
     }
 
-    // TODO. Don't load all the chess sets on init, i.e. load them here
-    // when you need them
-    function randomChessSetID(){
-        return CHESSSETIDS[Math.floor(Math.random() * CHESSSETIDS.length)];
+    // mach
+    function randomFatigues(){
+        var csids = Object.keys(CHESSSETS)
+        var csid = csids[Math.floor(Math.random() * csids.length)]
+
+        var colors = Object.keys(ClassicSet.COLORS)
+        var color = colors[Math.floor(Math.random() * colors.length)]
+
+        return {csid:csid, color:color}
     }
 
     return Piece
@@ -1010,7 +1010,7 @@ var Map = (function(){
             Chat.updateZone(x, y)
         })
         Map.loadZones(x, y) // load map wherever player spawns
-        // loadTest() // loads simple model
+        // loadTest() // loads simple model mach
     }
 
     // mach
