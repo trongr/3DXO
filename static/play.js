@@ -46,6 +46,8 @@ var K = (function(){
         CAM_DIST_MAX: 100,
         CAM_DIST_MIN: 50,
         CAM_DIST_INIT: 80,
+        MODEL_XYZ_OFFSET: {x:0, y:0, z:-0.4},
+        CLOCK_XYZ_OFFSET: {x:0, y:0, z:-0.4},
     }
 
     shearGeo(K.CUBE_GEO)
@@ -161,7 +163,7 @@ var Charge = (function(){
         _clocks[pieceID].interval = setInterval(function(){
             removeClockMesh(pieceID)
             time = time - delta
-            var clock = makeRechargeClock(piece.x, piece.y, 2, time / total)
+            var clock = makeRechargeClock(piece.x, piece.y, 1, time / total)
             _clocks[pieceID].clock = clock
             Scene.add(clock)
             if (time < 1){
@@ -199,8 +201,7 @@ var Charge = (function(){
         var ring = new THREE.Mesh(clock_geo, CLOCK_MAT);
         // NOTE. This moves to the center of cell xyz. If you need to
         // adjust say z to raise the ring higher, use something else.
-        Obj.move(ring, new THREE.Vector3(x, y, z))
-        ring.position.z = z + 0.2
+        Obj.move(ring, new THREE.Vector3(x, y, z), K.CLOCK_XYZ_OFFSET)
         return ring
     }
 
@@ -635,7 +636,7 @@ var BoxSet = function(color){
         var box = new THREE.Mesh(K.CUBE_GEO, mat);
         box.castShadow = true;
         box.receiveShadow = true;
-        box.isABox = true
+        // box.isABox = true // mach precise move
         Obj.move(mesh, pos)
         return box
     }
@@ -726,8 +727,6 @@ var ClassicSet = (function(){
         meshDiffuse.rotation.x = angle // fake 3D in real 3D!!! LOL
         meshDiffuse.castShadow = true;
         meshDiffuse.receiveShadow = true;
-        sceneDiffuse.add(meshDiffuse);
-        Obj.move(meshDiffuse, pos)
 
         // mach uncomment to enable edge:
         //
@@ -735,8 +734,8 @@ var ClassicSet = (function(){
         // shearModel(geoEdge)
         // mesh = new THREE.Mesh(geoEdge,mat.edge);
         // // mesh.scale.set(scale, scale, scale)
-        // Obj.move(mesh, pos)
         // mesh.rotation.x = angle // fake 3D in real 3D!!! LOL
+        // Obj.move(mesh, pos)
         // sceneEdge.add(mesh);
 
         // NOTE. Only returning one mesh here. If you want to turn on
@@ -879,6 +878,8 @@ var Piece = (function(){
         var pos = new THREE.Vector3(piece.x, piece.y, 1)
         var obj = CHESSSETS[fatigues.csid].make(piece.kind, fatigues.color, pos)
         obj.game = {piece:piece}
+        sceneDiffuse.add(obj);
+        Obj.move(obj, pos, K.MODEL_XYZ_OFFSET)
         return obj
     }
 
@@ -929,15 +930,22 @@ var Obj = (function(){
         })
     }
 
-    Obj.move = function(obj, point){
+    // moves to point in game space. if x y z are given, they are
+    // offsets from the center of the cell
+    Obj.move = function(obj, point, d){
         obj.position
             .copy(point)
             .divideScalar( K.CUBE_SIZE ).floor()
             .multiplyScalar( K.CUBE_SIZE )
             .addScalar( K.CUBE_SIZE / 2 );
         // mach
-        if (obj.isABox){
-            obj.position.y = obj.position.y + 0.15
+        // if (obj.isABox){
+        //     obj.position.y = obj.position.y + 0.15
+        // }
+        if (d){
+            obj.position.x = obj.position.x + d.x
+            obj.position.y = obj.position.y + d.y
+            obj.position.z = obj.position.z + d.z
         }
     }
 
@@ -1475,7 +1483,6 @@ var Scene = (function(){
     }
 
     Scene.init = function(x, y){
-        // mach
         sceneDiffuse = _scene = new THREE.Scene();
         // _scene = new THREE.Scene();
 
@@ -1713,7 +1720,7 @@ var Game = (function(){
         function movePiece(data){
             var sel = Obj.findObjAtPosition(Math.floor(data.from.x), Math.floor(data.from.y), 1)
             sel.game.piece = data.piece // update piece with new position data
-            Obj.move(sel, data.to)
+            Obj.move(sel, data.to, K.MODEL_XYZ_OFFSET)
         }
 
         // todo big splash screen and menu for loser
