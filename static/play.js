@@ -37,6 +37,18 @@ var camera, _scene, sceneEdge, sceneDiffuse, renderer, composer, composer2;
 var effectFXAA, cannyEdge, texturePass;
 var renderTargetEdge, renderTargetDiffuse;
 
+var COLORS = {
+        white: "white",
+        gray: "gray",
+        black: "black",
+        red: "red",
+        yellow: "yellow",
+        green: "green",
+        aqua: "aqua",
+        blue: "blue",
+        purple: "purple",
+}
+
 var K = (function(){
 
     var S = 1
@@ -667,13 +679,27 @@ var BoxSet = function(color){
     }
 }
 
-// mach color
+// mach for now only using a finite number of named colors:
+// white gray black red yellow green aqua blue purple
+//
+// TODO. random colors that look nice
 var ClassicSet = (function(){
     var ClassicSet = {}
 
+    var _colors = {
+        white: new THREE.Vector3(0.9, 0.9, 0.9),
+        gray: new THREE.Vector3(0.7, 0.7, 0.7),
+        black: new THREE.Vector3(0.3, 0.3, 0.3),
+        red: new THREE.Vector3(1, 0.3, 0.3),
+        yellow: new THREE.Vector3(1, 0.8, 0.3),
+        green: new THREE.Vector3(0.3, 0.9, 0.4),
+        aqua: new THREE.Vector3(0.5, 0.9, 1),
+        blue: new THREE.Vector3(0, 0.4, 1),
+        purple: new THREE.Vector3(0.6, 0.4, 1),
+    }
+
     var _geos = {} // e.g. knight: geometry
-    var _mats = {} // e.g. knight: material
-    var _material // one color. mach put this in _mats
+    var _mats = {} // e.g. color: material
 
     ClassicSet.init = function(done){
         initComposer()
@@ -691,12 +717,11 @@ var ClassicSet = (function(){
         // var angle = Math.PI / 4
 
         var geo = _geos[pieceKind]
-        var mat = _mats[pieceKind]
+        var mat = _mats[color]
 
         geoDiffuse = geo.clone();
         shearModel(geoDiffuse)
-        // mach _material: diff colors
-        meshDiffuse = new THREE.Mesh(geoDiffuse, _material.diffuse);
+        meshDiffuse = new THREE.Mesh(geoDiffuse, mat.diffuse);
         // meshDiffuse.scale.set(scale, scale, scale)
         meshDiffuse.rotation.x = angle // fake 3D in real 3D!!! LOL
         sceneDiffuse.add(meshDiffuse);
@@ -706,7 +731,7 @@ var ClassicSet = (function(){
         //
         // geoEdge = geo.clone()
         // shearModel(geoEdge)
-        // mesh = new THREE.Mesh(geoEdge,_material.edge);
+        // mesh = new THREE.Mesh(geoEdge,mat.edge);
         // // mesh.scale.set(scale, scale, scale)
         // Obj.move(mesh, pos)
         // mesh.rotation.x = angle // fake 3D in real 3D!!! LOL
@@ -738,16 +763,32 @@ var ClassicSet = (function(){
     }
 
     function initMaterials(){
-        _material = {
+        for (var color in COLORS) {
+            if (COLORS.hasOwnProperty(color)){
+                initMat(color)
+            }
+        }
+    }
+
+    function initMat(color){
+        var mat = {
             "diffuse": new THREE.ShaderMaterial(THREE.GoochShader),
             "edge"   : new THREE.ShaderMaterial(THREE.NormalShader)
         };
-        _material.diffuse.uniforms.WarmColor.value = new THREE.Vector3(1.0, 0.5, 0.0);
-        _material.diffuse.uniforms.CoolColor.value = new THREE.Vector3(0,0,0.7);
-        _material.diffuse.uniforms.SurfaceColor.value = new THREE.Vector3(0.0, 0.0, 0.8);
-        _material.diffuse.uniforms.LightPosition.value.copy(new THREE.Vector3(-300, 400, 900));
-        _material.diffuse.side = THREE.DoubleSide;
-        _material.diffuse.wireframe = false;
+        mat.diffuse.uniforms.WarmColor.value = _colors[color]
+        mat.diffuse.uniforms.CoolColor.value = new THREE.Vector3(0,0,0);
+        mat.diffuse.uniforms.SurfaceColor.value = new THREE.Vector3(0.1, 0.1, 0.1);
+        mat.diffuse.uniforms.LightPosition.value.copy(new THREE.Vector3(-300, 400, 900));
+        mat.diffuse.side = THREE.DoubleSide;
+        mat.diffuse.wireframe = false;
+
+        // NOTE. Have to clone uniforms otw later calls to initMat
+        // will overwrite it. THREEJS bug, don't know why. Might have
+        // to clone attributes too:
+        // mat.diffuse.attributes = THREE.UniformsUtils.clone(mat.diffuse.attributes)
+        mat.diffuse.uniforms = THREE.UniformsUtils.clone(mat.diffuse.uniforms)
+
+        _mats[color] = mat
     }
 
     function initComposer(){
@@ -828,7 +869,7 @@ var Piece = (function(){
             GreenBoxSet: new BoxSet(0x1FD125),
             PurpleBoxSet: new BoxSet(0xC02EE8),
             CyanBoxSet: new BoxSet(0x25DBDB),
-            WhiteClassicSet: ClassicSet, // mach
+            ClassicSet: ClassicSet, // mach
         }
         CHESSSETIDS = Object.keys(CHESSSETS)
     }
@@ -839,8 +880,8 @@ var Piece = (function(){
         // var chessSetID = getChessSetID(piece)
         var pos = new THREE.Vector3(piece.x, piece.y, 1)
         // var obj = CHESSSETS.BlueBoxSet.make(piece.kind, pos)
-        // mach ClassicSet color
-        var obj = CHESSSETS.WhiteClassicSet.make(piece.kind, 0xffffff, pos)
+        // mach
+        var obj = CHESSSETS.ClassicSet.make(piece.kind, COLORS.yellow, pos)
         obj.game = {piece:piece}
         return obj
     }
@@ -1516,7 +1557,6 @@ var Scene = (function(){
         Scene.render()
     }
 
-    // mach
     Scene.render = function(){
         try {
             // renderer.clear();
