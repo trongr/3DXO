@@ -48,6 +48,7 @@ var K = (function(){
         CAM_DIST_INIT: 80,
         MODEL_XYZ_OFFSET: {x:0, y:0, z:-0.4},
         CLOCK_XYZ_OFFSET: {x:0, y:0, z:-0.4},
+        ROLLOVER_XYZ_OFFSET: {x:0, y:0, z:-0.49},
     }
 
     shearGeo(K.CUBE_GEO)
@@ -72,7 +73,6 @@ function shearGeo(geo){
 }
 
 function shearModel(geo){
-    // // mach
     var Syx = 0,
     Szx = 0,
     Sxy = 0,
@@ -250,11 +250,9 @@ var Console = (function(){
         Console.print("<ol>"
                       + '<li>Left mouse: move pieces.</li>'
                       + "<li>Right mouse: navigate map.</li>" // todo Make it mouse click navigate
-                      + "<li>After each move, you must wait at least 15 seconds before you can move again.</li>"
+                      + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
+                      + " 30 seconds to recharge before it can move again.</li>"
                       + "</ol>")
-        Console.print("Rule 3 means that you will most likely lose if two other people decide "
-                      + "to gang up on you, so an important part of the game is to form alliances "
-                      + "and help defend each other from attackers.")
         Console.print("Type <code> /info game </code> into the chat box below to start learning more about the game, "
                       + "or dive right in and figure it out as you go.")
     }
@@ -510,14 +508,12 @@ var Select = (function(){
 var Rollover = (function(){
     var Rollover = {}
 
-    var ROLLOVER_MATERIAL = new THREE.MeshLambertMaterial({color:0xffffff, shading:THREE.FlatShading, opacity:0.3, transparent:true})
-    var ROLLOVER_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01) // 0.01 extra to prevent highlight from clipping with cube surface
-    shearGeo(ROLLOVER_GEOMETRY)
+    var ROLLOVER_MATERIAL = new THREE.MeshLambertMaterial({color:0x66FF66, opacity:0.5, transparent:true})
+    var ROLLOVER_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, 0.01)
     var _rollover = null
 
     Rollover.init = function(){
         _rollover = new THREE.Mesh(ROLLOVER_GEOMETRY, ROLLOVER_MATERIAL);
-        _rollover.isABox = true
         Rollover.hide()
         Scene.add(_rollover)
     }
@@ -670,8 +666,6 @@ var BoxSet = function(color){
     }
 }
 
-// mach for now only using a finite number of named colors:
-// TODO. random colors that look nice
 var ClassicSet = (function(){
     var ClassicSet = {}
 
@@ -708,7 +702,6 @@ var ClassicSet = (function(){
         initGeometries(done)
     }
 
-    // mach. color
     ClassicSet.make = function(pieceKind, color, pos){
         log("INFO. ClassicSet.make", pieceKind)
         var scale = 1
@@ -728,7 +721,7 @@ var ClassicSet = (function(){
         meshDiffuse.castShadow = true;
         meshDiffuse.receiveShadow = true;
 
-        // mach uncomment to enable edge:
+        // TODO uncomment to enable edge:
         //
         // geoEdge = geo.clone()
         // shearModel(geoEdge)
@@ -743,7 +736,6 @@ var ClassicSet = (function(){
         return meshDiffuse
     }
 
-    // mach callback when geometries are all loaded. then init pieces
     function initGeometries(done){
         log("INFO. ClassicSet.initGeometries")
         var loader = new THREE.BinaryLoader();
@@ -857,7 +849,7 @@ var Piece = (function(){
     var CHESSSETS = {} // BlueBoxSet: new BoxSet(0x0060ff)
     var _fatigues = {} // e.g. playerID: {csid:chessSetID, color:color} // keeps track of players and their chess set ID and color
 
-    // mach randomize colors once you run out of these colors
+    // TODO randomize colors once you run out of these colors
     Piece.init = function(){
         CHESSSETS = {
             // BlueBoxSet: new BoxSet(0x0060ff),
@@ -870,9 +862,8 @@ var Piece = (function(){
         }
     }
 
-    // mach manage player chess sets: player always the first set, and
+    // TODO manage player chess sets: player always the first set, and
     // enemies cycle through the remaining sets
-    // mach
     Piece.make = function(piece){
         var fatigues = getPlayerFatigues(piece.player)
         var pos = new THREE.Vector3(piece.x, piece.y, 1)
@@ -895,7 +886,6 @@ var Piece = (function(){
         return fatigues
     }
 
-    // mach
     function randomFatigues(){
         var csids = Object.keys(CHESSSETS)
         var csid = csids[Math.floor(Math.random() * csids.length)]
@@ -951,7 +941,7 @@ var Obj = (function(){
 
     Obj.highlight = function(obj, isHigh){
         if (!obj) return
-        if (isHigh) Obj.move(Rollover.getMesh(), obj.position)
+        if (isHigh) Obj.move(Rollover.getMesh(), obj.position, K.ROLLOVER_XYZ_OFFSET)
         else Rollover.hide()
     }
 
@@ -1021,7 +1011,6 @@ var Map = (function(){
         // loadTest() // loads simple model mach
     }
 
-    // mach
     function loadTest(){
         var onProgress = function ( xhr ) {
             if ( xhr.lengthComputable ) {
