@@ -471,27 +471,33 @@ var Select = (function(){
     Select.getIntersect = function(clientX, clientY){
         _mouse.set( ( clientX / window.innerWidth ) * 2 - 1, - ( clientY / window.innerHeight ) * 2 + 1 );
         _raycaster.setFromCamera(_mouse, Scene.camera);
-        return _raycaster.intersectObjects(Obj.getAll())[0];
+        return _raycaster.intersectObjects(Obj.objs)[0];
     }
 
     Select.select = function(clientX, clientY){
         var intersect = Select.getIntersect(clientX, clientY)
         if (!intersect) return
-        if (_isSelecting){
-            Game.move(_selected,
-                      new THREE.Vector3()
-                      .copy(intersect.point)
-                      .add(new THREE.Vector3()
-                           .copy(intersect.face.normal)
-                           .multiplyScalar(0.5))) // normal's unit length so gotta scale by half to fit inside the box
+
+        var obj = intersect.object
+        if (obj.game){
+            var p = obj.game.piece
+            var pos = new THREE.Vector3(p.x, p.y, 1)
+        } else {
+            var pos = new THREE.Vector3().copy(intersect.point).add(
+                new THREE.Vector3().copy(intersect.face.normal).multiplyScalar(0.5)
+            ) // normal's unit length so gotta scale by half to fit inside the box
+        }
+
+        if (_isSelecting){ // try to move the piece
+            Game.move(_selected, pos)
             _isSelecting = false
         } else { // start selecting
-            if (Player.objBelongsToPlayer(intersect.object)){
-                _selected = intersect.object
-                Obj.highlight(intersect.object, true)
-                Move.highlightAvailableMoves(intersect.object)
+            if (Player.objBelongsToPlayer(obj)){ // selecting your own piece
+                _selected = obj
+                Obj.highlight(obj, true)
+                Move.highlightAvailableMoves(obj)
                 _isSelecting = true
-            } else {
+            } else { // selecting someone else's piece or empty space
                 Obj.highlight(_selected, false)
                 _isSelecting = false
             }
@@ -632,7 +638,6 @@ var BoxSet = function(color){
         var box = new THREE.Mesh(K.CUBE_GEO, mat);
         box.castShadow = true;
         box.receiveShadow = true;
-        // box.isABox = true // mach precise move
         Obj.move(mesh, pos)
         return box
     }
@@ -905,10 +910,10 @@ var Obj = (function(){
     // dummy origin and direction, near==0, far==1 because we only
     // want to find the ground adjacent to an obj
     var _groundRaycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(), 0, 1)
-    var _objects
+    Obj.objs = [];
 
     Obj.init = function(){
-        _objects = []
+        Obj.objs = []
     }
 
     Obj.loadZone = function(x, y, done){
@@ -920,18 +925,14 @@ var Obj = (function(){
         })
     }
 
-    // moves to point in game space. if x y z are given, they are
-    // offsets from the center of the cell
+    // moves to point in game space. if d is given, it contains
+    // offsets d.{x,y,z} from the center of the cell
     Obj.move = function(obj, point, d){
         obj.position
             .copy(point)
             .divideScalar( K.CUBE_SIZE ).floor()
             .multiplyScalar( K.CUBE_SIZE )
             .addScalar( K.CUBE_SIZE / 2 );
-        // mach
-        // if (obj.isABox){
-        //     obj.position.y = obj.position.y + 0.15
-        // }
         if (d){
             obj.position.x = obj.position.x + d.x
             obj.position.y = obj.position.y + d.y
@@ -947,8 +948,8 @@ var Obj = (function(){
 
     // todo. Store objs in dictionary for faster get
     Obj.findObjAtPosition = function(x, y, z){
-        for (var i = 0; i < _objects.length; i++){
-            var obj = _objects[i]
+        for (var i = 0; i < Obj.objs.length; i++){
+            var obj = Obj.objs[i]
             var X = Math.floor(obj.position.x)
             var Y = Math.floor(obj.position.y)
             var Z = Math.floor(obj.position.z)
@@ -960,27 +961,23 @@ var Obj = (function(){
     }
 
     Obj.findObjsByPlayerID = function(playerID){
-        return _objects.filter(function(obj){
+        return Obj.objs.filter(function(obj){
             return (obj.game && obj.game.piece &&
                     (obj.game.piece.player == playerID ||
                      obj.game.piece.player._id == playerID))
         })
     }
 
-    Obj.getAll = function(){
-        return _objects
-    }
-
     Obj.add = function(obj){
-        _objects.push(obj)
+        Obj.objs.push(obj)
     }
 
     Obj.remove = function(obj){
-        _objects.splice(_objects.indexOf(obj), 1);
+        Obj.objs.splice(Obj.objs.indexOf(obj), 1);
     }
 
     Obj.get = function(index){
-        return _objects[index]
+        return Obj.objs[index]
     }
 
     return Obj
@@ -1008,7 +1005,7 @@ var Map = (function(){
             Chat.updateZone(x, y)
         })
         Map.loadZones(x, y) // load map wherever player spawns
-        // loadTest() // loads simple model mach
+        // loadTest() // loads simple model TODO
     }
 
     function loadTest(){
@@ -1534,7 +1531,6 @@ var Scene = (function(){
     }
 
     function initRenderer(){
-        // mach
         renderer = Scene.renderer = new THREE.WebGLRenderer( { antialias:true, alpha:true } );
         Scene.renderer.autoClear = false;
         renderer.autoClear = false
