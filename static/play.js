@@ -692,10 +692,10 @@ var ClassicSet = (function(){
         black: new THREE.Vector3(0.35, 0.4, 0.45),
         red: new THREE.Vector3(1, 0.4, 0.4),
         yellow: new THREE.Vector3(1, 0.8, 0.3),
-        green: new THREE.Vector3(0.3, 0.8, 0.35),
-        cyan: new THREE.Vector3(0.3, 0.9, 0.9),
+        green: new THREE.Vector3(0.45, 0.83, 0.45),
+        cyan: new THREE.Vector3(0.49, 0.81, 0.92),
         blue: new THREE.Vector3(0.1, 0.5, 1),
-        purple: new THREE.Vector3(0.8, 0.4, 1),
+        purple: new THREE.Vector3(0.77, 0.56, 0.83),
     }
 
     var _geos = {} // e.g. knight: geometry
