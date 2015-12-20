@@ -43,7 +43,9 @@ var K = (function(){
     var K = {
         CUBE_SIZE: S,
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
+        // mach
         CAM_DIST_MAX: 100,
+        // CAM_DIST_MAX: 1000,
         CAM_DIST_MIN: 50,
         CAM_DIST_INIT: 80,
         MODEL_XYZ_OFFSET: {x:0, y:0, z:-0.4},
@@ -708,18 +710,16 @@ var ClassicSet = (function(){
     }
 
     ClassicSet.make = function(pieceKind, color, pos){
-        log("INFO. ClassicSet.make", pieceKind)
+        // log("INFO. ClassicSet.make", [pieceKind, color])
         var scale = 1
         var angle = Math.PI / 2
         // var angle = Math.PI / 2.5
         // var angle = Math.PI / 3
         // var angle = Math.PI / 4
 
-        var geo = _geos[pieceKind]
+        var geoDiffuse = _geos[pieceKind]
         var mat = _mats[color]
 
-        geoDiffuse = geo.clone();
-        shearModel(geoDiffuse)
         meshDiffuse = new THREE.Mesh(geoDiffuse, mat.diffuse);
         // meshDiffuse.scale.set(scale, scale, scale)
         meshDiffuse.rotation.x = angle // fake 3D in real 3D!!! LOL
@@ -728,8 +728,7 @@ var ClassicSet = (function(){
 
         // TODO uncomment to enable edge:
         //
-        // geoEdge = geo.clone()
-        // shearModel(geoEdge)
+        // geoEdge = geoDiffuse.clone()
         // mesh = new THREE.Mesh(geoEdge,mat.edge);
         // // mesh.scale.set(scale, scale, scale)
         // mesh.rotation.x = angle // fake 3D in real 3D!!! LOL
@@ -748,6 +747,7 @@ var ClassicSet = (function(){
         async.each(pieces, function(piece, done){
             loader.load("static/models/" + piece + "0.js", function(geo){
                 log("INFO. ClassicSet.loaded", piece)
+                shearModel(geo)
                 _geos[piece] = geo
                 done(null)
             });
@@ -920,8 +920,25 @@ var Obj = (function(){
         API.Pieces.get({x:x, y:y, r:10}, function(er, _pieces){
             if (er && done) return done(er)
             Game.loadPieces(_pieces)
-            Scene.render()
             if (done) done(null)
+        })
+    }
+
+    // mach
+    // x y are lower left zone coordinates
+    Obj.destroyZone = function(x, y){
+        var S = Conf.zone_size
+        var X = x + S, Y = y + S
+        // find objs in zone
+        var zoneObjs = Obj.objs.filter(function(obj){
+            if (!obj.game || !obj.game.piece) return false
+            var ex = obj.game.piece.x
+            var wy = obj.game.piece.y
+            return (x <= ex && ex < X && y <= wy && wy < Y)
+        })
+        zoneObjs.forEach(function(obj){
+            Scene.remove(obj)
+            Obj.remove(obj)
         })
     }
 
@@ -992,19 +1009,21 @@ var Map = (function(){
     var ZONE_PLANE_MAT = new THREE.MeshLambertMaterial({color:0x4179E8, transparent:true, opacity:0.9});
 
     var _map = []
-    var _knownZones = {} // keys are string representations of arrays,
-                         // e.g. a[[1,2]] == "asdf" means a =
-                         // {"1,2":"asdf"}
+    var _knownZones = {} // [X,Y]:[X,Y]
+    var _knownZonesMap = {} // [X,Y]:[X,Y]
+
+    var ACTIVE_ZONE_WIDTH = 5
 
     Map.init = function(x, y){
         _map = []
         Map.addMouseDragListener(function scrollHandler(){
             var x = Scene.camera.position.x
             var y = Scene.camera.position.y
-            Map.loadZones(x, y)
+            loadZones(x, y, ACTIVE_ZONE_WIDTH)
+            destroyZones(x, y, ACTIVE_ZONE_WIDTH)
             Chat.updateZone(x, y)
         })
-        Map.loadZones(x, y) // load map wherever player spawns
+        loadZones(x, y, ACTIVE_ZONE_WIDTH) // load map wherever player spawns
         // loadTest() // loads simple model TODO
     }
 
@@ -1061,29 +1080,66 @@ var Map = (function(){
     }
 
     // x and y are real game coordinates
-    Map.loadZones = function(x, y){
+    function loadZones(x, y, N){
+        log("INFO. Map.loadZones", [x, y])
         var S = Conf.zone_size
-        var N = 1 // also load the 8 neighbouring zones to x, y
         for (var i = -N; i <= N; i++){
             for (var j = -N; j <= N; j++){
                 var X = Map.toZoneCoordinate(x + i * S)
                 var Y = Map.toZoneCoordinate(y + j * S)
 
-                if (_knownZones[[X, Y]]) continue // Check if we already rendered this zone
-                else _knownZones[[X, Y]] = true
+                if (_knownZones[[X, Y]]){
+                    continue // Check if we already rendered this zone
+                } else {
+                    _knownZones[[X, Y]] = [X, Y]
+                }
 
-                Map.loadZone(X, Y)
+                loadZoneMap(X, Y)
                 Obj.loadZone(X, Y)
             }
         }
     }
 
-    // TODO obj.geometry.dispose when removing from scene, to avoid
-    // memory leak
-    // TODO cache materials
-    //
+    function destroyZones(x, y, N){
+        log("INFO. Map.destroyZones", [x, y])
+        var S = Conf.zone_size
+
+        var newZones = {}
+        for (var i = -N; i <= N; i++){ // find new (active) zones
+            for (var j = -N; j <= N; j++){
+                var X = Map.toZoneCoordinate(x + i * S)
+                var Y = Map.toZoneCoordinate(y + j * S)
+                newZones[[X, Y]] = [X, Y]
+            }
+        }
+
+        for (var zone in _knownZones) { // find old (inactive) zones that aren't in the new zones centered at x, y
+            if (_knownZones.hasOwnProperty(zone)){
+                if (!newZones[zone]){ // inactive zone: destroy
+                    destroyZone(_knownZones[zone])
+                }
+            }
+        }
+    }
+
+    // mach
+    function destroyZone(zone){
+        var X = zone[0], Y = zone[1]
+        Obj.destroyZone(X, Y)
+        delete _knownZones[zone]
+    }
+
     // X and Y are game units rounded to nearest multiple of zone_size
-    Map.loadZone = function(X, Y){
+    //
+    // NOTE. Unlike pieces and other game objs, grids, borders, and
+    // planes aren't removed when destroying a zone, cause they're
+    // only added to Scene and not Obj.objs
+    function loadZoneMap(X, Y){
+        if (_knownZonesMap[[X, Y]]){
+            return
+        } else {
+            _knownZonesMap[[X, Y]] = [X, Y]
+        }
         var S = Conf.zone_size
         Scene.add(makeZoneGrid(X, Y, S));
         // Scene.add(makeZoneGridDiagonals(X, Y, S)); // toggle for fancy grid
@@ -1688,7 +1744,7 @@ var Game = (function(){
             }
         }
 
-        // todo load zone where the new pieces are, segmenting, etc.
+        // mach if new army is in an unknown zone, load the whole zone
         on.new_army = function(data){
             Game.loadPieces(data.pieces)
             Scene.render()
