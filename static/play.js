@@ -79,9 +79,12 @@ function shearModel(geo){
     var Syx = 0,
     Szx = 0,
     Sxy = 0,
-    Szy = 0.1,
     Sxz = 0,
+    Szy = 0.1,
     Syz = -0.4;
+    // mach use for the other models
+    // Szy = 0.1,
+    // Syz = -0.2;
     var matrix = new THREE.Matrix4();
     matrix.set(   1,   Syx,  Szx,  0,
                   Sxy,     1,  Szy,  0,
@@ -935,7 +938,6 @@ var Obj = (function(){
         })
     }
 
-    // mach
     // x y are lower left zone coordinates
     Obj.destroyZone = function(x, y){
         var S = Conf.zone_size
@@ -1037,7 +1039,7 @@ var Map = (function(){
             Chat.updateZone(x, y)
         })
         loadZones(x, y, ACTIVE_ZONE_WIDTH) // load map wherever player spawns
-        // loadTest() // loads simple model TODO
+        // loadTest() // mach loads simple model TODO
     }
 
     function loadTest(){
@@ -1052,20 +1054,108 @@ var Map = (function(){
             log("ERROR. play.loadTest.onError", xhr)
         };
 
+        // mach
         var loader = new THREE.OBJMTLLoader();
-        loader.load( 'static/models/knight0.obj', 'static/models/knight0.mtl', function ( object ) {
+        loader.load( 'static/models/king0.obj', 'static/models/king0.mtl', function ( object ) {
+            object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
             object.traverse( function ( child ) {
                 if ( child instanceof THREE.Mesh ) {
                     child.material.side = THREE.DoubleSide
-                    // child.castShadow = true;
-                    // child.receiveShadow = true
+                    shearModel(child.geometry)
+                    child.castShadow = true;
+                    child.receiveShadow = true
                 }
             } );
             // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(1, 4, 1))
-            object.rotation.x = Math.PI / 3 // fake 3D in real 3D!!! LOL
+            Obj.move(object, new THREE.Vector3(1, 4, 1), K.MODEL_XYZ_OFFSET)
             Scene.add( object );
         }, onProgress, onError );
+
+        // mach
+        var loader = new THREE.OBJMTLLoader();
+        loader.load( 'static/models/queen0.obj', 'static/models/queen0.mtl', function ( object ) {
+            object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
+            object.traverse( function ( child ) {
+                if ( child instanceof THREE.Mesh ) {
+                    child.material.side = THREE.DoubleSide
+                    shearModel(child.geometry)
+                    child.castShadow = true;
+                    child.receiveShadow = true
+                }
+            } );
+            // var newObj = object.clone() // todo reuse this model e.g. for other pieces
+            Obj.move(object, new THREE.Vector3(2, 4, 1), K.MODEL_XYZ_OFFSET)
+            Scene.add( object );
+        }, onProgress, onError );
+
+        // mach
+        var loader = new THREE.OBJMTLLoader();
+        loader.load( 'static/models/bishop0.obj', 'static/models/bishop0.mtl', function ( object ) {
+            object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
+            object.traverse( function ( child ) {
+                if ( child instanceof THREE.Mesh ) {
+                    child.material.side = THREE.DoubleSide
+                    shearModel(child.geometry)
+                    child.castShadow = true;
+                    child.receiveShadow = true
+                }
+            } );
+            // var newObj = object.clone() // todo reuse this model e.g. for other pieces
+            Obj.move(object, new THREE.Vector3(3, 4, 1), K.MODEL_XYZ_OFFSET)
+            Scene.add( object );
+        }, onProgress, onError );
+
+        // mach
+        var loader = new THREE.OBJMTLLoader();
+        loader.load( 'static/models/knight0.obj', 'static/models/knight0.mtl', function ( object ) {
+            object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
+            object.traverse( function ( child ) {
+                if ( child instanceof THREE.Mesh ) {
+                    child.material.side = THREE.DoubleSide
+                    shearModel(child.geometry)
+                    child.castShadow = true;
+                    child.receiveShadow = true
+                }
+            } );
+            // var newObj = object.clone() // todo reuse this model e.g. for other pieces
+            Obj.move(object, new THREE.Vector3(4, 4, 1), K.MODEL_XYZ_OFFSET)
+            Scene.add( object );
+        }, onProgress, onError );
+
+        // mach
+        var loader = new THREE.OBJMTLLoader();
+        loader.load( 'static/models/rook0.obj', 'static/models/rook0.mtl', function ( object ) {
+            object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
+            object.traverse( function ( child ) {
+                if ( child instanceof THREE.Mesh ) {
+                    child.material.side = THREE.DoubleSide
+                    shearModel(child.geometry)
+                    child.castShadow = true;
+                    child.receiveShadow = true
+                }
+            } );
+            // var newObj = object.clone() // todo reuse this model e.g. for other pieces
+            Obj.move(object, new THREE.Vector3(5, 4, 1), K.MODEL_XYZ_OFFSET)
+            Scene.add( object );
+        }, onProgress, onError );
+
+        // mach
+        var loader = new THREE.OBJMTLLoader();
+        loader.load( 'static/models/pawn0.obj', 'static/models/pawn0.mtl', function ( object ) {
+            object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
+            object.traverse( function ( child ) {
+                if ( child instanceof THREE.Mesh ) {
+                    child.material.side = THREE.DoubleSide
+                    shearModel(child.geometry)
+                    child.castShadow = true;
+                    child.receiveShadow = true
+                }
+            } );
+            // var newObj = object.clone() // todo reuse this model e.g. for other pieces
+            Obj.move(object, new THREE.Vector3(6, 4, 1), K.MODEL_XYZ_OFFSET)
+            Scene.add( object );
+        }, onProgress, onError );
+
     }
 
     // obj = {x:asdf, y:asdf, z:asdf}
