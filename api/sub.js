@@ -13,7 +13,7 @@ var Sub = module.exports = (function(){
 
     var ERROR_NO_NEIGHBOURS = "ERROR. Message not sent: you need to be within "
         + Conf.scout_range + " cells of another army to talk to them. "
-        + "You can send a direct message to another player by including @TheirUsername in the message."
+        + "You can send a direct message to another player by adding @TheirUsername to the beginning of the message."
 
     // todo can use psubscribe and punsubscribe with pattern:
     // https://github.com/NodeRedis/node_redis

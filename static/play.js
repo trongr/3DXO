@@ -29,7 +29,7 @@
 // farther
 
 function log(msg, er){
-    console.log(new Date(), msg, er)
+    console.log(new Date().getTime(), msg, er)
 }
 
 var clock = new THREE.Clock()
@@ -44,10 +44,11 @@ var K = (function(){
         CUBE_SIZE: S,
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
         // mach
-        CAM_DIST_MAX: 100,
+        CAM_DIST_MAX: 80,
+        // CAM_DIST_MAX: 100,
         // CAM_DIST_MAX: 1000,
         CAM_DIST_MIN: 50,
-        CAM_DIST_INIT: 80,
+        CAM_DIST_INIT: 70,
         MODEL_XYZ_OFFSET: {x:0, y:0, z:-0.4},
         CLOCK_XYZ_OFFSET: {x:0, y:0, z:-0.4},
         ROLLOVER_XYZ_OFFSET: {x:0, y:0, z:-0.49},
@@ -158,7 +159,7 @@ var Charge = (function(){
     Charge.start = function(piece){
         var pieceID = piece._id
         var total = Conf.recharge
-        var delta = 1000
+        var delta = 100 // change this for smoother or rougher ticks
         var time = total
         resetPieceClock(pieceID)
         _clocks[pieceID] = {}
@@ -241,21 +242,33 @@ var Console = (function(){
         Console.print("<span style='font-size:3em'>Ragnarook</span>")
         Console.print("[ Pre-alpha release ]")
         Console.print("<hr>")
-        Console.print("Ragnarook is a <i><b>Massively Multiplayer Open World Strategy Game</b></i> "
+        Console.print("RAGNAROOK is a <b style='color:yellow'>Massively Multiplayer Open World Strategy Game</b> "
                       + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
                       + "Prepare to destroy your enemies in a semi-turn-based fashion!")
-        // Console.print("Ragnarook is a <i><b>Massively Multiplayer Online Open World Exploration Creative Building Semi-Real Time Strategy Role-Playing Game</b></i> "
+        // Console.print("RAGNAROOK is a <i><b>Massively Multiplayer Online Open World Exploration Creative Building Semi-Real Time Strategy Role-Playing Game</b></i> "
         //               + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
         //               + "Prepare to destroy your enemies in a semi-turn-based fashion!")
         Console.print("<hr>")
         Console.print("<h2><u>HOW TO PLAY</u></h2>")
         Console.print("<ol>"
-                      + '<li>Left mouse: move pieces.</li>'
-                      + "<li>Right mouse: navigate map.</li>" // todo Make it mouse click navigate
-                      + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
-                      + " 30 seconds to recharge before it can move again.</li>"
+                      + "<li>Left mouse: move pieces.</li>"
+                      + "<li>Right mouse drag: navigate map.</li>" // todo Make it mouse click navigate
+                      + "<li>Scroll mouse: zoom.</li>"
                       + "</ol>")
-        Console.print("Type <code> /info game </code> into the chat box below to start learning more about the game, "
+        Console.print("<h2><u>RULES</u></h2>")
+        Console.print("<ol>"
+                      // + "<li></li>"
+                      + "<li>Similar to chess. Clicking on a piece will show its available moves.</li>"
+                      // + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
+                      // + " 30 seconds to recharge before it can move again.</li>"
+                      + "<li>You can move one piece every 15 seconds.</li>"
+                      + "<li>You can also move any additional piece that has no enemy in its range, "
+                      + "indicated by the green border around it.</li>"
+                      + "</ol>")
+        // Console.print("This roughly means that when there're no enemies around, "
+        //              + "you can quickly mobilize pieces to get them into battle, while when there are "
+        //              + "enemies nearby, the rules are the same as in regular chess.")
+        Console.print("Type <code> /info game </code> into the <b style='color:yellow'>chat box</b> below to start learning more about the game, "
                       + "or dive right in and figure it out as you go.")
     }
 
@@ -322,14 +335,14 @@ var Sock = (function(){
     var Sock = {}
 
     var _sock = null
-    var _socketAutoReconnectTimeout = null
+    var isRetry = false
 
     Sock.init = function(){
         _sock = new SockJS('http://localhost:8080/sock');
 
         _sock.onopen = function(){
-            // Console.info("INFO. Connected to game.")
-            clearTimeout(_socketAutoReconnectTimeout)
+            if (isRetry) Console.info("Connected")
+            isRetry = true
         };
 
         // re.data should always be an obj and contain a channel
@@ -364,7 +377,6 @@ var Chat = (function(){
     var Chat = {}
 
     var _chat = null
-    var _socketAutoReconnectTimeout = null
     var _zone = [] // player's current zone, updated as she moves around the map
     var _knownZones = {} // keeps track of known zones, but only for cosmetic things like drawing zone corners
     var playerID = null
@@ -379,7 +391,6 @@ var Chat = (function(){
 
         _chat.onopen = function() {
             // Console.info("INFO. Connected to chat.")
-            clearTimeout(_socketAutoReconnectTimeout)
             Chat.updateZone(x, y)
             Chat.sub()
         };
@@ -1012,7 +1023,9 @@ var Map = (function(){
     var _knownZones = {} // [X,Y]:[X,Y]
     var _knownZonesMap = {} // [X,Y]:[X,Y]
 
-    var ACTIVE_ZONE_WIDTH = 5
+    // mach
+    // var ACTIVE_ZONE_WIDTH = 5
+    var ACTIVE_ZONE_WIDTH = 2
 
     Map.init = function(x, y){
         _map = []
@@ -1218,11 +1231,13 @@ var Map = (function(){
 var Move = (function(){
     var Move = {}
 
+    // NOTE. Server has a copy of this. TODO. Put them both in conf.json
+    var MAX_RANGE = 5
     Move.range = {
         pawn: 1,
-        rook: 6,
-        bishop: 6,
-        queen: 6,
+        rook: MAX_RANGE,
+        bishop: MAX_RANGE,
+        queen: MAX_RANGE,
         king: 1,
         knight: 1,
     }

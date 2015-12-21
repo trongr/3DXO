@@ -15,11 +15,13 @@ var DB = require("../db.js")
 var Move = (function(){
     var Move = {}
 
+    // NOTE. Client also has a copy of this. TODO. Put them both in conf.json
+    var MAX_RANGE = 5
     Move.range = {
         pawn: 1,
-        rook: 6,
-        bishop: 6,
-        queen: 6,
+        rook: MAX_RANGE,
+        bishop: MAX_RANGE,
+        queen: MAX_RANGE,
         king: 1,
         knight: 1,
     }
