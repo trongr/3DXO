@@ -43,10 +43,9 @@ var K = (function(){
     var K = {
         CUBE_SIZE: S,
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
-        // mach
-        CAM_DIST_MAX: 80,
+        // CAM_DIST_MAX: 80,
         // CAM_DIST_MAX: 100,
-        // CAM_DIST_MAX: 1000,
+        CAM_DIST_MAX: 150,
         CAM_DIST_MIN: 50,
         CAM_DIST_INIT: 70,
         MODEL_XYZ_OFFSET: {x:0, y:0, z:-0.4},
@@ -82,7 +81,7 @@ function shearModel(geo){
     Sxz = 0,
     Szy = 0.1,
     Syz = -0.4;
-    // mach use for the other models
+    // todo use for the other models
     // Szy = 0.1,
     // Syz = -0.2;
     var matrix = new THREE.Matrix4();
@@ -245,14 +244,14 @@ var Console = (function(){
         Console.print("<span style='font-size:3em'>Ragnarook</span>")
         Console.print("[ Pre-alpha release ]")
         Console.print("<hr>")
-        Console.print("RAGNAROOK is a <b style='color:yellow'>Massively Multiplayer Open World Strategy Game</b> "
+        Console.print("Ragnarook is a <b style='color:yellow'>Massively Multiplayer Open World Strategy Game</b> "
                       + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
                       + "Prepare to destroy your enemies in a semi-turn-based fashion!")
-        // Console.print("RAGNAROOK is a <i><b>Massively Multiplayer Online Open World Exploration Creative Building Semi-Real Time Strategy Role-Playing Game</b></i> "
+        // Console.print("Ragnarook is a <i><b>Massively Multiplayer Online Open World Exploration Creative Building Semi-Real Time Strategy Role-Playing Game</b></i> "
         //               + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
         //               + "Prepare to destroy your enemies in a semi-turn-based fashion!")
         Console.print("<hr>")
-        Console.print("<h2><u>HOW TO PLAY</u></h2>")
+        Console.print("<h2><u>CONTROLS</u></h2>")
         Console.print("<ol>"
                       + "<li>Left mouse: move pieces.</li>"
                       + "<li>Right mouse drag: navigate map.</li>" // todo Make it mouse click navigate
@@ -261,17 +260,16 @@ var Console = (function(){
         Console.print("<h2><u>RULES</u></h2>")
         Console.print("<ol>"
                       // + "<li></li>"
-                      + "<li>Similar to chess. Clicking on a piece will show its available moves.</li>"
+                      + "<li>Similar to chess. Highlighting a piece will show its available moves.</li>"
                       // + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
                       // + " 30 seconds to recharge before it can move again.</li>"
                       + "<li>You can move one piece every 15 seconds.</li>"
-                      + "<li>You can also move any additional piece that has no enemy in its range, "
-                      + "indicated by the green border around it.</li>"
+                      + "<li>You can also move any additional piece that has no enemy inside its green border.</li>"
                       + "</ol>")
         // Console.print("This roughly means that when there're no enemies around, "
         //              + "you can quickly mobilize pieces to get them into battle, while when there are "
         //              + "enemies nearby, the rules are the same as in regular chess.")
-        Console.print("Type <code> /info game </code> into the <b style='color:yellow'>chat box</b> below to start learning more about the game, "
+        Console.print("Type <code> /info game </code> into the chat box below to start learning more about the game, "
                       + "or dive right in and figure it out as you go.")
     }
 
@@ -333,15 +331,17 @@ var Console = (function(){
     return Console
 }())
 
-// todo rename to something else
 var Sock = (function(){
     var Sock = {}
 
+    var _playerID = null
     var _sock = null
     var isRetry = false
+    var _zone = [] // keeps track of current zone
 
     Sock.init = function(){
-        _sock = new SockJS('http://localhost:8080/sock');
+        _playerID = Player.getPlayer()._id
+        _sock = new SockJS('http://localhost:8080/game');
 
         _sock.onopen = function(){
             if (isRetry) Console.info("Connected")
@@ -371,6 +371,18 @@ var Sock = (function(){
     Sock.send = function(chan, data){
         data.chan = chan
         _sock.send(JSON.stringify(data))
+    }
+
+    Sock.subZone = function(x, y){
+        var X = H.toZoneCoordinate(x, Conf.zone_size)
+        var Y = H.toZoneCoordinate(y, Conf.zone_size)
+        var zone = [X, Y]
+        if (zone.toString() == _zone.toString()){
+            return // no change. don't subscribe zone
+        } else {
+            _zone = zone
+        }
+        Sock.send("zone", {chan:"zone", playerID:_playerID, zone:zone})
     }
 
     return Sock
@@ -1025,21 +1037,18 @@ var Map = (function(){
     var _knownZones = {} // [X,Y]:[X,Y]
     var _knownZonesMap = {} // [X,Y]:[X,Y]
 
-    // mach
-    // var ACTIVE_ZONE_WIDTH = 5
-    var ACTIVE_ZONE_WIDTH = 2
-
     Map.init = function(x, y){
         _map = []
         Map.addMouseDragListener(function scrollHandler(){
             var x = Scene.camera.position.x
             var y = Scene.camera.position.y
-            loadZones(x, y, ACTIVE_ZONE_WIDTH)
-            destroyZones(x, y, ACTIVE_ZONE_WIDTH)
+            Sock.subZone(x, y)
+            loadZones(x, y, Conf.active_zone_half_width)
+            destroyZones(x, y, Conf.active_zone_half_width)
             Chat.updateZone(x, y)
         })
-        loadZones(x, y, ACTIVE_ZONE_WIDTH) // load map wherever player spawns
-        // loadTest() // mach loads simple model TODO
+        loadZones(x, y, Conf.active_zone_half_width) // load map wherever player spawns
+        // loadTest() // loads simple model TODO
     }
 
     function loadTest(){
@@ -1054,7 +1063,6 @@ var Map = (function(){
             log("ERROR. play.loadTest.onError", xhr)
         };
 
-        // mach
         var loader = new THREE.OBJMTLLoader();
         loader.load( 'static/models/king0.obj', 'static/models/king0.mtl', function ( object ) {
             object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
@@ -1071,7 +1079,6 @@ var Map = (function(){
             Scene.add( object );
         }, onProgress, onError );
 
-        // mach
         var loader = new THREE.OBJMTLLoader();
         loader.load( 'static/models/queen0.obj', 'static/models/queen0.mtl', function ( object ) {
             object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
@@ -1088,7 +1095,6 @@ var Map = (function(){
             Scene.add( object );
         }, onProgress, onError );
 
-        // mach
         var loader = new THREE.OBJMTLLoader();
         loader.load( 'static/models/bishop0.obj', 'static/models/bishop0.mtl', function ( object ) {
             object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
@@ -1105,7 +1111,6 @@ var Map = (function(){
             Scene.add( object );
         }, onProgress, onError );
 
-        // mach
         var loader = new THREE.OBJMTLLoader();
         loader.load( 'static/models/knight0.obj', 'static/models/knight0.mtl', function ( object ) {
             object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
@@ -1122,7 +1127,6 @@ var Map = (function(){
             Scene.add( object );
         }, onProgress, onError );
 
-        // mach
         var loader = new THREE.OBJMTLLoader();
         loader.load( 'static/models/rook0.obj', 'static/models/rook0.mtl', function ( object ) {
             object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
@@ -1139,7 +1143,6 @@ var Map = (function(){
             Scene.add( object );
         }, onProgress, onError );
 
-        // mach
         var loader = new THREE.OBJMTLLoader();
         loader.load( 'static/models/pawn0.obj', 'static/models/pawn0.mtl', function ( object ) {
             object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
@@ -1188,8 +1191,8 @@ var Map = (function(){
         var S = Conf.zone_size
         for (var i = -N; i <= N; i++){
             for (var j = -N; j <= N; j++){
-                var X = Map.toZoneCoordinate(x + i * S)
-                var Y = Map.toZoneCoordinate(y + j * S)
+                var X = H.toZoneCoordinate(x + i * S, S)
+                var Y = H.toZoneCoordinate(y + j * S, S)
 
                 if (_knownZones[[X, Y]]){
                     continue // Check if we already rendered this zone
@@ -1210,8 +1213,8 @@ var Map = (function(){
         var newZones = {}
         for (var i = -N; i <= N; i++){ // find new (active) zones
             for (var j = -N; j <= N; j++){
-                var X = Map.toZoneCoordinate(x + i * S)
-                var Y = Map.toZoneCoordinate(y + j * S)
+                var X = H.toZoneCoordinate(x + i * S, S)
+                var Y = H.toZoneCoordinate(y + j * S, S)
                 newZones[[X, Y]] = [X, Y]
             }
         }
@@ -1309,10 +1312,6 @@ var Map = (function(){
         geo.vertices.push(new THREE.Vector3(X + l, Y,     h));
         geo.vertices.push(new THREE.Vector3(X    , Y - l, h));
         geo.vertices.push(new THREE.Vector3(X    , Y + l, h));
-    }
-
-    Map.toZoneCoordinate = function(x){
-        return H.toZoneCoordinate(x, Conf.zone_size)
     }
 
     return Map
@@ -1849,7 +1848,6 @@ var Game = (function(){
             }
         }
 
-        // mach if new army is in an unknown zone, load the whole zone
         on.new_army = function(data){
             Game.loadPieces(data.pieces)
             Scene.render()

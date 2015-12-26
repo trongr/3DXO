@@ -556,6 +556,7 @@ var Game = module.exports = (function(){
 
     Game.sock = function(data){
         var chan = data.chan
+        // mach remove turn
         if (["move", "turn"].indexOf(chan) < 0){
             return H.log("ERROR. Game.sock: unknown channel", data)
         }
@@ -632,7 +633,11 @@ var Game = module.exports = (function(){
                     if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.on.move", er)
                     Pub.error(playerID, er.info || "ERROR. Game.on.move: unexpected error")
                 } else {
-                    Pub.move(player, nPiece, from, to)
+                    var zone = [
+                        H.toZoneCoordinate(to.x, Conf.zone_size),
+                        H.toZoneCoordinate(to.y, Conf.zone_size)
+                    ]
+                    Pub.move(player, nPiece, from, to, zone)
                 }
             })
         }

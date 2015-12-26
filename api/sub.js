@@ -1,11 +1,10 @@
-var _ = require("lodash")
+// mach remove
+// var _ = require("lodash")
 var redis   = require('redis');
 var async = require("async")
-var express = require('express');
 var H = require("../static/js/h.js")
 var Conf = require("../static/conf.json") // shared with client
 var Player = require("../models/player.js")
-var Piece = require("../models/piece.js")
 var Pub = require("./pub.js")
 
 var Sub = module.exports = (function(){

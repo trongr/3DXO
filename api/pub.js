@@ -38,12 +38,13 @@ var Pub = module.exports = (function(){
         })
     }
 
-    Pub.move = function(player, piece, from, to){
+    Pub.move = function(player, piece, from, to, zone){
         Pub.publish("move", {
             player: player,
             piece: piece,
             from: from,
-            to: to
+            to: to,
+            zone: zone
         })
     }
 
