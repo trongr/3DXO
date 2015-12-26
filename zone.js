@@ -72,7 +72,7 @@ var Sub = (function(){
             // that zone. there should be other neighbouring zones
             // with a subscriber
             if (!players) return
-            else H.log("INFO. zone.callbackZone", zone[0], zone[1])
+            else H.log("INFO. zone.callbackZone", zone[0], zone[1], H.length(players))
 
             // loop through players in zone
             for (var player in players) {

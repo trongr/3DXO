@@ -339,13 +339,16 @@ var Sock = (function(){
     var isRetry = false
     var _zone = [] // keeps track of current zone
 
-    Sock.init = function(){
+    Sock.init = function(x, y){
+        _zone = []
         _playerID = Player.getPlayer()._id
         _sock = new SockJS('http://localhost:8080/game');
 
+        // mach
         _sock.onopen = function(){
             if (isRetry) Console.info("Connected")
             isRetry = true
+            Sock.subZone(x, y)
         };
 
         // re.data should always be an obj and contain a channel
@@ -363,7 +366,7 @@ var Sock = (function(){
         _sock.onclose = function() {
             Console.warn("Lost connection: retrying in 5s")
             setTimeout(function(){
-                Sock.init()
+                Sock.init(_zone[0], _zone[1])
             }, 5000)
         };
     }
@@ -1781,7 +1784,7 @@ var Game = (function(){
                     x = king.x
                     y = king.y
                 }
-                Sock.init()
+                Sock.init(x, y)
                 Chat.init(x, y)
                 Scene.init(x, y)
             },
