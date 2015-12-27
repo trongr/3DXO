@@ -17,6 +17,7 @@ var Sub = (function(){
     var _subscriber = redis.createClient();
     _subscriber.subscribe('error');
     _subscriber.subscribe('new_army');
+    _subscriber.subscribe('remove');
     _subscriber.subscribe('move');
     _subscriber.subscribe('gameover');
     _subscriber.subscribe('defect');
@@ -157,7 +158,6 @@ var Zone = module.exports = (function(){
         H.log("INFO. Zone.onConnection")
         var playerID = null
 
-        // don't forward everything client sends through to other users
         // Receiving data from client
         conn.on('data', function(msg) {
             try {

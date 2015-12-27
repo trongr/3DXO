@@ -10,6 +10,7 @@ var Pub = module.exports = (function(){
     Pub = {}
 
     var _publisher = redis.createClient();
+    var S = Conf.zone_size
 
     Pub.publish = function(chan, data){
         data.chan = chan
@@ -38,16 +39,31 @@ var Pub = module.exports = (function(){
         })
     }
 
-    Pub.move = function(player, piece, from, to, zone){
-        Pub.publish("move", {
+    Pub.remove = function(player, piece, from){
+        Pub.publish("remove", {
             player: player,
             piece: piece,
             from: from,
-            to: to,
-            zone: zone
+            zone: [
+                H.toZoneCoordinate(from.x, S),
+                H.toZoneCoordinate(from.y, S)
+            ]
         })
     }
 
+    Pub.move = function(player, piece, to){
+        Pub.publish("move", {
+            player: player,
+            piece: piece,
+            to: to,
+            zone: [
+                H.toZoneCoordinate(to.x, S),
+                H.toZoneCoordinate(to.y, S)
+            ]
+        })
+    }
+
+    // mach remove
     // todo do something here. see game.js/Pub.new_enemies
     // Pub.new_enemies = function(player, enemies){
     //     // enemies.forEach(function(enemy){

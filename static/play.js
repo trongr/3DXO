@@ -344,7 +344,6 @@ var Sock = (function(){
         _playerID = Player.getPlayer()._id
         _sock = new SockJS('http://localhost:8080/game');
 
-        // mach
         _sock.onopen = function(){
             if (isRetry) Console.info("Connected")
             isRetry = true
@@ -1231,7 +1230,6 @@ var Map = (function(){
         }
     }
 
-    // mach
     function destroyZone(zone){
         var X = zone[0], Y = zone[1]
         Obj.destroyZone(X, Y)
@@ -1856,18 +1854,19 @@ var Game = (function(){
             Scene.render()
         }
 
-        on.move = function(data){
-            var you = Player.getPlayer()
-            var obj = Game.removeObjAtXY(data.to.x, data.to.y)
-            Charge.resetObjClock(obj)
-            movePiece(data)
-            Charge.start(data.piece)
+        on.remove = function(data){
+            Game.removeObjAtXY(data.from.x, data.from.y)
         }
 
-        function movePiece(data){
-            var sel = Obj.findObjAtPosition(Math.floor(data.from.x), Math.floor(data.from.y), 1)
-            sel.game.piece = data.piece // update piece with new position data
-            Obj.move(sel, data.to, K.MODEL_XYZ_OFFSET)
+        on.move = function(data){
+            // remove obj if any at dst
+            var deadPiece = Game.removeObjAtXY(data.to.x, data.to.y)
+            Charge.resetObjClock(deadPiece)
+
+            // create new piece at dst
+            var obj = Piece.make(data.piece)
+            Game.addObj(obj)
+            Charge.start(data.piece)
         }
 
         // todo big splash screen and menu for loser

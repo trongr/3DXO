@@ -633,11 +633,8 @@ var Game = module.exports = (function(){
                     if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.on.move", er)
                     Pub.error(playerID, er.info || "ERROR. Game.on.move: unexpected error")
                 } else {
-                    var zone = [
-                        H.toZoneCoordinate(to.x, Conf.zone_size),
-                        H.toZoneCoordinate(to.y, Conf.zone_size)
-                    ]
-                    Pub.move(player, nPiece, from, to, zone)
+                    Pub.remove(player, nPiece, from)
+                    Pub.move(player, nPiece, to)
                 }
             })
         }
