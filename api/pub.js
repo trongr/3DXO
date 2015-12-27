@@ -33,33 +33,28 @@ var Pub = module.exports = (function(){
         })
     }
 
-    Pub.new_army = function(pieces){
+    Pub.new_army = function(pieces, zone){
         Pub.publish("new_army", {
-            pieces: pieces
+            pieces: pieces,
+            zone: zone
         })
     }
 
-    Pub.remove = function(player, piece, from){
+    Pub.remove = function(player, piece, from, zone){
         Pub.publish("remove", {
             player: player,
             piece: piece,
             from: from,
-            zone: [
-                H.toZoneCoordinate(from.x, S),
-                H.toZoneCoordinate(from.y, S)
-            ]
+            zone: zone
         })
     }
 
-    Pub.move = function(player, piece, to){
+    Pub.move = function(player, piece, to, zone){
         Pub.publish("move", {
             player: player,
             piece: piece,
             to: to,
-            zone: [
-                H.toZoneCoordinate(to.x, S),
-                H.toZoneCoordinate(to.y, S)
-            ]
+            zone: zone
         })
     }
 

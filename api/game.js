@@ -302,6 +302,7 @@ var Game = module.exports = (function(){
         router: express.Router()
     }
 
+    var S = Conf.zone_size
     var ERROR_BUILD_ARMY = "ERROR. Can't build army"
 
     Game.router.route("/:playerID/buildArmy")
@@ -311,11 +312,11 @@ var Game = module.exports = (function(){
             } catch (e){
                 return res.send({info:ERROR_BUILD_ARMY})
             }
-            Game.buildArmy(playerID, function(er, pieces){
+            Game.buildArmy(playerID, function(er, pieces, zone){
                 if (er){
                     res.send(er)
                 } else {
-                    Pub.new_army(pieces)
+                    Pub.new_army(pieces, zone)
                     res.send({ok:true, pieces:pieces})
                 }
             })
@@ -431,7 +432,7 @@ var Game = module.exports = (function(){
                 })
             }
         ], function(er){
-            done(er, pieces)
+            done(er, pieces, zone)
         })
     }
 
@@ -443,8 +444,8 @@ var Game = module.exports = (function(){
                 if (p != LETTER_PIECES[0]){
                     army.push({
                         kind: LETTER_PIECES[p],
-                        x: zone.x + j,
-                        y: zone.y + i,
+                        x: zone[0] + j,
+                        y: zone[1] + i,
                         player: player
                     })
                 }
@@ -478,7 +479,7 @@ var Game = module.exports = (function(){
             },
             function(done){
                 if (!piece){
-                    zone = {x:0, y:0}
+                    zone = [0, 0]
                     return done(null)
                 }
                 Game.doWhilstCheckNeighbourZoneEmpty(piece, direction, function(er, _zone){
@@ -493,7 +494,7 @@ var Game = module.exports = (function(){
 
     // todo limit so we don't get infinite loop?
     // direction = {dx:+-1, dy:+-1}
-    // returns zone = {x:x, y:y}
+    // returns zone = [x, y]
     Game.doWhilstCheckNeighbourZoneEmpty = function(piece, direction, done){
         var count = 0
         var cells = null
@@ -501,7 +502,6 @@ var Game = module.exports = (function(){
         var x, y
         async.doWhilst(
             function(done){
-                var S = Conf.zone_size
                 x = Math.floor(nPiece.x / S) * S + direction.dx * S // zone coordinates
                 y = Math.floor(nPiece.y / S) * S + direction.dy * S
                 Cell.find({
@@ -524,7 +524,7 @@ var Game = module.exports = (function(){
                 }
             },
             function(er){
-                done(er, {x:x, y:y})
+                done(er, [x, y])
             }
         )
     }
@@ -633,8 +633,14 @@ var Game = module.exports = (function(){
                     if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.on.move", er)
                     Pub.error(playerID, er.info || "ERROR. Game.on.move: unexpected error")
                 } else {
-                    Pub.remove(player, nPiece, from)
-                    Pub.move(player, nPiece, to)
+                    Pub.remove(player, nPiece, from, [
+                        H.toZoneCoordinate(from.x, S),
+                        H.toZoneCoordinate(from.y, S)
+                    ])
+                    Pub.move(player, nPiece, to, [
+                        H.toZoneCoordinate(to.x, S),
+                        H.toZoneCoordinate(to.y, S)
+                    ])
                 }
             })
         }
