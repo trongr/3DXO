@@ -1,8 +1,6 @@
 var redis   = require('redis');
 var async = require("async")
 var express = require('express');
-// mach remove
-// var H = require("../lib/h.js")
 var H = require("../static/js/h.js")
 var Conf = require("../static/conf.json") // shared with client
 
@@ -40,36 +38,25 @@ var Pub = module.exports = (function(){
         })
     }
 
-    Pub.remove = function(player, piece, from, zone){
+    Pub.remove = function(piece, from, zone){
         Pub.publish("remove", {
-            player: player,
             piece: piece,
             from: from,
             zone: zone
         })
     }
 
-    Pub.move = function(player, piece, to, zone){
+    Pub.move = function(piece, to, zone){
         Pub.publish("move", {
-            player: player,
             piece: piece,
             to: to,
             zone: zone
         })
     }
 
-    // mach remove
-    // todo do something here. see game.js/Pub.new_enemies
-    // Pub.new_enemies = function(player, enemies){
-    //     // enemies.forEach(function(enemy){
-    //     // todo
-    //     // })
-    // }
-
-    Pub.gameover = function(player, enemy, you_win, zone){
+    Pub.gameover = function(playerID, you_win, zone){
         Pub.publish("gameover", {
-            player: player,
-            enemy: enemy,
+            playerID: playerID,
             you_win: you_win,
             zone: zone
         })

@@ -38,7 +38,13 @@ var Sub = (function(){
     _subscriber.on("message", function(chan, msg){
         try {
             var data = JSON.parse(msg)
-            callbackZones(data.zone, msg)
+            if (data.playerID){
+                callbackPlayer(data.playerID, msg)
+            } else if (data.zone){
+                callbackZones(data.zone, msg)
+            } else {
+                H.log("ERROR. Zone.sub.on.message: no playerID or zone", chan, msg)
+            }
         } catch (e){
             H.log("ERROR. Zone.Sub.on.message.catch", chan, msg, e)
         }
@@ -51,16 +57,11 @@ var Sub = (function(){
     // are of the lower left corner of the zone
     function callbackZones(zone, msg){
         try {
-            var x = zone[0]
-            var y = zone[1]
+            var x = zone[0], y = zone[1]
             var player = null
             for (var i = -N; i <= N; i++){
                 for (var j = -N; j <= N; j++){
-                    var nZone = [
-                        x + i * S,
-                        y + j * S
-                    ]
-                    callbackZone(nZone, msg)
+                    callbackZone([x + i * S, y + j * S], msg)
                 }
             }
         } catch (e){
@@ -83,15 +84,24 @@ var Sub = (function(){
             for (var player in players) {
                 if (players.hasOwnProperty(player)){
                     var playerID = players[player]
-                    if (_players[playerID]){
-                        _players[playerID].cb(msg)
-                    } else {
-                        H.log("ERROR. zone.callbackZone: _players has no playerID", playerID)
-                    }
+                    callbackPlayer(playerID, msg)
                 }
             }
         } catch (e){
             H.log("ERROR. zone.callbackZone.catch", zone, msg, e)
+        }
+    }
+
+    function callbackPlayer(playerID, msg){
+        try {
+            if (_players[playerID]){
+                _players[playerID].cb(msg)
+            } else {
+                // this can happen if they disconnect and unsub before the operation finishes
+                H.log("ERROR. zone.callbackPlayer: _players has no playerID", playerID)
+            }
+        } catch (e){
+            H.log("ERROR. zone.callbackPlayer.catch", playerID, msg, e)
         }
     }
 

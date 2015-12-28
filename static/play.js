@@ -1843,10 +1843,8 @@ var Game = (function(){
         // Generic error handler
         on.error = function(data){
             var you = Player.getPlayer()
-            if (isYourSock(you, data)){
-                Console.error(data.info || data.error) // TODO. Should stick with .info
-                log("ERROR. Game.on.error", data)
-            }
+            Console.error(data.info || data.error) // TODO. Should stick with .info
+            log("ERROR. Game.on.error", data)
         }
 
         on.new_army = function(data){
@@ -1855,6 +1853,9 @@ var Game = (function(){
         }
 
         on.remove = function(data){
+            // TODO. this could potentially remove another newly added
+            // piece cause it doesn't know what piece it's
+            // removing. fix: remove pieces by ID:
             Game.removeObjAtXY(data.from.x, data.from.y)
         }
 
@@ -1871,11 +1872,10 @@ var Game = (function(){
 
         // todo big splash screen and menu for loser
         on.gameover = function(data){
-            var you = Player.getPlayer()
             var you_win = data.you_win
-            if (isYourSock(you, data) && you_win){
+            if (you_win){
                 Console.info("YOU WIN!")
-            } else if (isYourSock(you, data)){
+            } else {
                 Console.error("GAME OVER")
             }
         }
@@ -1887,11 +1887,6 @@ var Game = (function(){
             Game.defect(defectors, defecteeID)
             Game.loadPieces(defectors)
             Scene.render()
-        }
-
-        function isYourSock(you, data){
-            var playerID = (data.player ? data.player._id : data.playerID)
-            return (you._id == playerID)
         }
 
         return on

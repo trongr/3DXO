@@ -634,11 +634,11 @@ var Game = module.exports = (function(){
                     if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.on.move", er)
                     Pub.error(playerID, er.info || "ERROR. Game.on.move: unexpected error")
                 } else {
-                    Pub.remove(player, nPiece, from, [
+                    Pub.remove(nPiece, from, [
                         H.toZoneCoordinate(from.x, S),
                         H.toZoneCoordinate(from.y, S)
                     ])
-                    Pub.move(player, nPiece, to, [
+                    Pub.move(nPiece, to, [
                         H.toZoneCoordinate(to.x, S),
                         H.toZoneCoordinate(to.y, S)
                     ])
@@ -695,8 +695,8 @@ var Game = module.exports = (function(){
                     Pub.error(enemyID, er.info || "ERROR. Game.on.gameover: unexpected error")
                 } else {
                     H.log("INFO. Game.on.gameover", enemy.name, player.name)
-                    Pub.gameover(player, enemy, false, zone)
-                    Pub.gameover(enemy, player, true, zone)
+                    Pub.gameover(player._id, false, zone)
+                    Pub.gameover(enemy._id, true, zone)
                 }
             })
         }
