@@ -898,7 +898,14 @@ var Piece = (function(){
     // TODO manage player chess sets: player always the first set, and
     // enemies cycle through the remaining sets
     Piece.make = function(piece){
-        var fatigues = getPlayerFatigues(piece.player)
+        if (piece.player && piece.player._id){
+            var playerID = piece.player._id
+        } else if (piece.player){
+            var playerID = piece.player
+        } else {
+            return Console.error("GAME ERROR. Please report this error to dev: Piece.make: no playerID: " + JSON.stringify(piece, 0, 2))
+        }
+        var fatigues = getPlayerFatigues(playerID)
         var pos = new THREE.Vector3(piece.x, piece.y, 1)
         var obj = CHESSSETS[fatigues.csid].make(piece.kind, fatigues.color, pos)
         obj.game = {piece:piece}
@@ -1847,6 +1854,7 @@ var Game = (function(){
             log("ERROR. Game.on.error", data)
         }
 
+        // mach
         on.new_army = function(data){
             Game.loadPieces(data.pieces)
             Scene.render()
