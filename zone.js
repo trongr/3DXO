@@ -77,6 +77,7 @@ var Sub = (function(){
             // with a subscriber
             if (!players) return
             else H.log("INFO. zone.callbackZone", zone[0], zone[1], H.length(players))
+            // else H.log("INFO. zone.callbackZone", zone[0], zone[1], players)
 
             // loop through players in zone
             for (var player in players) {

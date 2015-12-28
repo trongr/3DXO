@@ -3,7 +3,7 @@
     "zone_size": 8,
     "chat_zone_size": 16,
     "scout_range": 6,
-    "active_zone_half_width": 1,
+    "active_zone_half_width": 5,
     "code": {
         "get_player": "get_player"
     }

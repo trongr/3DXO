@@ -43,9 +43,9 @@ var K = (function(){
     var K = {
         CUBE_SIZE: S,
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
-        // CAM_DIST_MAX: 80,
+        CAM_DIST_MAX: 80,
         // CAM_DIST_MAX: 100,
-        CAM_DIST_MAX: 150,
+        // CAM_DIST_MAX: 150,
         CAM_DIST_MIN: 50,
         CAM_DIST_INIT: 70,
         MODEL_XYZ_OFFSET: {x:0, y:0, z:-0.4},
