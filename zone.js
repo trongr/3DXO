@@ -46,6 +46,9 @@ var Sub = (function(){
 
     // playerID is the player publishing the msg. We're calling back
     // to her neighbours to publish msg to them
+    //
+    // NOTE. assuming zone canonical, meaning its x and y coordinates
+    // are of the lower left corner of the zone
     function callbackZones(zone, msg){
         try {
             var x = zone[0]

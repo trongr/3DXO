@@ -12,6 +12,8 @@ var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
 var DB = require("../db.js")
 
+var S = Conf.zone_size
+
 var Move = (function(){
     var Move = {}
 
@@ -302,7 +304,6 @@ var Game = module.exports = (function(){
         router: express.Router()
     }
 
-    var S = Conf.zone_size
     var ERROR_BUILD_ARMY = "ERROR. Can't build army"
 
     Game.router.route("/:playerID/buildArmy")
@@ -624,7 +625,7 @@ var Game = module.exports = (function(){
                 },
                 function(done){
                     if (captured && captured.kind == "king"){
-                        Game.on.gameover(captured.player, playerID)
+                        Game.on.gameover(captured.player, playerID, captured)
                     }
                     done(null)
                 }
@@ -649,13 +650,16 @@ var Game = module.exports = (function(){
         // remaining pieces die (maybe later give them AI to roam the
         // world).
         //
-        // game over for player. remove player's token from his
-        // enemies
-        on.gameover = function(playerID, enemyID){
+        // game over for player, enemy wins
+        on.gameover = function(playerID, enemyID, king){
             try {
                 var player, enemy = null
+                var zone = [
+                        H.toZoneCoordinate(king.x, S),
+                        H.toZoneCoordinate(king.y, S)
+                ]
             } catch (e){
-                return H.log("ERROR. Game.on.gameover: invalid input", data)
+                return H.log("ERROR. Game.on.gameover: invalid input", playerID, enemy, king)
             }
             async.waterfall([
                 function(done){
@@ -681,18 +685,18 @@ var Game = module.exports = (function(){
                         done(er)
                     })
                     Pieces.defect(playerID, enemyID, function(er){
-                        Pub.defect(playerID, enemyID)
+                        Pub.defect(playerID, enemyID, zone)
                     })
                 },
             ], function(er){
                 if (er){
-                    H.log("ERROR. Game.on.gameover", er)
+                    H.log("ERROR. Game.on.gameover", playerID, enemyID, king, er)
                     Pub.error(playerID, er.info || "ERROR. Game.on.gameover: unexpected error")
                     Pub.error(enemyID, er.info || "ERROR. Game.on.gameover: unexpected error")
                 } else {
-                    H.log("INFO. Game.on.gameover winner:" + enemy.name + " loser:" + player.name + " live:" + player.alive)
-                    Pub.gameover(player, enemy, false)
-                    Pub.gameover(enemy, player, true)
+                    H.log("INFO. Game.on.gameover", enemy.name, player.name)
+                    Pub.gameover(player, enemy, false, zone)
+                    Pub.gameover(enemy, player, true, zone)
                 }
             })
         }

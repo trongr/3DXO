@@ -66,19 +66,21 @@ var Pub = module.exports = (function(){
     //     // })
     // }
 
-    Pub.gameover = function(player, enemy, you_win){
+    Pub.gameover = function(player, enemy, you_win, zone){
         Pub.publish("gameover", {
             player: player,
             enemy: enemy,
             you_win: you_win,
+            zone: zone
         })
     }
 
     // Defector defecting to defectee
-    Pub.defect = function(defectorID, defecteeID){
+    Pub.defect = function(defectorID, defecteeID, zone){
         Pub.publish("defect", {
             defectorID: defectorID,
             defecteeID: defecteeID,
+            zone: zone
         })
     }
 
