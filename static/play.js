@@ -92,6 +92,24 @@ function shearModel(geo){
     geo.applyMatrix( matrix );
 }
 
+function shearModel2(geo){
+    var Syx = 0,
+    Szx = 0,
+    Sxy = 0,
+    Sxz = 0,
+    // Szy = 0.1,
+    // Syz = -0.4;
+    // todo use for the other models
+    Szy = 0.1,
+    Syz = -0.2;
+    var matrix = new THREE.Matrix4();
+    matrix.set(   1,   Syx,  Szx,  0,
+                  Sxy,     1,  Szy,  0,
+                  Sxz,   Syz,   1,   0,
+                  0,     0,   0,   1  );
+    geo.applyMatrix( matrix );
+}
+
 var Conf = {} // set on load from server
 
 var Cache = {}
@@ -704,39 +722,15 @@ var BoxSet = function(color){
 var ClassicSet = (function(){
     var ClassicSet = {}
 
-    ClassicSet.COLORS = {
-        white: "white",
-        grey: "grey",
-        black: "black",
-        red: "red",
-        yellow: "yellow",
-        green: "green",
-        cyan: "cyan",
-        blue: "blue",
-        purple: "purple",
-    }
-
-    var _colors = { // NOTE. these color names should be the same as ClassicSet.COLORS
-        white: new THREE.Vector3(0.95, 0.9, 0.85),
-        grey: new THREE.Vector3(0.75, 0.7, 0.65),
-        black: new THREE.Vector3(0.35, 0.4, 0.45),
-        red: new THREE.Vector3(1, 0.4, 0.4),
-        yellow: new THREE.Vector3(1, 0.8, 0.3),
-        green: new THREE.Vector3(0.45, 0.83, 0.45),
-        cyan: new THREE.Vector3(0.49, 0.81, 0.92),
-        blue: new THREE.Vector3(0.1, 0.5, 1),
-        purple: new THREE.Vector3(0.77, 0.56, 0.83),
-    }
-
     var _geos = {} // e.g. knight: geometry
-    var _mats = {} // e.g. color: material
+    var _mats = {} // e.g. [r, g, b]: material
 
     ClassicSet.init = function(done){
         initComposer()
-        initMaterials()
         initGeometries(done)
     }
 
+    // color = [r, g, b], values between 0 and 1
     ClassicSet.make = function(pieceKind, color, pos){
         // log("INFO. ClassicSet.make", [pieceKind, color])
         var scale = 1
@@ -746,7 +740,7 @@ var ClassicSet = (function(){
         // var angle = Math.PI / 4
 
         var geoDiffuse = _geos[pieceKind]
-        var mat = _mats[color]
+        var mat = getMat(color)
 
         meshDiffuse = new THREE.Mesh(geoDiffuse, mat.diffuse);
         // meshDiffuse.scale.set(scale, scale, scale)
@@ -784,20 +778,15 @@ var ClassicSet = (function(){
         })
     }
 
-    function initMaterials(){
-        for (var color in ClassicSet.COLORS) {
-            if (ClassicSet.COLORS.hasOwnProperty(color)){
-                initMat(color)
-            }
-        }
-    }
+    // color = [r, g, b], values between 0 and 1
+    function getMat(color){
+        if (_mats[color]) return _mats[color]
 
-    function initMat(color){
         var mat = {
             "diffuse": new THREE.ShaderMaterial(THREE.GoochShader),
             "edge"   : new THREE.ShaderMaterial(THREE.NormalShader)
         };
-        mat.diffuse.uniforms.WarmColor.value = _colors[color]
+        mat.diffuse.uniforms.WarmColor.value = new THREE.Vector3(color[0], color[1], color[2])
         mat.diffuse.uniforms.CoolColor.value = new THREE.Vector3(0,0,0);
         // mat.diffuse.uniforms.SurfaceColor.value = new THREE.Vector3(0.1, 0.1, 0.1);
         mat.diffuse.uniforms.SurfaceColor.value = new THREE.Vector3(0, 0, 0);
@@ -812,6 +801,7 @@ var ClassicSet = (function(){
         mat.diffuse.uniforms = THREE.UniformsUtils.clone(mat.diffuse.uniforms)
 
         _mats[color] = mat
+        return mat
     }
 
     function initComposer(){
@@ -879,24 +869,14 @@ var ClassicSet = (function(){
 var Piece = (function(){
     var Piece = {}
 
-    var CHESSSETS = {} // BlueBoxSet: new BoxSet(0x0060ff)
-    var _fatigues = {} // e.g. playerID: {csid:chessSetID, color:color} // keeps track of players and their chess set ID and color
-
-    // TODO randomize colors once you run out of these colors
-    Piece.init = function(){
-        CHESSSETS = {
-            // BlueBoxSet: new BoxSet(0x0060ff),
-            // RedBoxSet: new BoxSet(0xff4545),
-            // YellowBoxSet: new BoxSet(0xFFB245),
-            // GreenBoxSet: new BoxSet(0x1FD125),
-            // PurpleBoxSet: new BoxSet(0xC02EE8),
-            // CyanBoxSet: new BoxSet(0x25DBDB),
-            ClassicSet: ClassicSet,
-        }
+    var _colors = {
+        // playerID: [r, g, b]
     }
 
-    // TODO manage player chess sets: player always the first set, and
-    // enemies cycle through the remaining sets
+    Piece.init = function(){
+
+    }
+
     Piece.make = function(piece){
         if (piece.player && piece.player._id){
             var playerID = piece.player._id
@@ -905,35 +885,27 @@ var Piece = (function(){
         } else {
             return Console.error("GAME ERROR. Please report this error to dev: Piece.make: no playerID: " + JSON.stringify(piece, 0, 2))
         }
-        var fatigues = getPlayerFatigues(playerID)
         var pos = new THREE.Vector3(piece.x, piece.y, 1)
-        var obj = CHESSSETS[fatigues.csid].make(piece.kind, fatigues.color, pos)
+        var color = getPlayerColor(playerID)
+        var obj = ClassicSet.make(piece.kind, color, pos)
         obj.game = {piece:piece}
         sceneDiffuse.add(obj);
         Obj.move(obj, pos, K.MODEL_XYZ_OFFSET)
         return obj
     }
 
-    // TODO. use all possible chess sets before reusing
-    // duplicate. better yet dynamically generate chess materials so
-    // you never run out
-    function getPlayerFatigues(playerID){
-        var fatigues = _fatigues[playerID]
-        if (!fatigues){
-            fatigues = randomFatigues()
-            _fatigues[playerID] = fatigues
-        }
-        return fatigues
-    }
-
-    function randomFatigues(){
-        var csids = Object.keys(CHESSSETS)
-        var csid = csids[Math.floor(Math.random() * csids.length)]
-
-        var colors = Object.keys(ClassicSet.COLORS)
-        var color = colors[Math.floor(Math.random() * colors.length)]
-
-        return {csid:csid, color:color}
+    // returns [r, g, b], values between 0 and 1
+    function getPlayerColor(playerID){
+        if (_colors[playerID]) return _colors[playerID]
+        var color = Please.make_color({
+            golden: true, // good looking colors
+            full_random: false,
+            format: "rgb",
+            colors_returned: 1,
+        })[0] // make_color returns a list of colors, of length colors_returned
+        color = [color.r / 255, color.g / 255, color.b /255] // normalize rgb
+        _colors[playerID] = color
+        return color
     }
 
     return Piece
@@ -1078,13 +1050,13 @@ var Map = (function(){
             object.traverse( function ( child ) {
                 if ( child instanceof THREE.Mesh ) {
                     child.material.side = THREE.DoubleSide
-                    shearModel(child.geometry)
+                    shearModel2(child.geometry)
                     child.castShadow = true;
                     child.receiveShadow = true
                 }
             } );
             // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(1, 4, 1), K.MODEL_XYZ_OFFSET)
+            Obj.move(object, new THREE.Vector3(1, 0, 1), K.MODEL_XYZ_OFFSET)
             Scene.add( object );
         }, onProgress, onError );
 
@@ -1094,13 +1066,13 @@ var Map = (function(){
             object.traverse( function ( child ) {
                 if ( child instanceof THREE.Mesh ) {
                     child.material.side = THREE.DoubleSide
-                    shearModel(child.geometry)
+                    shearModel2(child.geometry)
                     child.castShadow = true;
                     child.receiveShadow = true
                 }
             } );
             // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(2, 4, 1), K.MODEL_XYZ_OFFSET)
+            Obj.move(object, new THREE.Vector3(2, 0, 1), K.MODEL_XYZ_OFFSET)
             Scene.add( object );
         }, onProgress, onError );
 
@@ -1110,13 +1082,13 @@ var Map = (function(){
             object.traverse( function ( child ) {
                 if ( child instanceof THREE.Mesh ) {
                     child.material.side = THREE.DoubleSide
-                    shearModel(child.geometry)
+                    shearModel2(child.geometry)
                     child.castShadow = true;
                     child.receiveShadow = true
                 }
             } );
             // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(3, 4, 1), K.MODEL_XYZ_OFFSET)
+            Obj.move(object, new THREE.Vector3(3, 0, 1), K.MODEL_XYZ_OFFSET)
             Scene.add( object );
         }, onProgress, onError );
 
@@ -1126,13 +1098,13 @@ var Map = (function(){
             object.traverse( function ( child ) {
                 if ( child instanceof THREE.Mesh ) {
                     child.material.side = THREE.DoubleSide
-                    shearModel(child.geometry)
+                    shearModel2(child.geometry)
                     child.castShadow = true;
                     child.receiveShadow = true
                 }
             } );
             // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(4, 4, 1), K.MODEL_XYZ_OFFSET)
+            Obj.move(object, new THREE.Vector3(4, 0, 1), K.MODEL_XYZ_OFFSET)
             Scene.add( object );
         }, onProgress, onError );
 
@@ -1142,13 +1114,13 @@ var Map = (function(){
             object.traverse( function ( child ) {
                 if ( child instanceof THREE.Mesh ) {
                     child.material.side = THREE.DoubleSide
-                    shearModel(child.geometry)
+                    shearModel2(child.geometry)
                     child.castShadow = true;
                     child.receiveShadow = true
                 }
             } );
             // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(5, 4, 1), K.MODEL_XYZ_OFFSET)
+            Obj.move(object, new THREE.Vector3(5, 0, 1), K.MODEL_XYZ_OFFSET)
             Scene.add( object );
         }, onProgress, onError );
 
@@ -1158,13 +1130,13 @@ var Map = (function(){
             object.traverse( function ( child ) {
                 if ( child instanceof THREE.Mesh ) {
                     child.material.side = THREE.DoubleSide
-                    shearModel(child.geometry)
+                    shearModel2(child.geometry)
                     child.castShadow = true;
                     child.receiveShadow = true
                 }
             } );
             // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(6, 4, 1), K.MODEL_XYZ_OFFSET)
+            Obj.move(object, new THREE.Vector3(6, 0, 1), K.MODEL_XYZ_OFFSET)
             Scene.add( object );
         }, onProgress, onError );
 
@@ -1791,18 +1763,18 @@ var Game = (function(){
                 }
                 Sock.init(x, y)
                 Chat.init(x, y)
+                // ClassicSet needs the renderer to finish loading from
+                // Scene.init to init its composers
                 Scene.init(x, y)
             },
             function(done){
-                // ClassicSet needs the renderer to finish loading from
-                // Scene.init to init its composers
+                // Piece.make needs ClassicSet.init to load the models
                 ClassicSet.init(function(er){
                     done(er)
                 })
             },
             function(done){
                 Obj.init()
-                // Piece.init needs the ClassicSet.init to load the models
                 Piece.init() // load piece textures
                 Map.init(x, y) // load map and pieces
                 Menu.init(player)
@@ -1854,7 +1826,6 @@ var Game = (function(){
             log("ERROR. Game.on.error", data)
         }
 
-        // mach
         on.new_army = function(data){
             Game.loadPieces(data.pieces)
             Scene.render()
