@@ -48,6 +48,7 @@ var K = (function(){
         // CAM_DIST_MAX: 150,
         CAM_DIST_MIN: 50,
         CAM_DIST_INIT: 70,
+        // CAM_DIST_INIT: 150,
         MODEL_XYZ_OFFSET: {x:0, y:0, z:-0.4},
         CLOCK_XYZ_OFFSET: {x:0, y:0, z:-0.4},
         ROLLOVER_XYZ_OFFSET: {x:0, y:0, z:-0.49},
@@ -278,15 +279,14 @@ var Console = (function(){
         Console.print("<h2><u>RULES</u></h2>")
         Console.print("<ol>"
                       // + "<li></li>"
-                      + "<li>Similar to chess. Highlighting a piece will show its available moves.</li>"
-                      // + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
-                      // + " 30 seconds to recharge before it can move again.</li>"
-                      + "<li>You can move one piece every 15 seconds.</li>"
-                      + "<li>You can also move any additional piece that has no enemy inside its green border.</li>"
+                      // mode 1
+                      + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
+                      + " 30 seconds to recharge before it can move again.</li>"
+                      // mode 2
+                      // + "<li>Similar to chess. Highlighting a piece will show its available moves.</li>"
+                      // + "<li>You can move one piece every 15 seconds.</li>"
+                      // + "<li>You can also move any additional piece that has no enemy inside its green border.</li>"
                       + "</ol>")
-        // Console.print("This roughly means that when there're no enemies around, "
-        //              + "you can quickly mobilize pieces to get them into battle, while when there are "
-        //              + "enemies nearby, the rules are the same as in regular chess.")
         Console.print("Type <code> /info game </code> into the chat box below to start learning more about the game, "
                       + "or dive right in and figure it out as you go.")
     }
@@ -883,7 +883,7 @@ var Piece = (function(){
         } else if (piece.player){
             var playerID = piece.player
         } else {
-            return Console.error("GAME ERROR. Please report this error to dev: Piece.make: no playerID: " + JSON.stringify(piece, 0, 2))
+            return Console.error("FATAL ERROR. Piece.make: no playerID: " + JSON.stringify(piece, 0, 2))
         }
         var pos = new THREE.Vector3(piece.x, piece.y, 1)
         var color = getPlayerColor(playerID)
@@ -897,16 +897,208 @@ var Piece = (function(){
     // returns [r, g, b], values between 0 and 1
     function getPlayerColor(playerID){
         if (_colors[playerID]) return _colors[playerID]
-        var color = Please.make_color({
-            golden: true, // good looking colors
-            full_random: false,
-            format: "rgb",
-            colors_returned: 1,
-        })[0] // make_color returns a list of colors, of length colors_returned
-        color = [color.r / 255, color.g / 255, color.b /255] // normalize rgb
+
+        // try {
+        //     // v1: random with base_color from the 140 named COLORS
+        //     var name = randomColorName()
+        //     var color = Please.make_color({
+        //         golden: true,
+        //         full_random: false,
+        //         format: "rgb",
+        //         base_color: name,
+        //         colors_returned: 1,
+        //     })[0] // make_color returns a list of colors, of length colors_returned
+        //     color = [color.r / 255, color.g / 255, color.b / 255]
+        //     log("INFO. play.Please.make_color", name)
+        // } catch (e){
+        //     Console.error("FATAL ERROR. play.Please.make_color: " + name)
+        // }
+
+        // v2: random color from 140 named COLORS
+        var color = randomColor()
+        color = [color[0] / 255, color[1] / 255, color[2] / 255]
+
         _colors[playerID] = color
         return color
     }
+
+    // returns a color not already chosen, repeats once all (140)
+    // colors have been picked
+    function randomColor(){
+        // COLOR_NAMES keeps track of colors still available. each
+        // time a color is used, it's removed from COLOR_NAMES. once
+        // the list is empty, all the colors have been chosen once, so
+        // we refresh the list so they can all be chosen a second
+        // time, and so on
+        if (!COLOR_NAMES.length){
+            COLOR_NAMES = Object.keys(COLORS)
+        }
+        var index = Math.floor(Math.random() * COLOR_NAMES.length)
+        var name = COLOR_NAMES[index]
+        COLOR_NAMES.splice(index, 1)
+        log("INFO. play.randomColor", name)
+        return COLORS[name]
+    }
+
+    function randomColorName(){
+        // COLOR_NAMES keeps track of colors still available. each
+        // time a color is used, it's removed from COLOR_NAMES. once
+        // the list is empty, all the colors have been chosen once, so
+        // we refresh the list so they can all be chosen a second
+        // time, and so on
+        if (!COLOR_NAMES.length){
+            COLOR_NAMES = Object.keys(COLORS)
+        }
+        var index = Math.floor(Math.random() * COLOR_NAMES.length)
+        var name = COLOR_NAMES[index]
+        COLOR_NAMES.splice(index, 1)
+        return name
+    }
+
+    var COLORS = {
+        aliceblue: [240,248,255],
+        lightsalmon: [255,160,122],
+        palevioletred: [219,112,147],
+        darkturquoise: [0,206,209],
+        lightseagreen: [32, 178,170],
+        papayawhip: [255,239,213],
+        aqua: [0,255,255],
+        darkviolet: [148,0,211],
+        peachpuff: [255,239,213],
+        aquamarine: [127,255,212],
+        deeppink: [255,20,147],
+        peru: [205,133,63],
+        azure: [240,255,255],
+        deepskyblue: [0,191,255],
+        lightsteelblue: [176,196,222],
+        pink: [255,192,203],
+        beige: [245,245,220],
+        plum: [221,160,221],
+        bisque: [255,228,196],
+        dodgerblue: [30,144,255],
+        lime: [0,255,0],
+        firebrick: [178,34,34],
+        limegreen: [50,205,50],
+        purple: [128,0,128],
+        blanchedalmond: [255,255,205],
+        floralwhite: [255,250,240],
+        linen: [250,240,230],
+        whitesmoke: [245,245,245],
+        antiquewhite: [250,235,215],
+        lightyellow: [255,255,224], // too similar to beige
+        red: [225,0,0],
+        blue: [0,0,255],
+        forestgreen: [34,139,34],
+        magenta: [255,0,255],
+        rosybrown: [188,143,143],
+        blueviolet: [138,43,226],
+        fuchsia: [255,0,255],
+        maroon: [128,0,0],
+        royalblue: [65,105,225],
+        brown: [165,42,42],
+        mediumaquamarine: [102,205,170],
+        saddlebrown: [139,69,19],
+        burlywood: [222,184,135],
+        ghostwhite: [248,248,255],
+        mediumblue: [0,0,205],
+        salmon: [250,128,114],
+        cadetblue: [95,158,160],
+        gold: [255,215,0],
+        mediumorchid: [186,85,211],
+        sandybrown: [244,164,96],
+        chartreuse: [127,255,0],
+        goldenrod: [218,165,32],
+        mediumpurple: [147,112,219],
+        seagreen: [46,139,87],
+        chocolate: [210,105,30],
+        mediumseagreen: [60,179,113],
+        seashell: [255,245,238],
+        coral: [255,127,80],
+        green: [0,128,0],
+        mediumslateblue: [123,104,238],
+        sienna: [160,82,45],
+        cornflowerblue: [100,149,237],
+        greenyellow: [173,255,47],
+        mediumspringgreen: [0,250,154],
+        silver: [192,192,192],
+        cornsilk: [255,248,220],
+        honeydew: [240,255,240],
+        mediumturquoise: [72,209,204],
+        skyblue: [135,206,235],
+        lightskyblue: [135,206,250],
+        crimson: [220,20,60],
+        hotpink: [255,105,180],
+        mediumvioletred: [199,21,133],
+        slateblue: [106,90,205],
+        cyan: [0,255,255],
+        indianred: [205,92,92],
+        midnightblue: [25,25,112],
+        darkblue: [0,0,139],
+        indigo: [75,0,130],
+        mintcream: [245,255,250],
+        snow: [255,250,250],
+        darkcyan: [0,139,139],
+        ivory: [255,240,240],
+        mistyrose: [255,228,225],
+        springgreen: [0,255,127],
+        darkgoldenrod: [184,134,11],
+        khaki: [240,230,140],
+        moccasin: [255,228,181],
+        steelblue: [70,130,180],
+        lavender: [230,230,250],
+        gainsboro: [220,220,220],
+        navajowhite: [255,222,173],
+        tan: [210,180,140],
+        darkgreen: [0,100,0],
+        lavenderblush: [255,240,245],
+        navy: [0,0,128],
+        teal: [0,128,128],
+        darkkhaki: [189,183,107],
+        lawngreen: [124,252,0],
+        oldlace: [253,245,230],
+        thistle: [216,191,216],
+        darkmagenta: [139,0,139],
+        lemonchiffon: [255,250,205],
+        olive: [128,128,0],
+        tomato: [253,99,71],
+        darkolivegreen: [85,107,47],
+        lightblue: [173,216,230],
+        powderblue: [176,224,230],
+        paleturquoise: [175,238,238],
+        olivedrab: [107,142,35],
+        turquoise: [64,224,208],
+        darkorange: [255,140,0],
+        lightcoral: [240,128,128],
+        orange: [255,165,0],
+        violet: [238,130,238],
+        darkorchid: [153,50,204],
+        lightcyan: [224,255,255],
+        orangered: [255,69,0],
+        wheat: [245,222,179],
+        darkred: [139,0,0],
+        lightgoldenrodyellow: [250,250,210],
+        orchid: [218,112,214],
+        white: [255,255,255],
+        darksalmon: [233,150,122],
+        palegoldenrod: [238,232,170],
+        darkseagreen: [143,188,143],
+        palegreen: [152,251,152],
+        lightgreen: [144,238,144],
+        yellow: [255,255,0],
+        darkslateblue: [72,61,139],
+        lightpink: [255,182,193],
+        yellowgreen: [154,205,50],
+        // // NOTE. Please.js just makes these colors look black
+        // black: [0,0,0],
+        lightgrey: [211,211,211],
+        darkslategray: [47,79,79],
+        darkgray: [169,169,169],
+        slategray: [112,128,144],
+        gray: [128,128,128],
+        lightslategray: [119,136,153],
+        dimgray: [105,105,105],
+    }
+    var COLOR_NAMES = Object.keys(COLORS)
 
     return Piece
 }())
