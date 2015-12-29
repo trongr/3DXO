@@ -15,6 +15,7 @@ var Sub = (function(){
     // https://github.com/NodeRedis/node_redis
     // http://redis.io/commands/PSUBSCRIBE
     var _subscriber = redis.createClient();
+    _subscriber.subscribe('chat');
     _subscriber.subscribe('error');
     _subscriber.subscribe('new_army');
     _subscriber.subscribe('remove');
@@ -181,6 +182,8 @@ var Zone = module.exports = (function(){
                 if (chan == "zone"){
                     var zone = data.zone
                     Sub.subdate(playerID, zone, onZoneMsgCallback)
+                } else if (chan == "chat"){
+                    Pub.chat(data)
                 } else {
                     Game.sock(data)
                 }

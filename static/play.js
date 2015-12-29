@@ -324,8 +324,7 @@ var Console = (function(){
     function processConsoleInput(){
         var text = _console_in.val(); _console_in.val("")
         if (!text) return
-        Console.print(text)
-        Chat.pub(text)
+        Sock.chat(text)
     }
 
     function fixConsoleCSS(){
@@ -393,6 +392,10 @@ var Sock = (function(){
         _sock.send(JSON.stringify(data))
     }
 
+    Sock.chat = function(text){
+        Sock.send("chat", {zone:_zone, text:text})
+    }
+
     Sock.subZone = function(x, y){
         var X = H.toZoneCoordinate(x, Conf.zone_size)
         var Y = H.toZoneCoordinate(y, Conf.zone_size)
@@ -402,7 +405,7 @@ var Sock = (function(){
         } else {
             _zone = zone
         }
-        Sock.send("zone", {chan:"zone", playerID:_playerID, zone:zone})
+        Sock.send("zone", {playerID:_playerID, zone:zone})
     }
 
     return Sock
@@ -411,50 +414,14 @@ var Sock = (function(){
 var Chat = (function(){
     var Chat = {}
 
-    var _chat = null
     var _zone = [] // player's current zone, updated as she moves around the map
-    var _knownZones = {} // keeps track of known zones, but only for cosmetic things like drawing zone corners
-    var playerID = null
-
+    var _knownZones = {} // keeps track of known zones
     var CHAT_ZONE_CORNER_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.75, transparent:true});
 
     Chat.init = function(x, y){
-        playerID = Player.getPlayer()._id
         _zone = []
         _knownZones = {}
-        _chat = new SockJS('http://localhost:8080/chat');
-
-        _chat.onopen = function() {
-            // Console.info("INFO. Connected to chat.")
-            Chat.updateZone(x, y)
-            Chat.sub()
-        };
-
-        _chat.onmessage = function(re){
-            try {
-                var data = JSON.parse(re.data)
-                var text = data.text
-                Console.print(text)
-            } catch (e){
-                if (re) Console.error(re.data)
-                else Console.error("FATAL ERROR. Server chat response")
-            }
-        };
-
-        _chat.onclose = function() {
-            // Console.warn("WARNING. Lost chat connection. Retrying in 5s.")
-            setTimeout(function(){
-                Chat.init(_zone[0], _zone[1])
-            }, 5000)
-        };
-    }
-
-    Chat.send = function(data){
-        try {
-            _chat.send(JSON.stringify(data))
-        } catch (e){
-            log("ERROR. Chat.send.catch", data)
-        }
+        Chat.updateZone(x, y)
     }
 
     Chat.updateZone = function(x, y){
@@ -467,14 +434,6 @@ var Chat = (function(){
             _zone = zone
         }
         drawChatZoneCorners(X, Y)
-    }
-
-    Chat.sub = function(){
-        Chat.send({chan:"sub", playerID:playerID})
-    }
-
-    Chat.pub = function(text){
-        Chat.send({chan:"pub", playerID:playerID, text:text})
     }
 
     Chat.toZoneCoordinate = function(x){
@@ -1953,7 +1912,7 @@ var Game = (function(){
                     y = king.y
                 }
                 Sock.init(x, y)
-                Chat.init(x, y)
+                // Chat.init(x, y) // mach move cross hair rendering to map
                 // ClassicSet needs the renderer to finish loading from
                 // Scene.init to init its composers
                 Scene.init(x, y)
@@ -2057,6 +2016,11 @@ var Game = (function(){
             Game.defect(defectors, defecteeID)
             Game.loadPieces(defectors)
             Scene.render()
+        }
+
+        on.chat = function(data){
+            var text = data.text
+            Console.print(text)
         }
 
         return on

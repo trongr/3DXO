@@ -557,8 +557,7 @@ var Game = module.exports = (function(){
 
     Game.sock = function(data){
         var chan = data.chan
-        // mach remove turn
-        if (["move", "turn"].indexOf(chan) < 0){
+        if (["move"].indexOf(chan) < 0){
             return H.log("ERROR. Game.sock: unknown channel", data)
         }
         Game.on[chan](data)
@@ -612,14 +611,6 @@ var Game = module.exports = (function(){
                     Move.move(player, piece, from, to, function(er, _piece, _captured){
                         nPiece = _piece
                         captured = _captured
-                        done(er)
-                    })
-                },
-                function(done){
-                    Players.findNewEnemies(player, to, function(er, _player, _nEnemies){
-                        player = _player || player
-                        // todo do something with these new enemies
-                        // if (_nEnemies) Pub.new_enemies(player, _nEnemies)
                         done(er)
                     })
                 },

@@ -9,7 +9,6 @@ var path = require('path');
 var session = require('express-session')
 var RedisStore = require('connect-redis')(session);
 var Zone = require("./zone.js")
-var Chat = require("./chat.js")
 var DB = require("./db.js")
 var Auth = require("./api/auth.js")
 var Pieces = require("./api/pieces.js")
@@ -78,5 +77,4 @@ var port = process.env.PORT || 8080;
 server = http.createServer(app);
 server.listen(port);
 Zone.init(server)
-Chat.init(server)
 console.log('Magic happens on port ' + port);
