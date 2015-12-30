@@ -225,23 +225,12 @@ var Move = (function(){
         }
     }
 
+    var KING_KILLER = "KING_KILLER"
+
     // Actually making the move
     Move.move = function(player, piece, from, to, done){
-        var nPiece, dstCell, captured = null
+        var nPiece, dstCell, capturedKing = null
         async.waterfall([
-            function(done){ // update origin cell
-                Cell.update({
-                    piece: piece._id,
-                    x: from.x,
-                    y: from.y,
-                }, {
-                    $set: {
-                        piece: null
-                    }
-                }, {}, function(er, re){
-                    done(er)
-                })
-            },
             function(done){
                 // Check if dst has an enemy piece. (Since we're
                 // already here at Move.move if there's anything here
@@ -256,14 +245,31 @@ var Move = (function(){
                 });
             },
             function(done){
-                if (dstCell && dstCell.piece){ // is a kill move: remove dst piece
-                    captured = dstCell.piece
+                if (dstCell && dstCell.piece && dstCell.piece.kind == "king"){
+                    // check if captured piece is king and return
+                    capturedKing = dstCell.piece
+                    done({code:KING_KILLER})
+                } else if (dstCell && dstCell.piece){
+                    // is a kill move: remove dst piece
                     dstCell.piece.remove(function(er){
                         done(er)
                     })
                 } else { // do nothing
                     done(null)
                 }
+            },
+            function(done){ // update origin cell
+                Cell.update({
+                    piece: piece._id,
+                    x: from.x,
+                    y: from.y,
+                }, {
+                    $set: {
+                        piece: null
+                    }
+                }, {}, function(er, re){
+                    done(er)
+                })
             },
             function(done){ // update destination cell with new piece
                 Cells.upsert({
@@ -290,9 +296,13 @@ var Move = (function(){
                 })
             },
         ], function(er){
-            done(er ? [
-                "Game.Move.move", player, piece, from, to
-            ] : null, nPiece, captured)
+            if (er && er.code == KING_KILLER){
+                done(null, null, capturedKing)
+            } else if (er){
+                done(["Game.Move.move", player, piece, from, to, er])
+            } else {
+                done(null, nPiece)
+            }
         })
     }
 
@@ -583,7 +593,7 @@ var Game = module.exports = (function(){
                     y: Math.floor(data.to.y),
                     z: 1.5, // NOTE. Assuming ground at 1
                 }
-                var captured = null
+                var capturedKing = null
             } catch (e){
                 H.log("ERROR. Game.on.move: invalid input", data)
                 return
@@ -608,22 +618,22 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Move.move(player, piece, from, to, function(er, _piece, _captured){
+                    // exactly one of er, _piece, _capturedKing is not
+                    // null. _capturedKing not null means this is a
+                    // KING_KILLER move, and game over for
+                    // capturedKing.player
+                    Move.move(player, piece, from, to, function(er, _piece, _capturedKing){
                         nPiece = _piece
-                        captured = _captured
+                        capturedKing = _capturedKing
                         done(er)
                     })
                 },
-                function(done){
-                    if (captured && captured.kind == "king"){
-                        Game.on.gameover(captured.player, playerID, captured)
-                    }
-                    done(null)
-                }
             ], function(er){
                 if (er){
                     if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.on.move", er)
                     Pub.error(playerID, er.info || "ERROR. Game.on.move: unexpected error")
+                } else if (capturedKing){
+                    Game.on.gameover(capturedKing.player, playerID, capturedKing)
                 } else {
                     Pub.remove(nPiece, from, [
                         H.toZoneCoordinate(from.x, S),
@@ -672,10 +682,8 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Players.resetEnemies(playerID, function(er, player){
-                        done(er)
-                    })
                     Pieces.defect(playerID, enemyID, function(er){
+                        done(er)
                         Pub.defect(playerID, enemyID, zone)
                     })
                 },
