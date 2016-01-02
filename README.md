@@ -1,3 +1,2 @@
-3DXO: Massively Multiplayer Online Chess
+Ragnarook: Massively Multiplayer Open World Chess
 ========================================
-Created by: TRONG

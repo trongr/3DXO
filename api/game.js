@@ -495,7 +495,7 @@ var Game = module.exports = (function(){
                     } else if (count == 0){
                         done(null)
                     } else {
-                        done({info:"ERROR. Player still has at least one army remaining: " + count})
+                        done({info:"You can only build a new army if you have none left. Armies remaining: " + count})
                     }
                 })
             },

@@ -44,14 +44,18 @@ var K = (function(){
         CUBE_SIZE: S,
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
         CAM_DIST_MIN: 50,
+
         CAM_DIST_MAX: 80,
         // CAM_DIST_MAX: 100,
         // CAM_DIST_MAX: 150,
+
         CAM_DIST_INIT: 70,
         // CAM_DIST_INIT: 150,
         MODEL_XYZ_OFFSET: {x:0, y:0, z:-0.4},
         CLOCK_XYZ_OFFSET: {x:0, y:0, z:-0.4},
         ROLLOVER_XYZ_OFFSET: {x:0, y:0, z:-0.49},
+        HIGHLIGHT_XYZ_OFFSET: {x:0, y:0, z:-0.49},
+        HIGHLIGHT_ZONE_XYZ_OFFSET: {x:-0.5, y:-0.5, z:-0.49},
     }
 
     shearGeo(K.CUBE_GEO)
@@ -544,21 +548,19 @@ var Rollover = (function(){
 var Highlight = (function(){
     var Highlight = {}
 
+    var HIGHLIGHT_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, 0.01)
     var HIGHLIGHT_MATERIALS = {
         red: new THREE.MeshLambertMaterial({color:0xFF4D4D, shading:THREE.FlatShading, opacity:0.7, transparent:true}),
         // green: new THREE.MeshLambertMaterial({color:0x00ff00, shading:THREE.FlatShading, opacity:0.5, transparent:true}),
         green: new THREE.MeshLambertMaterial({color:0x66FF66, shading:THREE.FlatShading, opacity:0.5, transparent:true}),
     }
-    var HIGHLIGHT_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, 0.01)
-
-    Highlight.COLORS = {
-        red: "red",
-        green: "green",
-    }
+    var HIGHLIGHT_ZONE_GEOMETRY = null // can't init here cause Conf.zone_size isn't loaded yet
+    var HIGHLIGHT_ZONE_MATERIAL = new THREE.MeshLambertMaterial({color:0x66FF66, shading:THREE.FlatShading, opacity:0.5, transparent:true})
 
     var _highlights = {
         red: [],
         green: [],
+        zone: [], // highlights for zone moves
     }
 
     Highlight.highlightCells = function(moves){
@@ -568,9 +570,32 @@ var Highlight = (function(){
             var color = move.kill ? "red" : "green"
             var highlight = _highlights[color][i] || Highlight.makeHighlight(color)
             highlight.visible = true
-            Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z))
-            highlight.position.z -= 0.49
+            Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z), K.HIGHLIGHT_XYZ_OFFSET)
         }
+    }
+
+    Highlight.highlightZones = function(zones){
+        var S = Conf.zone_size
+        for (var i = 0; i < zones.length; i++){
+            var highlight = _highlights.zone[i] || makeZoneHighlight()
+            highlight.visible = true
+            Obj.move(highlight, new THREE.Vector3(
+                zones[i][0] + S / 2, zones[i][1] + S / 2, 1.5
+            ), K.HIGHLIGHT_ZONE_XYZ_OFFSET)
+        }
+    }
+
+    function makeZoneHighlight(){
+        // have to load HIGHLIGHT_ZONE_GEOMETRY here cause it uses
+        // Conf.zone_size, which is shared with server and loaded from
+        // there. by the time we use makeZoneHighlight it'll be ready,
+        // but not before
+        HIGHLIGHT_ZONE_GEOMETRY = HIGHLIGHT_ZONE_GEOMETRY
+            || new THREE.BoxGeometry(K.CUBE_SIZE * Conf.zone_size + 0.01, K.CUBE_SIZE * Conf.zone_size + 0.01, 0.01);
+        var highlight = new THREE.Mesh(HIGHLIGHT_ZONE_GEOMETRY, HIGHLIGHT_ZONE_MATERIAL);
+        Scene.add(highlight)
+        _highlights.zone.push(highlight)
+        return highlight
     }
 
     Highlight.makeHighlight = function(color){
@@ -580,16 +605,16 @@ var Highlight = (function(){
         return highlight
     }
 
-    Highlight.hideHighlights = function(color){
-        for (var i = 0; i < _highlights[color].length; i++){
-            _highlights[color][i].visible = false
+    Highlight.hideHighlights = function(highlightType){
+        for (var i = 0; i < _highlights[highlightType].length; i++){
+            _highlights[highlightType][i].visible = false
         }
     }
 
     Highlight.hideAllHighlights = function(){
-        for (var color in Highlight.COLORS) {
-            if (Highlight.COLORS.hasOwnProperty(color)){
-                Highlight.hideHighlights(color)
+        for (var highlightType in _highlights) {
+            if (_highlights.hasOwnProperty(highlightType)){
+                Highlight.hideHighlights(highlightType)
             }
         }
     }
@@ -620,7 +645,8 @@ var Player = (function(){
     }
 
     Player.isFriendly = function(piece){
-        return piece.player == _player._id
+        return (piece.player == _player._id
+                || piece.player._id == _player._id)
     }
 
     return Player
@@ -1082,15 +1108,7 @@ var Obj = (function(){
 
     // x y are lower left zone coordinates
     Obj.destroyZone = function(x, y){
-        var S = Conf.zone_size
-        var X = x + S, Y = y + S
-        // find objs in zone
-        var zoneObjs = Obj.objs.filter(function(obj){
-            if (!obj.game || !obj.game.piece) return false
-            var ex = obj.game.piece.x
-            var wy = obj.game.piece.y
-            return (x <= ex && ex < X && y <= wy && wy < Y)
-        })
+        var zoneObjs = Obj.findObjsInZone(x, y)
         zoneObjs.forEach(function(obj){
             Scene.remove(obj)
             Obj.remove(obj)
@@ -1132,7 +1150,7 @@ var Obj = (function(){
         return null
     }
 
-    Obj.findPiecesByPlayerID = function(playerID){
+    Obj.findObjsByPlayerID = function(playerID){
         return Obj.objs.filter(function(obj){
             return (obj.game && obj.game.piece &&
                     (obj.game.piece.player == playerID ||
@@ -1140,10 +1158,22 @@ var Obj = (function(){
         })
     }
 
-    Obj.findPiecesByArmyID = function(army_id){
+    Obj.findObjsByArmyID = function(army_id){
         return Obj.objs.filter(function(obj){
             return (obj.game && obj.game.piece &&
                     (obj.game.piece.army_id == army_id))
+        })
+    }
+
+    // lower left corners x y
+    Obj.findObjsInZone = function(x, y){
+        var S = Conf.zone_size
+        var X = x + S, Y = y + S
+        return Obj.objs.filter(function(obj){
+            if (!obj.game || !obj.game.piece) return false
+            var ex = obj.game.piece.x
+            var wy = obj.game.piece.y
+            return (x <= ex && ex < X && y <= wy && wy < Y)
         })
     }
 
@@ -1523,18 +1553,69 @@ var Move = (function(){
     // move. Each item contains position and a direction, whether it's
     // a kill move or not, etc. Useful for sending to server to
     // validate when player moves.
-    Move.validatedMoves = []
+    var _validatedMoves = []
+    var _validatedZoneMoves = []
 
     Move.highlightAvailableMoves = function(obj){
-        var moves = Move.findAvailableMoves(obj)
-        moves.push.apply(moves, Move.findAvailableKills(obj))
+        var moves = findAvailableMoves(obj)
+        moves.push.apply(moves, findAvailableKills(obj))
         Highlight.highlightCells(moves)
-        Move.validatedMoves = moves.filter(function(item){ // Cache available moves
+        _validatedMoves = moves.filter(function(item){ // Cache available moves
             return item.kill == false || item.killMove == true // Only interested in actual moveable positions
         })
+
+        // highlight available zones so you can move an entire army by
+        // clicking on the king
+        if (obj.game.piece.kind == "king"){
+            highlightZoneMoves(obj.game.piece)
+        }
     }
 
-    Move.findAvailableKills = function(obj){
+    function highlightZoneMoves(king){
+        // _validatedZoneMoves will be used later in Game.move to
+        // check that a zone move is allowed (provisionally) before
+        // sending to server for its own validation
+        _validatedZoneMoves = findAvailableZoneMoves(king)
+        Highlight.highlightZones(_validatedZoneMoves)
+    }
+
+    function findAvailableZoneMoves(king){
+        var zones = []
+        var S = Conf.zone_size
+        var x = H.toZoneCoordinate(king.x, S)
+        var y = H.toZoneCoordinate(king.y, S)
+
+        if (!checkOriginZoneHasNoEnemy(x, y)) return zones
+
+        var N = 1
+        for (var i = -N; i <= N; i++){
+            for (var j = -N; j <= N; j++){
+                var X = x + i * S
+                var Y = y + j * S
+                if (checkDstZoneEmpty(X, Y)){
+                    zones.push([X, Y])
+                }
+            }
+        }
+        return zones
+    }
+
+    function checkDstZoneEmpty(x, y){
+        return Obj.findObjsInZone(x, y).length == 0
+    }
+
+    function checkOriginZoneHasNoEnemy(x, y){
+        var enemies = Obj.findObjsInZone(x, y).filter(function(obj){
+            return ! Player.isFriendly(obj.game.piece)
+        })
+        if (enemies.length > 0){
+            return false
+        } else {
+            return true
+        }
+    }
+
+    function findAvailableKills(obj){
         var range = Move.getRange(obj.game.piece.kind)
         var killRules = Move.rules.kills[obj.game.piece.kind]
         var moves = []
@@ -1549,7 +1630,7 @@ var Move = (function(){
         return moves
     }
 
-    Move.findAvailableMoves = function(obj){
+    function findAvailableMoves(obj){
         var range = Move.getRange(obj.game.piece.kind)
         var moveRules = Move.rules.moves[obj.game.piece.kind]
         var moves = []
@@ -1627,7 +1708,7 @@ var Move = (function(){
 
     // Checks that xyz is in the list of validated moves that we just calculated
     Move.isValidated = function(x, y, z){
-        return $.grep(Move.validatedMoves, function(item){
+        return $.grep(_validatedMoves, function(item){
             return item.xyz.x == x && item.xyz.y == y && item.xyz.z == z
         }).length > 0
     }
@@ -1952,6 +2033,7 @@ var Game = (function(){
         var player = Player.getPlayer()
         async.waterfall([
             function(done){
+                // mach
                 if (Move.isValidated(x, y, z)) done(null)
                 else done("ERROR. Invalid move.")
             },
@@ -2015,7 +2097,6 @@ var Game = (function(){
             }
         }
 
-        // mach
         on.defect = function(data){
             var defectorID = data.defectorID
             var defecteeID = data.defecteeID
@@ -2072,7 +2153,7 @@ var Game = (function(){
     }
 
     Game.removePiecesByArmyID = function(army_id){
-        var objs = Obj.findPiecesByArmyID(army_id)
+        var objs = Obj.findObjsByArmyID(army_id)
         var pieces = objs.map(function(obj){
             Scene.remove(obj);
             Obj.remove(obj)
