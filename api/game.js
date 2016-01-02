@@ -405,6 +405,7 @@ var Game = module.exports = (function(){
     Game.buildArmy = function(playerID, done){
         var player, zone = null
         var pieces = []
+        var start = new Date().getTime()
         async.waterfall([
             function(done){
                 Player.findOneByID(playerID, function(er, _player){
@@ -459,6 +460,10 @@ var Game = module.exports = (function(){
                 done(er)
             } else {
                 done(null, pieces, zone)
+            }
+            var elapsed = new Date().getTime() - start
+            if (elapsed > 2000){
+                H.log("WARNING. Game.buildArmy.elapsed:", elapsed)
             }
         })
     }
