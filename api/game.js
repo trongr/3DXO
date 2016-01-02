@@ -701,7 +701,7 @@ var Game = module.exports = (function(){
                 function(done){
                     Pieces.defect(playerID, enemyID, army_id, function(er){
                         done(er)
-                        Pub.defect(playerID, enemyID, zone)
+                        Pub.defect(army_id, playerID, enemyID, zone)
                     })
                 },
                 function(done){

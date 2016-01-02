@@ -63,11 +63,12 @@ var Pub = module.exports = (function(){
     }
 
     // Defector defecting to defectee
-    Pub.defect = function(defectorID, defecteeID, zone){
+    Pub.defect = function(army_id, defectorID, defecteeID, zone){
         Pub.publish("defect", {
             defectorID: defectorID,
             defecteeID: defecteeID,
-            zone: zone
+            army_id: army_id,
+            zone: zone,
         })
     }
 

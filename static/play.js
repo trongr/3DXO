@@ -1132,11 +1132,18 @@ var Obj = (function(){
         return null
     }
 
-    Obj.findObjsByPlayerID = function(playerID){
+    Obj.findPiecesByPlayerID = function(playerID){
         return Obj.objs.filter(function(obj){
             return (obj.game && obj.game.piece &&
                     (obj.game.piece.player == playerID ||
                      obj.game.piece.player._id == playerID))
+        })
+    }
+
+    Obj.findPiecesByArmyID = function(army_id){
+        return Obj.objs.filter(function(obj){
+            return (obj.game && obj.game.piece &&
+                    (obj.game.piece.army_id == army_id))
         })
     }
 
@@ -1911,7 +1918,7 @@ var Game = (function(){
                     y = king.y
                 }
                 Sock.init(x, y)
-                // Chat.init(x, y) // mach move cross hair rendering to map
+                // Chat.init(x, y) // todo move cross hair rendering to map
                 // ClassicSet needs the renderer to finish loading from
                 // Scene.init to init its composers
                 Scene.init(x, y)
@@ -2008,10 +2015,12 @@ var Game = (function(){
             }
         }
 
+        // mach
         on.defect = function(data){
             var defectorID = data.defectorID
             var defecteeID = data.defecteeID
-            var defectors = Game.removePiecesByPlayerID(defectorID)
+            var army_id = data.army_id
+            var defectors = Game.removePiecesByArmyID(army_id)
             Game.defect(defectors, defecteeID)
             Game.loadPieces(defectors)
             Scene.render()
@@ -2062,8 +2071,8 @@ var Game = (function(){
         return obj
     }
 
-    Game.removePiecesByPlayerID = function(playerID){
-        var objs = Obj.findObjsByPlayerID(playerID)
+    Game.removePiecesByArmyID = function(army_id){
+        var objs = Obj.findPiecesByArmyID(army_id)
         var pieces = objs.map(function(obj){
             Scene.remove(obj);
             Obj.remove(obj)
