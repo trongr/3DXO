@@ -130,7 +130,6 @@ var Menu = (function(){
         $("#new_game").on("click", new_game)
     }
 
-    // todo let users start with a new army, but penalize restart.
     function new_game(){
         API.Game.buildArmy(_you._id, function(er, pieces){
             if (er) Console.error(er)
@@ -261,7 +260,7 @@ var Console = (function(){
 
     function helloConsole(){
         Console.print("<span style='font-size:3em'>Ragnarook</span>")
-        Console.print("[ Pre-alpha release ]")
+        Console.print("[ Chess 2.0: Pre-alpha Release ]")
         Console.print("<hr>")
         Console.print("Ragnarook is a <b style='color:yellow'>Massively Multiplayer Open World Strategy Game</b> "
                       + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
@@ -287,7 +286,7 @@ var Console = (function(){
                       // + "<li>You can move one piece every 15 seconds.</li>"
                       // + "<li>You can also move any additional piece that has no enemy inside its green border.</li>"
                       + "</ol>")
-        Console.print("Type <code> /info game </code> into the chat box below to start learning more about the game, "
+        Console.print("Type <code> /info game </code> into the chat box below to learn more about the game, "
                       + "or dive right in and figure it out as you go.")
     }
 

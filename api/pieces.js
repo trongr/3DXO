@@ -2,6 +2,7 @@ var async = require("async")
 var request = require("request")
 var express = require('express');
 var Piece = require("../models/piece.js")
+var Player = require("../models/player.js")
 var H = require("../static/js/h.js")
 var Conf = require("../static/conf.json") // shared with client
 
@@ -10,10 +11,11 @@ var Pieces = module.exports = (function(){
         router: express.Router()
     }
 
-    // Converts player's pieces to enemy's side
-    Pieces.defect = function(playerID, enemyID, done){
+    // Converts player's losing army to enemy's side
+    Pieces.defect = function(playerID, enemyID, army_id, done){
         Piece.update({
             player: playerID,
+            army_id: army_id,
         }, {
             $set: {
                 player: enemyID,
@@ -42,6 +44,39 @@ var Pieces = module.exports = (function(){
                 done(null)
             } else {
                 done("Charging: ready in " + parseInt((Conf.recharge - elapsed) / 1000) + "s")
+            }
+        })
+    }
+
+    Pieces.countPlayerArmies = function(player, done){
+        var playerID = player._id
+        Piece.count({
+            player: playerID,
+            kind: "king", // each army has a unique king
+        }, function(er, count){
+            if (er){
+                done(["ERROR. Piece.countPlayerArmies", playerID, er])
+            } else {
+                done(null, count)
+                if (count != player.armies){
+                    H.log("ERROR. Pieces.countPlayerArmies: count mismatch", player, count)
+                    correctPlayerArmiesCount(playerID, count)
+                }
+            }
+        });
+    };
+
+    function correctPlayerArmiesCount(playerID, count){
+        Player.update({
+            _id: playerID
+        }, {
+            $set: {
+                armies: count,
+                modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
+            },
+        }, function(er, num){
+            if (er){
+                H.log("ERROR. Pieces.correctPlayerArmiesCount", playerID, count, er)
             }
         })
     }

@@ -5,22 +5,19 @@ var SALT_WORK_FACTOR = 10;
 var schema = mongoose.Schema({
     name: {type: String, required: true, index: {unique:true}},
     pass: {type: String, required: true, select: false},
-    // todo
     // team: {
     //     type: mongoose.Schema.Types.ObjectId,
     //     ref: 'Team'
     // },
-    alive: {type: Boolean, default: false}, // alive false means player lost and has no control of his army
+    armies: {type: Number, default: 0},
     created: {type: Date, default: Date.now},
     modified: {type: Date, default: Date.now},
-    enemies: [{
-        _id: false, // stop mongoose from creating default _id
-        player: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Player'
-        },
-        name: {type: String},
-    }]
+    // NOTE. not using this field anymore, but kept for reference:
+    // _id: false stops mongoose from creating default _id:
+    // enemies: [{
+    //     _id: false, // stop mongoose from creating default _id
+    //     name: {type: String},
+    // }]
 });
 
 schema.pre("save", function(next) {
@@ -52,10 +49,6 @@ schema.methods.comparePassword = function(candidatePassword, done) {
         if (er) return done(er);
         done(null, isMatch);
     });
-};
-
-schema.methods.isInCombat = function(){
-    return this.turn_tokens.length > 0
 };
 
 schema.statics.findOneByID = function(playerID, done){

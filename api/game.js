@@ -1,3 +1,4 @@
+var mongoose = require('mongoose');
 var _ = require("lodash")
 var async = require("async")
 var express = require('express');
@@ -412,13 +413,18 @@ var Game = module.exports = (function(){
                 })
             },
             function(done){
-                if (player.alive) done({info:"ERROR. Can't build new army: player still alive."})
-                else done(null)
-            },
-            function(done){
-                Players.resurrect(playerID, function(er, _player){
-                    player = _player
-                    done(er)
+                // NOTE. count player's kings instead of using
+                // player.armies count in case it's wrong and they
+                // can't build new armies. this method also updates
+                // player.armies when it's wrong
+                Pieces.countPlayerArmies(player, function(er, count){
+                    if (er){
+                        done(er)
+                    } else if (count == 0){
+                        done(null)
+                    } else {
+                        done({info:"ERROR. Player still has at least one army remaining: " + count})
+                    }
                 })
             },
             function(done){
@@ -441,14 +447,25 @@ var Game = module.exports = (function(){
                 }, function(er){
                     done(er)
                 })
-            }
+            },
+            function(done){
+                Players.incArmies(playerID, 1, function(er, _player){
+                    done(er)
+                })
+            },
         ], function(er){
-            done(er, pieces, zone)
+            if (er){
+                H.log("INFO. Game.buildArmy", playerID, er)
+                done(er)
+            } else {
+                done(null, pieces, zone)
+            }
         })
     }
 
     function generateArmy(player, zone){
         var army = []
+        var army_id = mongoose.Types.ObjectId();
         for (var i = 0; i < ARMY_CONFIG.length; i++){
             for (var j = 0; j < ARMY_CONFIG.length; j++){
                 var p = ARMY_CONFIG[i][j]
@@ -457,7 +474,8 @@ var Game = module.exports = (function(){
                         kind: LETTER_PIECES[p],
                         x: zone[0] + j,
                         y: zone[1] + i,
-                        player: player
+                        player: player,
+                        army_id: army_id
                     })
                 }
             }
@@ -606,7 +624,6 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    if (!player.alive) return done({info: "ERROR. You are dead."})
                     Pieces.validatePieceTimeout(piece, function(er){
                         if (er) done({info:er, code:VALIDATE_PIECE_TIMEOUT})
                         else done(null)
@@ -655,6 +672,7 @@ var Game = module.exports = (function(){
         on.gameover = function(playerID, enemyID, king){
             try {
                 var player, enemy = null
+                var army_id = king.army_id
                 var zone = [
                         H.toZoneCoordinate(king.x, S),
                         H.toZoneCoordinate(king.y, S)
@@ -676,15 +694,21 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Players.kill(playerID, function(er, _player){
+                    Pieces.defect(playerID, enemyID, army_id, function(er){
+                        done(er)
+                        Pub.defect(playerID, enemyID, zone)
+                    })
+                },
+                function(done){
+                    Players.incArmies(playerID, -1, function(er, _player){
                         player = _player
                         done(er)
                     })
                 },
                 function(done){
-                    Pieces.defect(playerID, enemyID, function(er){
+                    Players.incArmies(enemyID, +1, function(er, _enemy){
+                        enemy = _enemy
                         done(er)
-                        Pub.defect(playerID, enemyID, zone)
                     })
                 },
             ], function(er){

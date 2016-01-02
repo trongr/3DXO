@@ -50,35 +50,23 @@ var Players = module.exports = (function(){
             })
         })
 
-    Players.kill = function(playerID, done){
+    // inc can be +/- 1
+    Players.incArmies = function(playerID, inc, done){
         Player.findOneAndUpdate({
             _id: playerID
         }, {
             $set: {
-                modified: new Date(), // update bypasses mongoose's pre save middleware
-                alive: false,
-            }
+                modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
+            },
+            $inc: {armies:inc}
         }, {
             new: true
         }, function(er, player){
-            if (er) H.log("ERROR. Players.kill", er)
-            if (done) done(er, player)
-        })
-    }
-
-    Players.resurrect = function(playerID, done){
-        Player.findOneAndUpdate({
-            _id: playerID
-        }, {
-            $set: {
-                modified: new Date(), // update bypasses mongoose's pre save middleware
-                alive: true,
+            if (er){
+                done(["ERROR. Players.incArmies", playerID, inc, er])
+            } else {
+                done(null, player)
             }
-        }, {
-            new: true,
-        }, function(er, player){
-            if (er) H.log("ERROR. Players.resurrect", er)
-            if (done) done(er, player)
         })
     }
 
