@@ -1554,7 +1554,9 @@ var Move = (function(){
     // a kill move or not, etc. Useful for sending to server to
     // validate when player moves.
     var _validatedMoves = []
-    var _validatedZoneMoves = []
+    var _validatedZoneMoves = [
+        // [x, y], // zone lower left corners
+    ]
 
     Move.highlightAvailableMoves = function(obj){
         var moves = findAvailableMoves(obj)
@@ -1708,8 +1710,17 @@ var Move = (function(){
 
     // Checks that xyz is in the list of validated moves that we just calculated
     Move.isValidated = function(x, y, z){
-        return $.grep(_validatedMoves, function(item){
+        return _validatedMoves.filter(function(item){
             return item.xyz.x == x && item.xyz.y == y && item.xyz.z == z
+        }).length > 0
+    }
+
+    // Checks that xyz is in the list of validated zone moves that we just calculated
+    Move.isValidatedZoneMove = function(x, y){
+        var X = H.toZoneCoordinate(x, Conf.zone_size)
+        var Y = H.toZoneCoordinate(y, Conf.zone_size)
+        return _validatedZoneMoves.filter(function(move){
+            return move[0] == X && move[1] == Y
         }).length > 0
     }
 
@@ -2030,19 +2041,22 @@ var Game = (function(){
         var x = Math.floor(pos.x)
         var y = Math.floor(pos.y)
         var z = 1 // height of every game piece
+        var piece = selected.game.piece
         var player = Player.getPlayer()
         async.waterfall([
             function(done){
-                // mach
-                if (Move.isValidated(x, y, z)) done(null)
-                else done("ERROR. Invalid move.")
+                if (Move.isValidated(x, y, z)){
+                    done(null)
+                } else if (piece.kind == "king" && Move.isValidatedZoneMove(x, y)){
+                    done(null)
+                } else done("ERROR. Invalid move.")
             },
             function(done){
                 done(null)
                 Sock.send("move", {
                     playerID: player._id,
                     player: player,
-                    piece: selected.game.piece,
+                    piece: piece,
                     from: selected.position, // most likely fractions, so need to floor on server:
                     to: pos,
                 })
