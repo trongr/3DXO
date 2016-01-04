@@ -48,6 +48,17 @@ var Pieces = module.exports = (function(){
         })
     }
 
+    // mach
+    Pieces.findPiecesInZone = function(playerID, x, y, X, Y, done){
+        Piece.find({
+            player: playerID,
+            x: {$gte: x, $lt: X},
+            y: {$gte: y, $lt: Y},
+        }).exec(function(er, _pieces){
+            done(er, _pieces)
+        });
+    }
+
     Pieces.countPlayerArmies = function(player, done){
         var playerID = player._id
         Piece.count({

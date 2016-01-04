@@ -282,6 +282,8 @@ var Console = (function(){
         Console.print("<h2><u>RULES</u></h2>")
         Console.print("<ol>"
                       // + "<li></li>"
+                      // alternatively different zones have different rules, e.g. some zones lets you move
+                      // any number of pieces, some 4 at a time, some 2, some just 1, per army.
                       // mode 1
                       + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
                       + " 30 seconds to recharge before it can move again.</li>"
@@ -289,6 +291,9 @@ var Console = (function(){
                       // + "<li>Similar to chess. Highlighting a piece will show its available moves.</li>"
                       // + "<li>You can move one piece every 15 seconds.</li>"
                       // + "<li>You can also move any additional piece that has no enemy inside its green border.</li>"
+                      // mach emphasis
+                      + "<li>You can move all your pieces in an 8 x 8 zone to a neighbouring zone if there are no "
+                      + "enemy pieces in either zone. Clicking on your king will highlight available moves.</li>"
                       + "</ol>")
         Console.print("Type <code> /info game </code> into the chat box below to learn more about the game, "
                       + "or dive right in and figure it out as you go.")
@@ -1001,7 +1006,7 @@ var Piece = (function(){
         // lightskyblue: [135,206,250],
         crimson: [220,20,60],
         hotpink: [255,105,180],
-        mediumvioletred: [199,21,133],
+        // mediumvioletred: [199,21,133],
         slateblue: [106,90,205],
         // mediumslateblue: [123,104,238],
         cyan: [0,255,255],
@@ -1029,7 +1034,7 @@ var Piece = (function(){
         // peachpuff: [255,239,213],
         // lavenderblush: [255,240,245],
         tan: [210,180,140],
-        navy: [0,0,128],
+        // navy: [0,0,128],
         // darkblue: [0,0,139],
         teal: [0,128,128],
         // darkcyan: [0,139,139],
@@ -1043,7 +1048,7 @@ var Piece = (function(){
         // ivory: [255,240,240],
         // linen: [250,240,230],
         // antiquewhite: [250,235,215],
-        olive: [128,128,0],
+        // olive: [128,128,0],
         darkolivegreen: [85,107,47],
         lightblue: [173,216,230],
         // powderblue: [176,224,230],
@@ -2048,6 +2053,7 @@ var Game = (function(){
                 if (Move.isValidated(x, y, z)){
                     done(null)
                 } else if (piece.kind == "king" && Move.isValidatedZoneMove(x, y)){
+                    // NOTE. regular move takes precedence over zone move
                     done(null)
                 } else done("ERROR. Invalid move.")
             },

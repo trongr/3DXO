@@ -69,7 +69,7 @@ var Move = (function(){
         }
     }
 
-    Move.validateMove = function(player, piece, from, to, done){
+    Move.validateOneMove = function(player, piece, from, to, done){
         var distance, direction
         async.waterfall([
             function(done){
@@ -135,7 +135,7 @@ var Move = (function(){
     Move.validateMoveFrom = function(player, piece, from, done){
         var er = null
         try {
-            if (player._id != piece.player) er = "Piece doesn't belong to player"
+            if (!player._id.equals(piece.player)) er = "Piece doesn't belong to player"
             if (!(piece.x == from.x && piece.y == from.y)) er = "Piece position and origin don't match"
         } catch (e){
             er = "Can't validate move origin"
@@ -226,14 +226,13 @@ var Move = (function(){
         }
     }
 
-    // mach remove player
     // Actually making the move
-    Move.move = function(player, piece, from, to, done){
+    Move.oneMove = function(piece, from, to, done){
         var dstCell, capturedKing = null
         async.waterfall([
             function(done){
                 // Check if dst has an enemy piece. (Since we're
-                // already here at Move.move if there's anything here
+                // already here at Move.oneMove if there's anything here
                 // it has to be an enemy.)
                 Cell.findOne({
                     x: to.x,
@@ -251,32 +250,32 @@ var Move = (function(){
                         done(er, _piece)
                     })
                 } else if (dstCell && dstCell.piece){
-                    killMove(dstCell.piece, piece, from, to, function(er, _piece){
+                    killMove(dstCell.piece, piece, to, function(er, _piece){
                         done(er, _piece)
                     })
                 } else {
-                    regularMove(piece, from, to, function(er, _piece){
+                    regularMove(piece, to, function(er, _piece){
                         done(er, _piece)
                     })
                 }
             },
         ], function(er, nPiece){
             if (er){
-                done(["Game.Move.move", player, piece, from, to, er])
+                done(["Game.Move.oneMove", piece, from, to, er])
             } else {
                 done(null, nPiece, capturedKing)
             }
         })
     }
 
-    function regularMove(piece, from, to, done){
-        var nPiece = null
+    // NOTE. this method modifies piece
+    function regularMove(piece, to, done){
         async.waterfall([
             function(done){ // update origin cell
                 Cell.update({
                     piece: piece._id,
-                    x: from.x,
-                    y: from.y,
+                    x: piece.x,
+                    y: piece.y,
                 }, {
                     $set: {
                         piece: null
@@ -291,30 +290,56 @@ var Move = (function(){
                     x: to.x,
                     y: to.y,
                 }, function(er, cell){
-                    done(er)
+                    if (er){
+                        done(["Cells.upsert", piece, to, er])
+                    } else {
+                        done(null)
+                    }
                 })
             },
             function(done){
-                Piece.findOneAndUpdate(piece, { // update moving piece data
-                    $set: {
-                        x: to.x,
-                        y: to.y,
-                        moved: new Date(), // for piece timeout
+                // IMPORTANT NOTE! I don't know why but
+                // Piece.findOneAndUpdate below will modify the wrong
+                // document, so the piece._id and the returned
+                // _piece._id are completely different. DO NOT USE IT!
+                piece.x = to.x
+                piece.y = to.y
+                piece.moved = new Date()
+                piece.save(function(er){
+                    if (er){
+                        done(["Piece.update", piece, to, er])
+                    } else {
+                        done(null, piece)
                     }
-                }, {
-                    new: true,
-                    runValidators: true,
-                }, function(er, _piece){
-                    nPiece = _piece
-                    done(er)
                 })
+                // DO NOT USE:
+                // DO NOT USE:
+                // DO NOT USE:
+                // Piece.findOneAndUpdate(piece._id, { // update moving piece data
+                //     $set: {
+                //         x: to.x,
+                //         y: to.y,
+                //         moved: new Date(), // for piece timeout
+                //     }
+                // }, {
+                //     new: true,
+                //     runValidators: true,
+                // }, function(er, _piece){
+                //     nPiece = _piece
+                //     console.log("regular move.piece.update", piece, to, _piece, er)
+                //     if (_piece){
+                //         done(null)
+                //     } else {
+                //         done(["Piece.update", piece, to, er])
+                //     }
+                // })
             },
-        ], function(er){
-            done(er, nPiece)
+        ], function(er, piece){
+            done(er, piece)
         })
     }
 
-    function killMove(dstPiece, piece, from, to, done){
+    function killMove(dstPiece, piece, to, done){
         var nPiece = null
         async.waterfall([
             function(done){
@@ -325,8 +350,8 @@ var Move = (function(){
             function(done){ // update origin cell
                 Cell.update({
                     piece: piece._id,
-                    x: from.x,
-                    y: from.y,
+                    x: piece.x,
+                    y: piece.y,
                 }, {
                     $set: {
                         piece: null
@@ -364,6 +389,7 @@ var Move = (function(){
         })
     }
 
+    // mach use piece.save() instead of findoneandupdate
     function kingKillerMove(piece, done){
         Piece.findOneAndUpdate(piece, { // update moving piece data
             $set: {
@@ -375,6 +401,74 @@ var Move = (function(){
             runValidators: true,
         }, function(er, _piece){
             done(er, _piece)
+        })
+    }
+
+    // mach
+    Move.validateZoneMove = function(player, king, from, to, done){
+        var playerID = player._id
+        var nFrom = {
+            x: H.toZoneCoordinate(from.x, S),
+            y: H.toZoneCoordinate(from.y, S)
+        }
+        var nTo = {
+            x: H.toZoneCoordinate(to.x, S),
+            y: H.toZoneCoordinate(to.y, S)
+        }
+        async.waterfall([
+            function(done){
+                Move.validateMoveFrom(player, king, from, function(er){
+                    done(er)
+                })
+            },
+            function(done){
+                // mach validate origin and dst zone
+                var x = nFrom.x, y = nFrom.y
+                var X = x + S, Y = y + S
+                Pieces.findPiecesInZone(playerID, x, y, X, Y, function(er, _pieces){
+                    done(er, _pieces)
+                })
+            }
+        ], function(er, pieces){
+            done(er, pieces)
+        })
+    }
+
+    // mach
+    // Moving pieces from one zone to another.
+    // Returned pieces contains piece.from,to so caller can publish (re)moves to clients
+    Move.zoneMove = function(pieces, to, done){
+        var nTo = {
+            x: H.toZoneCoordinate(to.x, S),
+            y: H.toZoneCoordinate(to.y, S)
+        }
+        var pieceObjs = []
+        async.each(pieces, function(piece, done){
+            var pieceTo = {
+                // mach move to nTo
+                x: piece.x + S,
+                y: piece.y + S
+            }
+            var pieceObj = {
+                from: {x:piece.x, y:piece.y},
+            }
+            regularMove(piece, pieceTo, function(er, _piece){
+                piece = _piece
+                if (piece){
+                    pieceObj.to = {x:piece.x, y:piece.y},
+                    pieceObj.piece = piece
+                    pieceObjs.push(pieceObj)
+                    done(null)
+                } else {
+                    done(["regularMove: null piece response", piece, pieceTo, er])
+                }
+            })
+        }, function(er){
+            if (er){
+                done(["ERROR. Game.Move.zoneMove", to, er])
+            } else {
+                done(null, pieceObjs)
+            }
         })
     }
 
@@ -609,6 +703,8 @@ var Game = module.exports = (function(){
             function(done){
                 x = Math.floor(nPiece.x / S) * S + direction.dx * S // zone coordinates
                 y = Math.floor(nPiece.y / S) * S + direction.dy * S
+                // todo. remove Cell and Cells, use Piece and Pieces instead
+                // use Pieces.findPiecesInZone
                 Cell.find({
                     x: {$gte: x, $lt: x + S},
                     y: {$gte: y, $lt: y + S},
@@ -671,13 +767,13 @@ var Game = module.exports = (function(){
         var on = {}
 
         var VALIDATE_PIECE_TIMEOUT = "VALIDATE_PIECE_TIMEOUT"
-
         on.move = function(data){
             try {
                 var player = data.player
                 var playerID = player._id
                 var piece = data.piece
-                var nPiece = null
+                var pieceID = piece._id
+                // mach take only piece ID
                 var from = { // Clean coordinates and remove z axis
                     x: Math.floor(data.from.x),
                     y: Math.floor(data.from.y),
@@ -687,18 +783,53 @@ var Game = module.exports = (function(){
                     y: Math.floor(data.to.y),
                     z: 1.5, // NOTE. Assuming ground at 1
                 }
-                var capturedKing = null
             } catch (e){
-                H.log("ERROR. Game.on.move: invalid input", data)
+                H.log("ERROR. Game.move: invalid input", data)
                 return
             }
             async.waterfall([
                 function(done){
                     Player.findOneByID(playerID, function(er, _player){
                         player = _player
-                        done(er)
+                        if (er){
+                            done({info:"FATAL ERROR. Game.move: can't find player"})
+                        } else done(null)
                     })
                 },
+                // mach get piece here and use piece.x,y instead of from
+                // mach get piece here and use piece.x,y instead of from
+                // mach get piece here and use piece.x,y instead of from
+                function(done){
+                    Piece.findOneByID(pieceID, function(er, _piece){
+                        piece = _piece
+                        if (er){
+                            done({info:"FATAL ERROR. Game.move: can't find piece"})
+                        } else done(null)
+                    })
+                },
+                function(done){
+                    // this means the king is making a zone move:
+                    if (piece.kind == "king"
+                        && (Math.abs(from.x - to.x) > 1 || Math.abs(from.y - to.y) > 1)){
+                        zoneMove(playerID, player, piece, from, to)
+                    } else { // regular single piece move
+                        oneMove(playerID, player, piece, from, to)
+                    }
+                    done(null)
+                }
+            ], function(er){
+                if (er){
+                    H.log("ERROR. Game.move", playerID, er)
+                    Pub.error(playerID, er.info || "ERROR. Game.move: unexpected error")
+                }
+            })
+        }
+
+        // regular single piece move, as opposed to moving an entire army from one zone to another
+        function oneMove(playerID, player, piece, from, to){
+            var nPiece = null
+            var capturedKing = null
+            async.waterfall([
                 function(done){
                     Pieces.validatePieceTimeout(piece, function(er){
                         if (er) done({info:er, code:VALIDATE_PIECE_TIMEOUT})
@@ -706,13 +837,13 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Move.validateMove(player, piece, from, to, function(er){
+                    Move.validateOneMove(player, piece, from, to, function(er){
                         done(er)
                     })
                 },
                 function(done){
                     // _capturedKing not null means this is a KING_KILLER move, and game over for capturedKing.player
-                    Move.move(player, piece, from, to, function(er, _piece, _capturedKing){
+                    Move.oneMove(piece, from, to, function(er, _piece, _capturedKing){
                         nPiece = _piece
                         capturedKing = _capturedKing
                         done(er)
@@ -720,8 +851,8 @@ var Game = module.exports = (function(){
                 },
             ], function(er){
                 if (er){
-                    if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.on.move", er)
-                    Pub.error(playerID, er.info || "ERROR. Game.on.move: unexpected error")
+                    if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.oneMove", er)
+                    Pub.error(playerID, er.info || "ERROR. Game.oneMove: unexpected error")
                 } else if (capturedKing){
                     Game.on.gameover(capturedKing.player, playerID, capturedKing)
                     Pub.move(nPiece, from, [ // from instead of to cause not moving king killer
@@ -738,6 +869,52 @@ var Game = module.exports = (function(){
                         H.toZoneCoordinate(to.y, S)
                     ])
                 }
+            })
+        }
+
+        // mach
+        // moving an entire army from one zone to another
+        function zoneMove(playerID, player, king, from, to){
+            async.waterfall([
+                function(done){
+                    Pieces.validatePieceTimeout(king, function(er){
+                        if (er) done({info:er, code:VALIDATE_PIECE_TIMEOUT})
+                        else done(null)
+                    })
+                },
+                function(done){
+                    // _pieces are pieces from the origin zone, so
+                    // Move.zoneMove can skip a query to save time
+                    Move.validateZoneMove(player, king, from, to, function(er, _pieces){
+                        done(er, _pieces)
+                    })
+                },
+                function(pieces, done){
+                    Move.zoneMove(pieces, to, function(er, _pieceObjs){
+                        done(er, _pieceObjs)
+                    })
+                },
+            ], function(er, pieceObjs){
+                if (er){
+                    if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.zoneMove", er)
+                    Pub.error(playerID, er.info || "ERROR. Game.zoneMove: unexpected error")
+                } else {
+                    pubZoneMovePieces(pieceObjs)
+                }
+            })
+        }
+
+        // mach
+        function pubZoneMovePieces(pieceObjs){
+            pieceObjs.forEach(function(pieceObj){
+                Pub.remove(pieceObj.piece, pieceObj.from, [
+                    H.toZoneCoordinate(pieceObj.from.x, S),
+                    H.toZoneCoordinate(pieceObj.from.y, S)
+                ])
+                Pub.move(pieceObj.piece, pieceObj.to, [
+                    H.toZoneCoordinate(pieceObj.to.x, S),
+                    H.toZoneCoordinate(pieceObj.to.y, S)
+                ])
             })
         }
 
