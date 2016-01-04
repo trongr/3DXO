@@ -5,6 +5,9 @@ var schema = mongoose.Schema({
     kind: {type: String, required: true}, // pawn, knight, rook, bishop, queen, king
     x: {type: Number, required: true, validate: [Validate.isInt, "x not int"]},
     y: {type: Number, required: true, validate: [Validate.isInt, "y not int"]},
+    // previous x and y
+    px: {type: Number, required: true, validate: [Validate.isInt, "x not int"]},
+    py: {type: Number, required: true, validate: [Validate.isInt, "y not int"]},
     army_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: true

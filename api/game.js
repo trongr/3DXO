@@ -299,6 +299,8 @@ var Move = (function(){
                 // Piece.findOneAndUpdate below will modify the wrong
                 // document, so the piece._id and the returned
                 // _piece._id are completely different. DO NOT USE IT!
+                piece.px = piece.x
+                piece.py = piece.y
                 piece.x = to[0]
                 piece.y = to[1]
                 piece.moved = new Date()
@@ -316,6 +318,8 @@ var Move = (function(){
                 //     $set: {
                 //         x: to[0],
                 //         y: to[1],
+                //         px: piece.x,
+                //         py: piece.y,
                 //         moved: new Date(), // for piece timeout
                 //     }
                 // }, {
@@ -367,10 +371,13 @@ var Move = (function(){
                 })
             },
             function(done){
+                // mach use piece.save
                 Piece.findOneAndUpdate(piece, { // update moving piece data
                     $set: {
                         x: to[0],
                         y: to[1],
+                        px: piece.x,
+                        py: piece.y,
                         moved: new Date(), // for piece timeout
                     }
                 }, {
@@ -401,7 +408,6 @@ var Move = (function(){
         })
     }
 
-    // mach
     Move.validateZoneMove = function(player, king, to, done){
         var playerID = player._id
         var from = [H.toZoneCoordinate(king.x, S), H.toZoneCoordinate(king.y, S)]
@@ -425,23 +431,19 @@ var Move = (function(){
         })
     }
 
-    // mach
     // Moving pieces from one zone to another.
     // Returned pieces contains piece.from,to so caller can publish (re)moves to clients
     Move.zoneMove = function(pieces, to, done){
         var nTo = [H.toZoneCoordinate(to[0], S), H.toZoneCoordinate(to[1], S)]
-        var pieceBoxes = []
+        var nPieces = []
         async.each(pieces, function(piece, done){
             // mach move to nTo
             var pieceTo = [piece.x + S, piece.y + S]
-            var pieceBox = {
-                from: [piece.x, piece.y], // todo store from in piece.p_x, p_y
-            }
             regularMove(piece, pieceTo, function(er, _piece){
                 piece = _piece
                 if (piece){
-                    pieceBox.piece = piece
-                    pieceBoxes.push(pieceBox)
+                    // mach removing pieceBox
+                    nPieces.push(piece)
                     done(null)
                 } else {
                     done(["regularMove: null piece response", piece, pieceTo, er])
@@ -451,7 +453,7 @@ var Move = (function(){
             if (er){
                 done(["ERROR. Game.Move.zoneMove", to, er])
             } else {
-                done(null, pieceBoxes)
+                done(null, nPieces)
             }
         })
     }
@@ -628,6 +630,8 @@ var Game = module.exports = (function(){
                         kind: LETTER_PIECES[p],
                         x: zone[0] + j,
                         y: zone[1] + i,
+                        px: zone[0] + j, // previous x and y same as x and y for new pieces
+                        py: zone[1] + i,
                         player: player,
                         army_id: army_id
                     })
@@ -865,30 +869,30 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(pieces, done){
-                    Move.zoneMove(pieces, to, function(er, _pieceBoxes){
-                        done(er, _pieceBoxes)
+                    Move.zoneMove(pieces, to, function(er, _pieces){
+                        done(er, _pieces)
                     })
                 },
-            ], function(er, pieceBoxes){
+            ], function(er, pieces){
                 if (er){
                     if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.zoneMove", er)
                     Pub.error(playerID, er.info || "ERROR. Game.zoneMove: unexpected error")
                 } else {
-                    pubZoneMovePieces(pieceBoxes)
+                    pubZoneMovePieces(pieces)
                 }
             })
         }
 
         // mach
-        function pubZoneMovePieces(pieceBoxes){
-            pieceBoxes.forEach(function(pieceBox){
-                Pub.remove(pieceBox.piece, pieceBox.from, [
-                    H.toZoneCoordinate(pieceBox.from[0], S),
-                    H.toZoneCoordinate(pieceBox.from[1], S)
+        function pubZoneMovePieces(pieces){
+            pieces.forEach(function(piece){
+                Pub.remove(piece, [piece.px, piece.py], [
+                    H.toZoneCoordinate(piece.px, S),
+                    H.toZoneCoordinate(piece.py, S)
                 ])
-                Pub.move(pieceBox.piece, [
-                    H.toZoneCoordinate(pieceBox.piece.x, S),
-                    H.toZoneCoordinate(pieceBox.piece.y, S)
+                Pub.move(piece, [
+                    H.toZoneCoordinate(piece.x, S),
+                    H.toZoneCoordinate(piece.y, S)
                 ])
             })
         }
