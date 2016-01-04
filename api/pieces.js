@@ -6,6 +6,8 @@ var Player = require("../models/player.js")
 var H = require("../static/js/h.js")
 var Conf = require("../static/conf.json") // shared with client
 
+var S = Conf.zone_size
+
 var Pieces = module.exports = (function(){
     Pieces = {
         router: express.Router()
@@ -49,11 +51,11 @@ var Pieces = module.exports = (function(){
     }
 
     // mach
-    Pieces.findPiecesInZone = function(playerID, x, y, X, Y, done){
+    Pieces.findPiecesInZone = function(playerID, x, y, done){
         Piece.find({
             player: playerID,
-            x: {$gte: x, $lt: X},
-            y: {$gte: y, $lt: Y},
+            x: {$gte: x, $lt: x + S},
+            y: {$gte: y, $lt: y + S},
         }).exec(function(er, _pieces){
             done(er, _pieces)
         });

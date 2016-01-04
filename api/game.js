@@ -408,10 +408,16 @@ var Move = (function(){
         })
     }
 
+    // returns pieces from origin zone, dx and dy == +/-8 == Conf.zone_size
     Move.validateZoneMove = function(player, king, to, done){
+        // mach
         var playerID = player._id
-        var from = [H.toZoneCoordinate(king.x, S), H.toZoneCoordinate(king.y, S)]
-        var nTo = [H.toZoneCoordinate(to[0], S), H.toZoneCoordinate(to[1], S)]
+        var x = H.toZoneCoordinate(king.x, S)
+        var y = H.toZoneCoordinate(king.y, S)
+        var X = H.toZoneCoordinate(to[0], S)
+        var Y = H.toZoneCoordinate(to[1], S)
+        var dx = X - x
+        var dy = Y - y
         async.waterfall([
             function(done){
                 Move.validateMoveFrom(player, king, function(er){
@@ -420,38 +426,31 @@ var Move = (function(){
             },
             function(done){
                 // mach validate origin and dst zone
-                var x = from[0], y = from[1]
-                var X = x + S, Y = y + S
-                Pieces.findPiecesInZone(playerID, x, y, X, Y, function(er, _pieces){
+                Pieces.findPiecesInZone(playerID, x, y, function(er, _pieces){
                     done(er, _pieces)
                 })
             }
         ], function(er, pieces){
-            done(er, pieces)
+            done(er, pieces, dx, dy)
         })
     }
 
     // Moving pieces from one zone to another.
     // Returned pieces contains piece.from,to so caller can publish (re)moves to clients
-    Move.zoneMove = function(pieces, to, done){
-        var nTo = [H.toZoneCoordinate(to[0], S), H.toZoneCoordinate(to[1], S)]
+    Move.zoneMove = function(pieces, dx, dy, done){
         var nPieces = []
         async.each(pieces, function(piece, done){
-            // mach move to nTo
-            var pieceTo = [piece.x + S, piece.y + S]
-            regularMove(piece, pieceTo, function(er, _piece){
-                piece = _piece
-                if (piece){
-                    // mach removing pieceBox
-                    nPieces.push(piece)
+            regularMove(piece, [piece.x + dx, piece.y + dy], function(er, _piece){
+                if (_piece){
+                    nPieces.push(_piece)
                     done(null)
                 } else {
-                    done(["regularMove: null piece response", piece, pieceTo, er])
+                    done(["regularMove: null piece response", piece, _piece, er])
                 }
             })
         }, function(er){
             if (er){
-                done(["ERROR. Game.Move.zoneMove", to, er])
+                done(["ERROR. Game.Move.zoneMove", dx, dy, er])
             } else {
                 done(null, nPieces)
             }
@@ -864,14 +863,10 @@ var Game = module.exports = (function(){
                 function(done){
                     // _pieces are pieces from the origin zone, so
                     // Move.zoneMove can skip a query to save time
-                    Move.validateZoneMove(player, king, to, function(er, _pieces){
-                        done(er, _pieces)
-                    })
+                    Move.validateZoneMove(player, king, to, done)
                 },
-                function(pieces, done){
-                    Move.zoneMove(pieces, to, function(er, _pieces){
-                        done(er, _pieces)
-                    })
+                function(pieces, dx, dy, done){
+                    Move.zoneMove(pieces, dx, dy, done)
                 },
             ], function(er, pieces){
                 if (er){
