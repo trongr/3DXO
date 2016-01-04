@@ -69,28 +69,28 @@ var Move = (function(){
         }
     }
 
-    Move.validateOneMove = function(player, piece, from, to, done){
+    Move.validateOneMove = function(player, piece, to, done){
         var distance, direction
         async.waterfall([
             function(done){
-                Move.validateMoveFrom(player, piece, from, function(er){
+                Move.validateMoveFrom(player, piece, function(er){
                     done(er)
                 })
             },
             function(done){
-                distance = Move.validateDistance(piece, from, to)
+                distance = Move.validateDistance(piece, to)
                 if (distance) done(null)
                 else done({info:"Can't move that far"})
             },
             function(done){
-                Move.validateDirection(piece, from, to, function(er, _direction){
+                Move.validateDirection(piece, to, function(er, _direction){
                     direction = _direction
                     done(er)
                 })
             },
             function(done){
                 // distance and direction make it easier to look up cells along the way
-                Move.validateBlock(piece, from, distance, direction, function(er){
+                Move.validateBlock(piece, distance, direction, function(er){
                     done(er)
                 })
             }
@@ -100,15 +100,15 @@ var Move = (function(){
     }
 
     // Check if there are any pieces in the way
-    Move.validateBlock = function(piece, from, distance, direction, done){
+    Move.validateBlock = function(piece, distance, direction, done){
         var dx = direction.dx
         var dy = direction.dy
         var isPawnKill = direction.isPawnKill
         async.times(distance, function(i, done){
             var j = i + 1
             Cell.findOne({
-                x: from.x + j * dx,
-                y: from.y + j * dy,
+                x: piece.x + j * dx,
+                y: piece.y + j * dy,
             }).populate("piece").exec(function(er, cell){
                 if (er) return done({info:"FATAL DB ERROR", er:er})
 
@@ -130,27 +130,24 @@ var Move = (function(){
         })
     }
 
+    // mach change this method to validatePlayerPiece and simplify
     // Makes sure that player piece and from are whose and where they
     // should be
-    Move.validateMoveFrom = function(player, piece, from, done){
+    Move.validateMoveFrom = function(player, piece, done){
         var er = null
         try {
             if (!player._id.equals(piece.player)) er = "Piece doesn't belong to player"
-            if (!(piece.x == from.x && piece.y == from.y)) er = "Piece position and origin don't match"
         } catch (e){
             er = "Can't validate move origin"
         }
-        if (er) return done({info:er})
-        Piece.findOne(piece, function(er, piece){
-            if (piece) done(null)
-            else done({info:"Can't validate move: piece not found at origin", er:er})
-        })
+        if (er) done({info:er})
+        else done(null)
     }
 
-    Move.validateDistance = function(piece, from, to){
+    Move.validateDistance = function(piece, to){
         try {
-            var dx = to.x - from.x
-            var dy = to.y - from.y
+            var dx = to[0] - piece.x
+            var dy = to[1] - piece.y
             var distance = Math.max(Math.abs(dx), Math.abs(dy))
             if (piece.kind == "knight") return Move.range.knight // knight "distance" == 1
             if (distance <= Move.range[piece.kind]) return distance
@@ -160,12 +157,12 @@ var Move = (function(){
         }
     }
 
-    Move.validateDirection = function(piece, from, to, done){
+    Move.validateDirection = function(piece, to, done){
         var error = {info:"Can't move that way"}
         var isPawnKill = false
         try {
-            var dx = to.x - from.x
-            var dy = to.y - from.y
+            var dx = to[0] - piece.x
+            var dy = to[1] - piece.y
             // A knight only has range 1, so whatever its dx and dy are they
             // should match its list of legal moves, so we don't need
             // to normalize. Only pieces with variable distance moves
@@ -227,7 +224,7 @@ var Move = (function(){
     }
 
     // Actually making the move
-    Move.oneMove = function(piece, from, to, done){
+    Move.oneMove = function(piece, to, done){
         var dstCell, capturedKing = null
         async.waterfall([
             function(done){
@@ -235,8 +232,8 @@ var Move = (function(){
                 // already here at Move.oneMove if there's anything here
                 // it has to be an enemy.)
                 Cell.findOne({
-                    x: to.x,
-                    y: to.y,
+                    x: to[0],
+                    y: to[1],
                 }).populate("piece").exec(function(er, cell){
                     dstCell = cell
                     if (er) return done({info:"FATAL DB ERROR", er:er})
@@ -261,7 +258,7 @@ var Move = (function(){
             },
         ], function(er, nPiece){
             if (er){
-                done(["Game.Move.oneMove", piece, from, to, er])
+                done(["Game.Move.oneMove", piece, to, er])
             } else {
                 done(null, nPiece, capturedKing)
             }
@@ -287,8 +284,8 @@ var Move = (function(){
             function(done){ // update destination cell with new piece
                 Cells.upsert({
                     piece: piece._id,
-                    x: to.x,
-                    y: to.y,
+                    x: to[0],
+                    y: to[1],
                 }, function(er, cell){
                     if (er){
                         done(["Cells.upsert", piece, to, er])
@@ -302,8 +299,8 @@ var Move = (function(){
                 // Piece.findOneAndUpdate below will modify the wrong
                 // document, so the piece._id and the returned
                 // _piece._id are completely different. DO NOT USE IT!
-                piece.x = to.x
-                piece.y = to.y
+                piece.x = to[0]
+                piece.y = to[1]
                 piece.moved = new Date()
                 piece.save(function(er){
                     if (er){
@@ -317,8 +314,8 @@ var Move = (function(){
                 // DO NOT USE:
                 // Piece.findOneAndUpdate(piece._id, { // update moving piece data
                 //     $set: {
-                //         x: to.x,
-                //         y: to.y,
+                //         x: to[0],
+                //         y: to[1],
                 //         moved: new Date(), // for piece timeout
                 //     }
                 // }, {
@@ -363,8 +360,8 @@ var Move = (function(){
             function(done){ // update destination cell with new piece
                 Cells.upsert({
                     piece: piece._id,
-                    x: to.x,
-                    y: to.y,
+                    x: to[0],
+                    y: to[1],
                 }, function(er, cell){
                     done(er)
                 })
@@ -372,8 +369,8 @@ var Move = (function(){
             function(done){
                 Piece.findOneAndUpdate(piece, { // update moving piece data
                     $set: {
-                        x: to.x,
-                        y: to.y,
+                        x: to[0],
+                        y: to[1],
                         moved: new Date(), // for piece timeout
                     }
                 }, {
@@ -405,25 +402,19 @@ var Move = (function(){
     }
 
     // mach
-    Move.validateZoneMove = function(player, king, from, to, done){
+    Move.validateZoneMove = function(player, king, to, done){
         var playerID = player._id
-        var nFrom = {
-            x: H.toZoneCoordinate(from.x, S),
-            y: H.toZoneCoordinate(from.y, S)
-        }
-        var nTo = {
-            x: H.toZoneCoordinate(to.x, S),
-            y: H.toZoneCoordinate(to.y, S)
-        }
+        var from = [H.toZoneCoordinate(king.x, S), H.toZoneCoordinate(king.y, S)]
+        var nTo = [H.toZoneCoordinate(to[0], S), H.toZoneCoordinate(to[1], S)]
         async.waterfall([
             function(done){
-                Move.validateMoveFrom(player, king, from, function(er){
+                Move.validateMoveFrom(player, king, function(er){
                     done(er)
                 })
             },
             function(done){
                 // mach validate origin and dst zone
-                var x = nFrom.x, y = nFrom.y
+                var x = from[0], y = from[1]
                 var X = x + S, Y = y + S
                 Pieces.findPiecesInZone(playerID, x, y, X, Y, function(er, _pieces){
                     done(er, _pieces)
@@ -438,26 +429,19 @@ var Move = (function(){
     // Moving pieces from one zone to another.
     // Returned pieces contains piece.from,to so caller can publish (re)moves to clients
     Move.zoneMove = function(pieces, to, done){
-        var nTo = {
-            x: H.toZoneCoordinate(to.x, S),
-            y: H.toZoneCoordinate(to.y, S)
-        }
-        var pieceObjs = []
+        var nTo = [H.toZoneCoordinate(to[0], S), H.toZoneCoordinate(to[1], S)]
+        var pieceBoxes = []
         async.each(pieces, function(piece, done){
-            var pieceTo = {
-                // mach move to nTo
-                x: piece.x + S,
-                y: piece.y + S
-            }
-            var pieceObj = {
-                from: {x:piece.x, y:piece.y},
+            // mach move to nTo
+            var pieceTo = [piece.x + S, piece.y + S]
+            var pieceBox = {
+                from: [piece.x, piece.y], // todo store from in piece.p_x, p_y
             }
             regularMove(piece, pieceTo, function(er, _piece){
                 piece = _piece
                 if (piece){
-                    pieceObj.to = {x:piece.x, y:piece.y},
-                    pieceObj.piece = piece
-                    pieceObjs.push(pieceObj)
+                    pieceBox.piece = piece
+                    pieceBoxes.push(pieceBox)
                     done(null)
                 } else {
                     done(["regularMove: null piece response", piece, pieceTo, er])
@@ -467,7 +451,7 @@ var Move = (function(){
             if (er){
                 done(["ERROR. Game.Move.zoneMove", to, er])
             } else {
-                done(null, pieceObjs)
+                done(null, pieceBoxes)
             }
         })
     }
@@ -769,20 +753,13 @@ var Game = module.exports = (function(){
         var VALIDATE_PIECE_TIMEOUT = "VALIDATE_PIECE_TIMEOUT"
         on.move = function(data){
             try {
-                var player = data.player
-                var playerID = player._id
-                var piece = data.piece
-                var pieceID = piece._id
-                // mach take only piece ID
-                var from = { // Clean coordinates and remove z axis
-                    x: Math.floor(data.from.x),
-                    y: Math.floor(data.from.y),
-                }
-                var to = {
-                    x: Math.floor(data.to.x),
-                    y: Math.floor(data.to.y),
-                    z: 1.5, // NOTE. Assuming ground at 1
-                }
+                var playerID = data.playerID
+                var pieceID = data.pieceID
+                var player, piece = null
+                var to = [
+                    Math.floor(data.to[0]),
+                    Math.floor(data.to[1]),
+                ]
             } catch (e){
                 H.log("ERROR. Game.move: invalid input", data)
                 return
@@ -796,9 +773,6 @@ var Game = module.exports = (function(){
                         } else done(null)
                     })
                 },
-                // mach get piece here and use piece.x,y instead of from
-                // mach get piece here and use piece.x,y instead of from
-                // mach get piece here and use piece.x,y instead of from
                 function(done){
                     Piece.findOneByID(pieceID, function(er, _piece){
                         piece = _piece
@@ -809,11 +783,10 @@ var Game = module.exports = (function(){
                 },
                 function(done){
                     // this means the king is making a zone move:
-                    if (piece.kind == "king"
-                        && (Math.abs(from.x - to.x) > 1 || Math.abs(from.y - to.y) > 1)){
-                        zoneMove(playerID, player, piece, from, to)
+                    if (piece.kind == "king" && (Math.abs(piece.x - to[0]) > 1 || Math.abs(piece.y - to[1]) > 1)){
+                        zoneMove(playerID, player, piece, to)
                     } else { // regular single piece move
-                        oneMove(playerID, player, piece, from, to)
+                        oneMove(playerID, player, piece, to)
                     }
                     done(null)
                 }
@@ -826,9 +799,11 @@ var Game = module.exports = (function(){
         }
 
         // regular single piece move, as opposed to moving an entire army from one zone to another
-        function oneMove(playerID, player, piece, from, to){
+        function oneMove(playerID, player, piece, to){
             var nPiece = null
             var capturedKing = null
+            var from = [piece.x, piece.y] // save this to pub remove from later this method
+            // TODO. store from as piece.p_x and p_y
             async.waterfall([
                 function(done){
                     Pieces.validatePieceTimeout(piece, function(er){
@@ -837,13 +812,13 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Move.validateOneMove(player, piece, from, to, function(er){
+                    Move.validateOneMove(player, piece, to, function(er){
                         done(er)
                     })
                 },
                 function(done){
                     // _capturedKing not null means this is a KING_KILLER move, and game over for capturedKing.player
-                    Move.oneMove(piece, from, to, function(er, _piece, _capturedKing){
+                    Move.oneMove(piece, to, function(er, _piece, _capturedKing){
                         nPiece = _piece
                         capturedKing = _capturedKing
                         done(er)
@@ -855,18 +830,18 @@ var Game = module.exports = (function(){
                     Pub.error(playerID, er.info || "ERROR. Game.oneMove: unexpected error")
                 } else if (capturedKing){
                     Game.on.gameover(capturedKing.player, playerID, capturedKing)
-                    Pub.move(nPiece, from, [ // from instead of to cause not moving king killer
-                        H.toZoneCoordinate(from.x, S),
-                        H.toZoneCoordinate(from.y, S)
+                    Pub.move(nPiece, [
+                        H.toZoneCoordinate(nPiece.x, S),
+                        H.toZoneCoordinate(nPiece.y, S)
                     ])
                 } else {
                     Pub.remove(nPiece, from, [
-                        H.toZoneCoordinate(from.x, S),
-                        H.toZoneCoordinate(from.y, S)
+                        H.toZoneCoordinate(from[0], S),
+                        H.toZoneCoordinate(from[1], S)
                     ])
-                    Pub.move(nPiece, to, [
-                        H.toZoneCoordinate(to.x, S),
-                        H.toZoneCoordinate(to.y, S)
+                    Pub.move(nPiece, [
+                        H.toZoneCoordinate(nPiece.x, S),
+                        H.toZoneCoordinate(nPiece.y, S)
                     ])
                 }
             })
@@ -874,7 +849,7 @@ var Game = module.exports = (function(){
 
         // mach
         // moving an entire army from one zone to another
-        function zoneMove(playerID, player, king, from, to){
+        function zoneMove(playerID, player, king, to){
             async.waterfall([
                 function(done){
                     Pieces.validatePieceTimeout(king, function(er){
@@ -885,35 +860,35 @@ var Game = module.exports = (function(){
                 function(done){
                     // _pieces are pieces from the origin zone, so
                     // Move.zoneMove can skip a query to save time
-                    Move.validateZoneMove(player, king, from, to, function(er, _pieces){
+                    Move.validateZoneMove(player, king, to, function(er, _pieces){
                         done(er, _pieces)
                     })
                 },
                 function(pieces, done){
-                    Move.zoneMove(pieces, to, function(er, _pieceObjs){
-                        done(er, _pieceObjs)
+                    Move.zoneMove(pieces, to, function(er, _pieceBoxes){
+                        done(er, _pieceBoxes)
                     })
                 },
-            ], function(er, pieceObjs){
+            ], function(er, pieceBoxes){
                 if (er){
                     if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.zoneMove", er)
                     Pub.error(playerID, er.info || "ERROR. Game.zoneMove: unexpected error")
                 } else {
-                    pubZoneMovePieces(pieceObjs)
+                    pubZoneMovePieces(pieceBoxes)
                 }
             })
         }
 
         // mach
-        function pubZoneMovePieces(pieceObjs){
-            pieceObjs.forEach(function(pieceObj){
-                Pub.remove(pieceObj.piece, pieceObj.from, [
-                    H.toZoneCoordinate(pieceObj.from.x, S),
-                    H.toZoneCoordinate(pieceObj.from.y, S)
+        function pubZoneMovePieces(pieceBoxes){
+            pieceBoxes.forEach(function(pieceBox){
+                Pub.remove(pieceBox.piece, pieceBox.from, [
+                    H.toZoneCoordinate(pieceBox.from[0], S),
+                    H.toZoneCoordinate(pieceBox.from[1], S)
                 ])
-                Pub.move(pieceObj.piece, pieceObj.to, [
-                    H.toZoneCoordinate(pieceObj.to.x, S),
-                    H.toZoneCoordinate(pieceObj.to.y, S)
+                Pub.move(pieceBox.piece, [
+                    H.toZoneCoordinate(pieceBox.piece.x, S),
+                    H.toZoneCoordinate(pieceBox.piece.y, S)
                 ])
             })
         }

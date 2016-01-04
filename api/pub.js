@@ -46,10 +46,9 @@ var Pub = module.exports = (function(){
         })
     }
 
-    Pub.move = function(piece, to, zone){
+    Pub.move = function(piece, zone){
         Pub.publish("move", {
             piece: piece,
-            to: to,
             zone: zone
         })
     }

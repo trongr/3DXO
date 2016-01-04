@@ -2061,10 +2061,8 @@ var Game = (function(){
                 done(null)
                 Sock.send("move", {
                     playerID: player._id,
-                    player: player,
-                    piece: piece,
-                    from: selected.position, // most likely fractions, so need to floor on server:
-                    to: pos,
+                    pieceID: piece._id,
+                    to: [x, y],
                 })
             },
         ], function(er){
@@ -2093,12 +2091,12 @@ var Game = (function(){
             // TODO. this could potentially remove another newly added
             // piece cause it doesn't know what piece it's
             // removing. fix: remove pieces by ID:
-            Game.removeObjAtXY(data.from.x, data.from.y)
+            Game.removeObjAtXY(data.from[0], data.from[1])
         }
 
         on.move = function(data){
             // remove obj if any at dst
-            var deadPiece = Game.removeObjAtXY(data.to.x, data.to.y)
+            var deadPiece = Game.removeObjAtXY(data.piece.x, data.piece.y)
             Charge.resetObjClock(deadPiece)
 
             // create new piece at dst
