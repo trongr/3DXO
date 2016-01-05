@@ -81,32 +81,17 @@ var API = (function(){
         return Player
     }())
 
-    API.Cells = (function(){
-        var Cells = {}
-
-        // data.r is ignored by server
-        Cells.get = function(data, done){
-            var url = API_PREFIX + "cell/" + data.x + "/" + data.y + "/" + data.r
-            API.req("get", url, {}, function(er, re){
-                if (re && re.cells) done(null, re.cells)
-                else done(er)
-            })
-        }
-
-        return Cells
-    }())
-
     API.Pieces = (function(){
         var Pieces = {}
 
         // get pieces within x, y, r
+        // NOTE. atm r is ignored by server
         Pieces.get = function(data, done){
-            API.Cells.get(data, function(er, _cells){
-                if (er) return done(er)
-                var pieces = _cells.map(function(cell){
-                    return cell.piece
-                })
-                done(null, pieces)
+            var url = API_PREFIX + "piece/" + data.x + "/" + data.y + "/" + data.r
+            API.req("get", url, {}, function(er, re){
+                if (re && re.pieces){
+                    done(null, re.pieces)
+                } else done(er)
             })
         }
 

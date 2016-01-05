@@ -949,7 +949,7 @@ var Piece = (function(){
         palevioletred: [219,112,147],
         lightseagreen: [32, 178,170],
         aquamarine: [127,255,212],
-        deeppink: [255,20,147],
+        // deeppink: [255,20,147],
         peru: [205,133,63],
         deepskyblue: [0,191,255],
         // darkturquoise: [0,206,209],
@@ -1592,14 +1592,15 @@ var Move = (function(){
         var x = H.toZoneCoordinate(king.x, S)
         var y = H.toZoneCoordinate(king.y, S)
 
-        if (!checkOriginZoneHasNoEnemy(x, y)) return zones
+        if (!checkZoneHasNoEnemy(x, y)) return zones
 
         var N = 1
         for (var i = -N; i <= N; i++){
             for (var j = -N; j <= N; j++){
+                if (i == 0 && j == 0) continue // ignore origin zone
                 var X = x + i * S
                 var Y = y + j * S
-                if (checkDstZoneEmpty(X, Y)){
+                if (checkZoneHasNoEnemy(X, Y)){
                     zones.push([X, Y])
                 }
             }
@@ -1607,11 +1608,7 @@ var Move = (function(){
         return zones
     }
 
-    function checkDstZoneEmpty(x, y){
-        return Obj.findObjsInZone(x, y).length == 0
-    }
-
-    function checkOriginZoneHasNoEnemy(x, y){
+    function checkZoneHasNoEnemy(x, y){
         var enemies = Obj.findObjsInZone(x, y).filter(function(obj){
             return ! Player.isFriendly(obj.game.piece)
         })

@@ -5,6 +5,7 @@ var Piece = require("../models/piece.js")
 var Player = require("../models/player.js")
 var H = require("../static/js/h.js")
 var Conf = require("../static/conf.json") // shared with client
+var Sanitize = require("../lib/sanitize.js")
 
 var S = Conf.zone_size
 
@@ -12,6 +13,31 @@ var Pieces = module.exports = (function(){
     Pieces = {
         router: express.Router()
     }
+
+    var ERROR_GET_PIECES = "ERROR. Can't populate pieces"
+
+    Pieces.router.route("/:x/:y/:r")
+        .get(function(req, res){
+            try {
+                var S = Conf.zone_size
+                var x = Math.floor(Sanitize.integer(H.param(req, "x")) / S) * S
+                var y = Math.floor(Sanitize.integer(H.param(req, "y")) / S) * S
+                // var r = Sanitize.integer(H.param(req, "r"))
+                var r = S // use default zone size
+            } catch (e){
+                return res.send({info:ERROR_GET_PIECES})
+            }
+            Piece.find({
+                x: {$gte: x, $lt: x + r},
+                y: {$gte: y, $lt: y + r},
+            }).exec(function(er, pieces){
+                if (pieces){
+                    res.send({ok:true, pieces:pieces})
+                } else {
+                    res.send({info:ERROR_GET_PIECES})
+                }
+            });
+        })
 
     // Converts player's losing army to enemy's side
     Pieces.defect = function(playerID, enemyID, army_id, done){
@@ -50,8 +76,16 @@ var Pieces = module.exports = (function(){
         })
     }
 
-    // mach
-    Pieces.findPiecesInZone = function(playerID, x, y, done){
+    Pieces.findPiecesInZone = function(x, y, done){
+        Piece.find({
+            x: {$gte: x, $lt: x + S},
+            y: {$gte: y, $lt: y + S},
+        }).exec(function(er, _pieces){
+            done(er, _pieces)
+        });
+    }
+
+    Pieces.findPlayerPiecesInZone = function(playerID, x, y, done){
         Piece.find({
             player: playerID,
             x: {$gte: x, $lt: x + S},
