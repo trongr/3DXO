@@ -80,7 +80,11 @@ var Pieces = module.exports = (function(){
             x: {$gte: x, $lt: x + S},
             y: {$gte: y, $lt: y + S},
         }).exec(function(er, _pieces){
-            done(er, _pieces)
+            if (_pieces){
+                done(null, _pieces)
+            } else {
+                done(["ERROR. Pieces.findPiecesInZone", x, y, er])
+            }
         });
     }
 
@@ -90,7 +94,11 @@ var Pieces = module.exports = (function(){
             x: {$gte: x, $lt: x + S},
             y: {$gte: y, $lt: y + S},
         }).exec(function(er, _pieces){
-            done(er, _pieces)
+            if (_pieces){
+                done(null, _pieces)
+            } else {
+                done(["ERROR. Pieces.findPlayerPiecesInZone", playerID, x, y, er])
+            }
         });
     }
 

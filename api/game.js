@@ -72,11 +72,6 @@ var Move = (function(){
         var distance, direction
         async.waterfall([
             function(done){
-                Move.validatePlayerPiece(player, piece, function(er){
-                    done(er)
-                })
-            },
-            function(done){
                 Move.validateDistance(piece, to, function(er, _distance){
                     distance = _distance
                     done(er)
@@ -119,11 +114,11 @@ var Move = (function(){
                 }
 
                 if (!_piece) done(null) // empty cell
-                else if (_piece && j < distance) done("Move blocked")
+                else if (_piece && j < distance) done(["Move blocked", _piece])
                 else if (_piece && j == distance && !piece.player.equals(_piece.player)){
                     done(null) // Blocked at the destination by non-friendly: can kill
                 } else if (_piece && j == distance){
-                    done("Move blocked by friendly")
+                    done(["Move blocked by friendly", _piece])
                 }
                 else done(null) // Nothing's in the way
             });
@@ -343,7 +338,6 @@ var Move = (function(){
         })
     }
 
-    // mach
     // returns pieces from origin zone, dx and dy == +/-8 == Conf.zone_size
     Move.validateZoneMove = function(player, king, to, done){
         var playerID = player._id
@@ -353,21 +347,39 @@ var Move = (function(){
         var Y = H.toZoneCoordinate(to[1], S)
         var dx = X - x
         var dy = Y - y
+        var pieces = []
         async.waterfall([
             function(done){
-                Move.validatePlayerPiece(player, piece, function(er){
+                if (dx == 0 && dy == 0) done("dx dy zero")
+                else if (Math.abs(dx) > S || Math.abs(dy) > S) done("dx dy gt S")
+                else done(null)
+            },
+            function(done){
+                Pieces.findPiecesInZone(x, y, function(er, _pieces){
+                    pieces = _pieces
                     done(er)
                 })
             },
             function(done){
-                // mach validate origin and dst zone
-                Pieces.findPlayerPiecesInZone(playerID, x, y, function(er, _pieces){
-                    done(er, _pieces)
-                })
+                if (checkAllPiecesBelongToPlayer(pieces, playerID)) done(null)
+                else done("enemy in origin zone")
+            },
+            function(done){
+                Pieces.findPiecesInZone(X, Y, done)
+            },
+            function(dstPieces, done){
+                if (checkAllPiecesBelongToPlayer(dstPieces, playerID)) done(null)
+                else done("enemy in dst zone")
             }
-        ], function(er, pieces){
+        ], function(er){
             if (er) done(["ERROR. Game.Move.validateZoneMove", player, king, to, er])
             else done(null, pieces, dx, dy)
+        })
+    }
+
+    function checkAllPiecesBelongToPlayer(pieces, playerID){
+        return pieces.every(function(piece){
+            return piece.player.equals(playerID)
         })
     }
 
@@ -685,6 +697,11 @@ var Game = module.exports = (function(){
                 function(done){
                     Piece.findOneByID(pieceID, function(er, _piece){
                         piece = _piece
+                        done(er)
+                    })
+                },
+                function(done){
+                    Move.validatePlayerPiece(player, piece, function(er){
                         done(er)
                     })
                 },

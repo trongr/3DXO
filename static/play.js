@@ -285,18 +285,23 @@ var Console = (function(){
                       // alternatively different zones have different rules, e.g. some zones lets you move
                       // any number of pieces, some 4 at a time, some 2, some just 1, per army.
                       // mode 1
+                      + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
                       + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
                       + " 30 seconds to recharge before it can move again.</li>"
                       // mode 2
-                      // + "<li>Similar to chess. Highlighting a piece will show its available moves.</li>"
+                      // + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
                       // + "<li>You can move one piece every 15 seconds.</li>"
                       // + "<li>You can also move any additional piece that has no enemy inside its green border.</li>"
                       // mach emphasis
-                      + "<li>You can move all your pieces in an 8 x 8 zone to a neighbouring zone if there are no "
-                      + "enemy pieces in either zone. Clicking on your king will highlight available moves.</li>"
+                      + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
+                      + "enemy pieces in either zone. Click on your king to highlight available zones.</li>"
                       + "</ol>")
-        Console.print("Type <code> /info game </code> into the chat box below to learn more about the game, "
-                      + "or dive right in and figure it out as you go.")
+        Console.print("<h2><u>TIPS</u></h2>")
+        Console.print("<ol>"
+                      + "<li>Join an Alliance. Type <code> /h alliance </code> into the chat box below to find out why.</li>"
+                      + "<li>Type <code> /h </code> to learn more about the game.</li>"
+                      + "</ol>")
+        if (_console_out && _console_out[0]) _console_out[0].scrollTop = 0;
     }
 
     function initHTML(){
@@ -304,7 +309,7 @@ var Console = (function(){
             +           "<div id='console_out_box'></div>"
             +      "</div>"
             +      "<div id='console_in_box'>"
-            +           "<textarea id='console_input' rows='1' type='text' placeholder='chat or type /info'></textarea>"
+            +           "<textarea id='console_input' rows='1' type='text' placeholder='chat or type /h'></textarea>"
             +      "</div>"
         $("body").append(html)
 
@@ -970,7 +975,7 @@ var Piece = (function(){
         blue: [0,0,255],
         // mediumblue: [0,0,205],
         forestgreen: [34,139,34],
-        magenta: [255,0,255],
+        // magenta: [255,0,255],
         // fuchsia: [255,0,255],
         rosybrown: [188,143,143],
         blueviolet: [138,43,226],
