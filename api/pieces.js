@@ -39,6 +39,14 @@ var Pieces = module.exports = (function(){
             });
         })
 
+    Pieces.makePiece = function(data, done){
+        var piece = new Piece(data)
+        piece.save(function(er){
+            if (er) done(["ERROR. Pieces.makePiece", data, er])
+            else done(null, piece)
+        })
+    }
+
     // Converts player's losing army to enemy's side
     Pieces.defect = function(playerID, enemyID, army_id, done){
         Piece.update({
@@ -56,24 +64,15 @@ var Pieces = module.exports = (function(){
     }
 
     Pieces.validatePieceTimeout = function(piece, done){
-        var pieceID = piece._id
-        var nPiece = null
-        Piece.findOneByID(pieceID, function(er, _piece){
-            nPiece = _piece
-            if (!nPiece){
-                H.log("ERROR. Pieces.validatePieceTimeout: piece not found", piece, er)
-                return done("ERROR. Piece not found.")
-            }
-            // piece.moved == null by default, so new Date(null) ==
-            // Start of Epoch, so if else check will work out: piece
-            // can move
-            var elapsed = new Date().getTime() - new Date(nPiece.moved).getTime()
-            if (elapsed >= Conf.recharge){
-                done(null)
-            } else {
-                done("Charging: ready in " + parseInt((Conf.recharge - elapsed) / 1000) + "s")
-            }
-        })
+        // piece.moved == null by default, so new Date(null) ==
+        // Start of Epoch, so if else check will work out: piece
+        // can move
+        var elapsed = new Date().getTime() - new Date(piece.moved).getTime()
+        if (elapsed >= Conf.recharge){
+            done(null)
+        } else {
+            done("ERROR. Charging: ready in " + parseInt((Conf.recharge - elapsed) / 1000) + "s")
+        }
     }
 
     Pieces.findPiecesInZone = function(x, y, done){

@@ -170,7 +170,12 @@ var Zone = module.exports = (function(){
     // One connection from client to server. Multiple channels to
     // publish and subscribe to.
     function onConnection(conn){
-        H.log("INFO. Zone.onConnection")
+        try {
+            H.log("INFO. Zone.conn", conn.remoteAddress, conn.headers["user-agent"], conn.address.address)
+        } catch (e){
+            H.log(new Date(), "ERROR. Zone.conn.catch")
+            // console.log(new Date(), "ERROR. Zone.conn.catch", conn) // conn is a circular obj so can't use H.log
+        }
         var playerID = null
 
         // Receiving data from client

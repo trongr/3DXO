@@ -12,6 +12,7 @@ var Pieces = require("../api/pieces.js")
 var DB = require("../db.js")
 
 var S = Conf.zone_size
+var OK = "OK"
 
 var Move = (function(){
     var Move = {}
@@ -71,14 +72,15 @@ var Move = (function(){
         var distance, direction
         async.waterfall([
             function(done){
-                Move.validateMoveFrom(player, piece, function(er){
+                Move.validatePlayerPiece(player, piece, function(er){
                     done(er)
                 })
             },
             function(done){
-                distance = Move.validateDistance(piece, to)
-                if (distance) done(null)
-                else done({info:"Can't move that far"})
+                Move.validateDistance(piece, to, function(er, _distance){
+                    distance = _distance
+                    done(er)
+                })
             },
             function(done){
                 Move.validateDirection(piece, to, function(er, _direction){
@@ -93,7 +95,8 @@ var Move = (function(){
                 })
             }
         ], function(er){
-            done(er)
+            if (er) done(["ERROR. Game.Move.validateOneMove", player, piece, to, er])
+            else done(null)
         })
     }
 
@@ -108,56 +111,58 @@ var Move = (function(){
                 x: piece.x + j * dx,
                 y: piece.y + j * dy,
             }).exec(function(er, _piece){
-                if (er) return done({info:"FATAL DB ERROR", er:er})
+                if (er) return done(["Piece.findOne", er])
 
                 // pawn kill but nothing at the kill destination: illegal move
                 if (isPawnKill && !_piece){
-                    return done({info:"Illegal move"})
+                    return done("Illegal pawn move")
                 }
 
                 if (!_piece) done(null) // empty cell
-                else if (_piece && j < distance) done({info:"Move blocked"})
+                else if (_piece && j < distance) done("Move blocked")
                 else if (_piece && j == distance && !piece.player.equals(_piece.player)){
                     done(null) // Blocked at the destination by non-friendly: can kill
                 } else if (_piece && j == distance){
-                    done({info:"Move blocked"}) // blocked by friendly
+                    done("Move blocked by friendly")
                 }
                 else done(null) // Nothing's in the way
             });
         }, function(er){
-            done(er)
+            if (er) done(["ERROR. Move.validateBlock", piece, distance, direction, er])
+            else done(null)
         })
     }
 
-    // mach change this method to validatePlayerPiece and simplify
-    // Makes sure that player piece and from are whose and where they
-    // should be
-    Move.validateMoveFrom = function(player, piece, done){
-        var er = null
+    Move.validatePlayerPiece = function(player, piece, done){
         try {
-            if (!player._id.equals(piece.player)) er = "Piece doesn't belong to player"
+            if (player._id.equals(piece.player)){
+                done(null)
+            } else {
+                done(["ERROR. Game.Move.validatePlayerPiece", player, piece])
+            }
         } catch (e){
-            er = "Can't validate move origin"
+            done(["ERROR. Game.Move.validatePlayerPiece.catch", player, piece])
         }
-        if (er) done({info:er})
-        else done(null)
     }
 
-    Move.validateDistance = function(piece, to){
+    Move.validateDistance = function(piece, to, done){
         try {
             var dx = to[0] - piece.x
             var dy = to[1] - piece.y
             var distance = Math.max(Math.abs(dx), Math.abs(dy))
-            if (piece.kind == "knight") return Move.range.knight // knight "distance" == 1
-            if (distance <= Move.range[piece.kind]) return distance
-            else return null
+            if (piece.kind == "knight"){
+                done(null, Move.range.knight)  // knight "distance" == 1
+            } else if (distance <= Move.range[piece.kind]){
+                done(null, distance)
+            } else {
+                done(["ERROR. Move.validateDistance: too far", piece, to])
+            }
         } catch (e){
-            return null
+            done(["ERROR. Move.validateDistance.catch", piece, to])
         }
     }
 
     Move.validateDirection = function(piece, to, done){
-        var error = {info:"Can't move that way"}
         var isPawnKill = false
         try {
             var dx = to[0] - piece.x
@@ -169,7 +174,9 @@ var Move = (function(){
             if (piece.kind != "knight"){
                 // Makes sure non-knights only move either vertically
                 // horizontally or diagonally and not, say, 2 by 3
-                if (Math.abs(dx) != Math.abs(dy) && dx != 0 && dy != 0) return done(error)
+                if (Math.abs(dx) != Math.abs(dy) && dx != 0 && dy != 0){
+                    return done(["ERROR. Move.validateDirection: non-knight", piece, to])
+                }
 
                 if (dx) dx = parseInt(dx / Math.abs(dx)) // normalize to get direction
                 if (dy) dy = parseInt(dy / Math.abs(dy))
@@ -184,7 +191,7 @@ var Move = (function(){
                     break;
                 }
             }
-            if (!directionName) return done(error)
+            if (!directionName) return done(["ERROR. Move.validateDirection: no direction name", piece, to])
 
             // Check that this direction name is in this piece's list of legal moves
             var directions = Move.rules.moves[piece.kind]
@@ -209,16 +216,16 @@ var Move = (function(){
             }
 
             if (directionFound){
-                return done(null, {
+                done(null, {
                     dx: direction[0],
                     dy: direction[1],
                     isPawnKill: isPawnKill, // so Move.validateBlock can check if there's any piece at the kill move destination
                 })
             } else {
-                return done(error)
+                done(["ERROR. Move.validateDirection: direction not found", piece, to])
             }
         } catch (e){
-            return done(error)
+            done(["ERROR. Move.validateDirection.catch", piece, to])
         }
     }
 
@@ -235,8 +242,8 @@ var Move = (function(){
                     y: to[1],
                 }).exec(function(er, _piece){
                     dstPiece = _piece
-                    if (er) return done({info:"FATAL DB ERROR", er:er})
-                    done(null)
+                    if (er) done(["Piece.findOne", to, er])
+                    else done(null)
                 });
             },
             function(done){
@@ -348,7 +355,7 @@ var Move = (function(){
         var dy = Y - y
         async.waterfall([
             function(done){
-                Move.validateMoveFrom(player, king, function(er){
+                Move.validatePlayerPiece(player, piece, function(er){
                     done(er)
                 })
             },
@@ -359,7 +366,8 @@ var Move = (function(){
                 })
             }
         ], function(er, pieces){
-            done(er, pieces, dx, dy)
+            if (er) done(["ERROR. Game.Move.validateZoneMove", player, king, to, er])
+            else done(null, pieces, dx, dy)
         })
     }
 
@@ -403,8 +411,11 @@ var Game = module.exports = (function(){
                 return res.send({info:ERROR_BUILD_ARMY})
             }
             Game.buildArmy(playerID, function(er, pieces, zone){
-                if (er){
-                    res.send(er)
+                if (er == OK){
+                    // ignore
+                } else if (er){
+                    H.log(er)
+                    res.send({info:ERROR_BUILD_ARMY})
                 } else {
                     Pub.new_army(pieces, zone)
                     res.send({ok:true, pieces:pieces})
@@ -502,7 +513,8 @@ var Game = module.exports = (function(){
                     } else if (count == 0){
                         done(null)
                     } else {
-                        done({info:"You can only build a new army if you have none left. Armies remaining: " + count})
+                        Pub.error(playerID, "You can only build a new army if you have none left. Armies remaining: " + count)
+                        done(OK)
                     }
                 })
             },
@@ -514,14 +526,13 @@ var Game = module.exports = (function(){
             },
             function(done){
                 var army = generateArmy(player, zone)
-                async.each(army, function(item, done){
-                    Game.makePiece(item, function(er, piece){
-                        if (piece){
-                            pieces.push(piece)
-                            done(null)
-                        } else {
-                            done(er || {info:"ERROR. Couldn't create new piece"})
-                        }
+                async.each(army, function(pieceData, done){
+                    // todo game logic should check if upserting is
+                    // allowed: check if there's another piece at the
+                    // same location. do the same for moving pieces
+                    Pieces.makePiece(pieceData, function(er, piece){
+                        pieces.push(piece)
+                        done(er)
                     })
                 }, function(er){
                     done(er)
@@ -533,15 +544,16 @@ var Game = module.exports = (function(){
                 })
             },
         ], function(er){
-            if (er){
-                H.log("INFO. Game.buildArmy", playerID, er)
-                done(er)
+            if (er == OK){
+                done(OK)
+            }else if (er){
+                done(["ERROR. Game.buildArmy", playerID, er])
             } else {
                 done(null, pieces, zone)
             }
             var elapsed = new Date().getTime() - start
             if (elapsed > 2000){
-                H.log("WARNING. Game.buildArmy.elapsed:", elapsed)
+                H.log("WARNING. Game.buildArmy.elapsed", elapsed)
             }
         })
     }
@@ -639,16 +651,6 @@ var Game = module.exports = (function(){
         )
     }
 
-    // todo game logic should check if upserting is allowed: check if
-    // there's another piece at the same location. do the same for
-    // moving pieces
-    Game.makePiece = function(data, done){
-        var piece = new Piece(data)
-        piece.save(function(er){
-            done(er, piece)
-        })
-    }
-
     Game.sock = function(data){
         var chan = data.chan
         if (["move"].indexOf(chan) < 0){
@@ -660,7 +662,6 @@ var Game = module.exports = (function(){
     Game.on = (function(){
         var on = {}
 
-        var VALIDATE_PIECE_TIMEOUT = "VALIDATE_PIECE_TIMEOUT"
         on.move = function(data){
             try {
                 var playerID = data.playerID
@@ -678,17 +679,13 @@ var Game = module.exports = (function(){
                 function(done){
                     Player.findOneByID(playerID, function(er, _player){
                         player = _player
-                        if (er){
-                            done({info:"FATAL ERROR. Game.move: can't find player"})
-                        } else done(null)
+                        done(er)
                     })
                 },
                 function(done){
                     Piece.findOneByID(pieceID, function(er, _piece){
                         piece = _piece
-                        if (er){
-                            done({info:"FATAL ERROR. Game.move: can't find piece"})
-                        } else done(null)
+                        done(er)
                     })
                 },
                 function(done){
@@ -702,8 +699,7 @@ var Game = module.exports = (function(){
                 }
             ], function(er){
                 if (er){
-                    H.log("ERROR. Game.move", playerID, er)
-                    Pub.error(playerID, er.info || "ERROR. Game.move: unexpected error")
+                    H.log("ERROR. Game.move", playerID, pieceID, to, er)
                 }
             })
         }
@@ -713,12 +709,13 @@ var Game = module.exports = (function(){
             var nPiece = null
             var capturedKing = null
             var from = [piece.x, piece.y] // save this to pub remove from later this method
-            // TODO. store from as piece.p_x and p_y
             async.waterfall([
                 function(done){
                     Pieces.validatePieceTimeout(piece, function(er){
-                        if (er) done({info:er, code:VALIDATE_PIECE_TIMEOUT})
-                        else done(null)
+                        if (er){
+                            Pub.error(playerID, er)
+                            done(OK)
+                        } else done(null)
                     })
                 },
                 function(done){
@@ -735,9 +732,10 @@ var Game = module.exports = (function(){
                     })
                 },
             ], function(er){
-                if (er){
-                    if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.oneMove", er)
-                    Pub.error(playerID, er.info || "ERROR. Game.oneMove: unexpected error")
+                if (er == OK){
+                    // ignore
+                }else if (er){
+                    H.log("ERROR. Game.oneMove", er)
                 } else if (capturedKing){
                     Game.on.gameover(capturedKing.player, playerID, capturedKing)
                     Pub.move(nPiece, [
@@ -762,8 +760,10 @@ var Game = module.exports = (function(){
             async.waterfall([
                 function(done){
                     Pieces.validatePieceTimeout(king, function(er){
-                        if (er) done({info:er, code:VALIDATE_PIECE_TIMEOUT})
-                        else done(null)
+                        if (er){
+                            Pub.error(playerID, er)
+                            done(OK)
+                        } else done(null)
                     })
                 },
                 function(done){
@@ -775,9 +775,10 @@ var Game = module.exports = (function(){
                     Move.zoneMove(pieces, dx, dy, done)
                 },
             ], function(er, pieces){
-                if (er){
-                    if (er.code != VALIDATE_PIECE_TIMEOUT) H.log("ERROR. Game.zoneMove", er)
-                    Pub.error(playerID, er.info || "ERROR. Game.zoneMove: unexpected error")
+                if (er == OK){
+                    // ignore
+                } else if (er){
+                    H.log("ERROR. Game.zoneMove", player, king, to, er)
                 } else {
                     pubZoneMovePieces(pieces)
                 }
@@ -847,8 +848,6 @@ var Game = module.exports = (function(){
             ], function(er){
                 if (er){
                     H.log("ERROR. Game.on.gameover", playerID, enemyID, king, er)
-                    Pub.error(playerID, er.info || "ERROR. Game.on.gameover: unexpected error")
-                    Pub.error(enemyID, er.info || "ERROR. Game.on.gameover: unexpected error")
                 } else {
                     H.log("INFO. Game.on.gameover", enemy.name, player.name)
                     Pub.gameover(player._id, false, zone)
@@ -880,7 +879,7 @@ var Test = (function(){
         var y = args[2]
         var player = args[3]
         setTimeout(function(){
-            Game.makePiece({
+            Pieces.makePiece({
                 kind: kind,
                 x: x,
                 y: y,

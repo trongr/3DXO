@@ -54,7 +54,7 @@ schema.methods.comparePassword = function(candidatePassword, done) {
 schema.statics.findOneByID = function(playerID, done){
     this.findById(playerID, function(er, player){
         if (player) done(null, player)
-        else done({error:"Player.findOneByID: not found", playerID:playerID, er:er})
+        else done(["ERROR. Player.findOneByID", playerID, er])
     })
 };
 

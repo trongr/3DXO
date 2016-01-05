@@ -50,7 +50,7 @@ schema.statics.random = function(callback) {
 schema.statics.findOneByID = function(pieceID, done){
     this.findById(pieceID, function(er, piece){
         if (piece) done(null, piece)
-        else done({error:"Piece.findOneByID", pieceID:pieceID, er:er})
+        else done(["ERROR. Piece.findOneByID", pieceID, er])
     })
 };
 
