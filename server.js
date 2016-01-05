@@ -3,7 +3,7 @@
 var http       = require("http")
 var express    = require('express');
 var app        = express();
-var logger = require('morgan');
+var morgan = require('morgan');
 var bodyParser = require('body-parser');
 var path = require('path');
 var session = require('express-session')
@@ -42,7 +42,10 @@ app.use(function (req, res, next) {
     next() // otherwise continue
 })
 
-app.use(logger('dev'));
+// app.use(morgan('dev'));
+app.use(morgan('combined', {
+    skip: function(req, res) { return res.statusCode < 400 }
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
