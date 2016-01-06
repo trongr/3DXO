@@ -14,6 +14,13 @@ var DB = require("../db.js")
 var S = Conf.zone_size
 var OK = "OK"
 
+function alertElapsed(start, max_dur, msg){
+    var elapsed = new Date().getTime() - start
+    if (elapsed > max_dur){
+        H.log("WARNING. " + msg + ".elapsed", elapsed)
+    }
+}
+
 var Move = (function(){
     var Move = {}
 
@@ -230,8 +237,10 @@ var Move = (function(){
         async.waterfall([
             function(done){
                 // Check if dst has an enemy piece. (Since we're
-                // already here at Move.oneMove if there's anything here
-                // it has to be an enemy.)
+                // already here at Move.oneMove if there's anything
+                // here it has to be an enemy.) EDIT. not necessarily:
+                // someone could have moved here while this sequence
+                // was executing. TODO do something about that
                 Piece.findOne({
                     x: to[0],
                     y: to[1],
@@ -264,6 +273,22 @@ var Move = (function(){
                 done(null, nPiece, capturedKing)
             }
         })
+    }
+
+    // moving a single piece in a zone move
+    function zoneMoveOne(piece, to, done){
+        Piece.findOne({
+            x: to[0],
+            y: to[1],
+        }).exec(function(er, _piece){
+            if (er){
+                done(["ERROR. Game.Move.zoneMoveOne.findOne", piece, to, er])
+            } else if (_piece){
+                done(OK) // dst occupied, can't zone move piece there
+            } else {
+                regularMove(piece, to, done)
+            }
+        });
     }
 
     function regularMove(piece, to, done){
@@ -386,14 +411,19 @@ var Move = (function(){
     // Moving pieces from one zone to another.
     Move.zoneMove = function(pieces, dx, dy, done){
         var nPieces = []
-        async.each(pieces, function(piece, done){
+        async.eachSeries(pieces, function(piece, done){
             var to = [piece.x + dx, piece.y + dy]
-            regularMove(piece, to, function(er, _piece){
-                if (_piece){
+            zoneMoveOne(piece, to, function(er, _piece){
+                if (er == OK){
+                    // this means there's a (most likely friendly)
+                    // piece at the dst so this piece can't move
+                    // there. ignore
+                    done(null)
+                } else if (er){
+                    done(er)
+                } else {
                     nPieces.push(_piece)
                     done(null)
-                } else {
-                    done(["regularMove: null piece response", piece, _piece, er])
                 }
             })
         }, function(er){
@@ -563,10 +593,7 @@ var Game = module.exports = (function(){
             } else {
                 done(null, pieces, zone)
             }
-            var elapsed = new Date().getTime() - start
-            if (elapsed > 2000){
-                H.log("WARNING. Game.buildArmy.elapsed", elapsed)
-            }
+            alertElapsed(start, 2000, "Game.buildArmy")
         })
     }
 
@@ -774,6 +801,7 @@ var Game = module.exports = (function(){
 
         // moving an entire army from one zone to another
         function zoneMove(playerID, player, king, to){
+            var start = new Date().getTime()
             async.waterfall([
                 function(done){
                     Pieces.validatePieceTimeout(king, function(er){
@@ -799,6 +827,7 @@ var Game = module.exports = (function(){
                 } else {
                     pubZoneMovePieces(pieces)
                 }
+                alertElapsed(start, 2000, "Game.zoneMove")
             })
         }
 

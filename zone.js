@@ -44,10 +44,10 @@ var Sub = (function(){
             } else if (data.zone){
                 callbackZones(data.zone, msg)
             } else {
-                H.log("ERROR. Zone.sub.on.message: no playerID or zone", chan, msg)
+                H.log("ERROR. Zone.message: no playerID or zone", chan, msg)
             }
         } catch (e){
-            H.log("ERROR. Zone.Sub.on.message.catch", chan, msg, e)
+            H.log("ERROR. Zone.message.catch", chan, msg, e)
         }
     });
 
@@ -126,9 +126,9 @@ var Sub = (function(){
                     delete _zones[oldZone][playerID]
                 }
             }
-            H.log("INFO. Zone.Sub.subdate", playerID, zone[0], zone[1], H.length(_zones[zone]))
+            H.log("INFO. Zone.subdate", playerID, zone[0], zone[1], H.length(_zones[zone]))
         } catch (e){
-            H.log("ERROR. Zone.Sub.subdate.catch", playerID, zone, e)
+            H.log("ERROR. Zone.subdate.catch", playerID, zone, e)
         }
     }
 
@@ -138,9 +138,9 @@ var Sub = (function(){
             var zone = _players[playerID].zone
             delete _zones[zone][playerID]
             delete _players[playerID]
-            H.log("INFO. Zone.Sub.unsub", playerID, H.length(_players))
+            H.log("INFO. Zone.unsub", playerID, H.length(_players))
         } catch (e){
-            H.log("ERROR. Zone.Sub.unsub.catch", playerID, e)
+            H.log("ERROR. Zone.unsub.catch", playerID, e)
         }
     }
 
