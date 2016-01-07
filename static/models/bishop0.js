@@ -3,7 +3,7 @@
     "metadata" :
     {
         "formatVersion" : 3.1,
-        "sourceFile"    : "bishop0.obj",
+        "sourceFile"    : "bishop.obj",
         "generatedBy"   : "OBJConverter",
         "vertices"      : 5036,
         "faces"         : 4333,

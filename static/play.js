@@ -296,11 +296,11 @@ var Console = (function(){
                       + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in either zone. Click on your king to highlight available zones.</li>"
                       + "</ol>")
-        Console.print("<h2><u>TIPS</u></h2>")
-        Console.print("<ol>"
-                      + "<li>Join an Alliance. Type <code> /h alliance </code> into the chat box below to find out why.</li>"
-                      + "<li>Type <code> /h </code> to learn more about the game.</li>"
-                      + "</ol>")
+        // Console.print("<h2><u>TIPS</u></h2>")
+        // Console.print("<ol>"
+        //               + "<li>Join an Alliance. Type <code> /h alliance </code> into the chat box below to find out why.</li>"
+        //               + "<li>Type <code> /h </code> to learn more about the game.</li>"
+        //               + "</ol>")
         if (_console_out && _console_out[0]) _console_out[0].scrollTop = 0;
     }
 
