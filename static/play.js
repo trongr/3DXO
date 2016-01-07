@@ -1988,6 +1988,19 @@ var Scene = (function(){
     return Scene
 }())
 
+var SFX = (function(){
+    var SFX = {}
+
+    var _move_snd = new Audio('/static/snd/board_move.mp3');
+    var _kill_snd = new Audio('/static/snd/board_kill.mp3');
+
+    SFX.move = function(){
+        _move_snd.cloneNode(true).play()
+    }
+
+    return SFX
+}())
+
 var Game = (function(){
     var Game = {}
 
@@ -2097,6 +2110,8 @@ var Game = (function(){
         }
 
         on.move = function(data){
+            SFX.move()
+
             // remove obj if any at dst
             var deadPiece = Game.removeObjAtXY(data.piece.x, data.piece.y)
             Charge.resetObjClock(deadPiece)
