@@ -48,9 +48,11 @@ var K = (function(){
         CAM_DIST_MAX: 80,
         // CAM_DIST_MAX: 100,
         // CAM_DIST_MAX: 150,
+        // CAM_DIST_MAX: 1000,
 
         CAM_DIST_INIT: 70,
         // CAM_DIST_INIT: 150,
+        // CAM_DIST_INIT: 700,
         MODEL_XYZ_OFFSET: {x:0, y:0, z:-0.4},
         CLOCK_XYZ_OFFSET: {x:0, y:0, z:-0.4},
         ROLLOVER_XYZ_OFFSET: {x:0, y:0, z:-0.49},
@@ -813,11 +815,10 @@ var ClassicSet = (function(){
         effect.renderToScreen = false;
         composer.addPass( effect );
 
-        var blur = new THREE.ShaderPass(THREE.MedianFilter);
-        blur.uniforms.dim.value.copy(new THREE.Vector2(1.0 / window.innerWidth, 1.0 / window.innerHeight));
-        blur.renderToScreen = false;
-        composer.addPass(blur);
-
+        // var blur = new THREE.ShaderPass(THREE.MedianFilter);
+        // blur.uniforms.dim.value.copy(new THREE.Vector2(1.0 / window.innerWidth, 1.0 / window.innerHeight));
+        // blur.renderToScreen = false;
+        // composer.addPass(blur);
 
         cannyEdge = new THREE.ShaderPass(THREE.CannyEdgeFilterPass);
         cannyEdge.renderToScreen = false;
@@ -1240,13 +1241,25 @@ var Map = (function(){
             log("ERROR. play.loadTest.onError", xhr)
         };
 
-        var loader = new THREE.OBJMTLLoader();
-        loader.load( 'static/models/king0.obj', 'static/models/king0.mtl', function ( object ) {
+        var loader = new THREE.OBJLoader();
+        // var loader = new THREE.OBJMTLLoader();
+        // loader.load( 'static/models/king0.obj', 'static/models/king0.mtl', function ( object ) {
+        loader.load( 'static/models/queen0.obj', function ( object ) {
             object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
             object.traverse( function ( child ) {
                 if ( child instanceof THREE.Mesh ) {
-                    child.material.side = THREE.DoubleSide
-                    shearModel2(child.geometry)
+                    child.geometry.computeFaceNormals();
+                    child.geometry.computeVertexNormals( true );
+                    child.material = new THREE.MeshPhongMaterial({
+                        color: 0xFF6536,
+                        emissive: 0x000000,
+                        specular: 0xF8FF42,
+                        shininess: 100,
+                        shading: THREE.FlatShading,
+                        // shading: THREE.SmoothShading,
+                        // side: THREE.DoubleSide
+                    })
+                    shearModel(child.geometry)
                     child.castShadow = true;
                     child.receiveShadow = true
                 }
@@ -1272,69 +1285,69 @@ var Map = (function(){
             Scene.add( object );
         }, onProgress, onError );
 
-        var loader = new THREE.OBJMTLLoader();
-        loader.load( 'static/models/bishop0.obj', 'static/models/bishop0.mtl', function ( object ) {
-            object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
-            object.traverse( function ( child ) {
-                if ( child instanceof THREE.Mesh ) {
-                    child.material.side = THREE.DoubleSide
-                    shearModel2(child.geometry)
-                    child.castShadow = true;
-                    child.receiveShadow = true
-                }
-            } );
-            // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(3, 0, 1), K.MODEL_XYZ_OFFSET)
-            Scene.add( object );
-        }, onProgress, onError );
+        // var loader = new THREE.OBJMTLLoader();
+        // loader.load( 'static/models/bishop0.obj', 'static/models/bishop0.mtl', function ( object ) {
+        //     object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
+        //     object.traverse( function ( child ) {
+        //         if ( child instanceof THREE.Mesh ) {
+        //             child.material.side = THREE.DoubleSide
+        //             shearModel2(child.geometry)
+        //             child.castShadow = true;
+        //             child.receiveShadow = true
+        //         }
+        //     } );
+        //     // var newObj = object.clone() // todo reuse this model e.g. for other pieces
+        //     Obj.move(object, new THREE.Vector3(3, 0, 1), K.MODEL_XYZ_OFFSET)
+        //     Scene.add( object );
+        // }, onProgress, onError );
 
-        var loader = new THREE.OBJMTLLoader();
-        loader.load( 'static/models/knight0.obj', 'static/models/knight0.mtl', function ( object ) {
-            object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
-            object.traverse( function ( child ) {
-                if ( child instanceof THREE.Mesh ) {
-                    child.material.side = THREE.DoubleSide
-                    shearModel2(child.geometry)
-                    child.castShadow = true;
-                    child.receiveShadow = true
-                }
-            } );
-            // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(4, 0, 1), K.MODEL_XYZ_OFFSET)
-            Scene.add( object );
-        }, onProgress, onError );
+        // var loader = new THREE.OBJMTLLoader();
+        // loader.load( 'static/models/knight0.obj', 'static/models/knight0.mtl', function ( object ) {
+        //     object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
+        //     object.traverse( function ( child ) {
+        //         if ( child instanceof THREE.Mesh ) {
+        //             child.material.side = THREE.DoubleSide
+        //             shearModel2(child.geometry)
+        //             child.castShadow = true;
+        //             child.receiveShadow = true
+        //         }
+        //     } );
+        //     // var newObj = object.clone() // todo reuse this model e.g. for other pieces
+        //     Obj.move(object, new THREE.Vector3(4, 0, 1), K.MODEL_XYZ_OFFSET)
+        //     Scene.add( object );
+        // }, onProgress, onError );
 
-        var loader = new THREE.OBJMTLLoader();
-        loader.load( 'static/models/rook0.obj', 'static/models/rook0.mtl', function ( object ) {
-            object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
-            object.traverse( function ( child ) {
-                if ( child instanceof THREE.Mesh ) {
-                    child.material.side = THREE.DoubleSide
-                    shearModel2(child.geometry)
-                    child.castShadow = true;
-                    child.receiveShadow = true
-                }
-            } );
-            // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(5, 0, 1), K.MODEL_XYZ_OFFSET)
-            Scene.add( object );
-        }, onProgress, onError );
+        // var loader = new THREE.OBJMTLLoader();
+        // loader.load( 'static/models/rook0.obj', 'static/models/rook0.mtl', function ( object ) {
+        //     object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
+        //     object.traverse( function ( child ) {
+        //         if ( child instanceof THREE.Mesh ) {
+        //             child.material.side = THREE.DoubleSide
+        //             shearModel2(child.geometry)
+        //             child.castShadow = true;
+        //             child.receiveShadow = true
+        //         }
+        //     } );
+        //     // var newObj = object.clone() // todo reuse this model e.g. for other pieces
+        //     Obj.move(object, new THREE.Vector3(5, 0, 1), K.MODEL_XYZ_OFFSET)
+        //     Scene.add( object );
+        // }, onProgress, onError );
 
-        var loader = new THREE.OBJMTLLoader();
-        loader.load( 'static/models/pawn0.obj', 'static/models/pawn0.mtl', function ( object ) {
-            object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
-            object.traverse( function ( child ) {
-                if ( child instanceof THREE.Mesh ) {
-                    child.material.side = THREE.DoubleSide
-                    shearModel2(child.geometry)
-                    child.castShadow = true;
-                    child.receiveShadow = true
-                }
-            } );
-            // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(6, 0, 1), K.MODEL_XYZ_OFFSET)
-            Scene.add( object );
-        }, onProgress, onError );
+        // var loader = new THREE.OBJMTLLoader();
+        // loader.load( 'static/models/pawn0.obj', 'static/models/pawn0.mtl', function ( object ) {
+        //     object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
+        //     object.traverse( function ( child ) {
+        //         if ( child instanceof THREE.Mesh ) {
+        //             child.material.side = THREE.DoubleSide
+        //             shearModel2(child.geometry)
+        //             child.castShadow = true;
+        //             child.receiveShadow = true
+        //         }
+        //     } );
+        //     // var newObj = object.clone() // todo reuse this model e.g. for other pieces
+        //     Obj.move(object, new THREE.Vector3(6, 0, 1), K.MODEL_XYZ_OFFSET)
+        //     Scene.add( object );
+        // }, onProgress, onError );
 
     }
 
@@ -1928,10 +1941,13 @@ var Scene = (function(){
     function initRenderer(){
         renderer = Scene.renderer = new THREE.WebGLRenderer( { antialias:true, alpha:true } );
         Scene.renderer.autoClear = false;
-        renderer.autoClear = false
+        Scene.renderer.autoClear = false
+        var DPR = (window.devicePixelRatio) ? window.devicePixelRatio : 1;
+        var WW = window.innerWidth;
+        var HH = window.innerHeight;
         Scene.renderer.setClearColor(0x02002B, 1);
-        Scene.renderer.setPixelRatio( window.devicePixelRatio );
-        Scene.renderer.setSize( window.innerWidth, window.innerHeight );
+        Scene.renderer.setPixelRatio( DPR );
+        Scene.renderer.setSize( WW, HH );
         Scene.renderer.shadowMapEnabled = true
         Scene.renderer.shadowMapSoft = true
         Scene.renderer.shadowMapType = THREE.PCFSoftShadowMap
@@ -1993,11 +2009,11 @@ var SFX = (function(){
 
     var _snds = {
         king: {
-            move: new Audio('/static/snd/king/technocrash01.mp3'),
+            move: new Audio('/static/snd/king/lofituned03.mp3'),
             kill: null
         },
         queen: {
-            move: new Audio('/static/snd/queen/acousticride04.mp3'),
+            move: new Audio('/static/snd/queen/lofituned02.mp3'),
             kill: null
         },
         bishop: {
