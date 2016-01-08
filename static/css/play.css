@@ -20,8 +20,9 @@ hr {
     color: white;
     margin: 5px;
     position: fixed;
-    right: 0;
-    top: 0;
+    /* right: 0; */
+    left: 310px; /* same as console_box width */
+    top: 5px;
 }
 
 #menu_box a {

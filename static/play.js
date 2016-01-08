@@ -1991,11 +1991,65 @@ var Scene = (function(){
 var SFX = (function(){
     var SFX = {}
 
-    var _move_snd = new Audio('/static/snd/board_move.mp3');
-    var _kill_snd = new Audio('/static/snd/board_kill.mp3');
+    var _snds = {
+        king: {
+            moves: [
+                new Audio('/static/snd/king/acousticcrash07.mp3'),
+                new Audio('/static/snd/king/hardcorecrash01.mp3'),
+            ],
+            kills: []
+        },
+        queen: {
+            moves: [
+                new Audio('/static/snd/queen/acousticride04.mp3'),
+                new Audio('/static/snd/queen/technocrash01.mp3'),
+            ],
+            kills: []
+        },
+        bishop: {
+            moves: [
+                new Audio('/static/snd/bishop/knockwood01.mp3'),
+                new Audio('/static/snd/bishop/knockwood02.mp3'),
+            ],
+            kills: []
+        },
+        knight: {
+            moves: [
+                new Audio('/static/snd/knight/hiphophat01.mp3'),
+                new Audio('/static/snd/knight/hiphophat02.mp3'),
+                new Audio('/static/snd/knight/electrocrash02.mp3'),
+                new Audio('/static/snd/knight/lofihatop04.mp3'),
+            ],
+            kills: []
+        },
+        rook: {
+            moves: [
+                new Audio('/static/snd/rook/acoustickick11.mp3'),
+                new Audio('/static/snd/rook/dnbkick08.mp3'),
+                new Audio('/static/snd/rook/ethniclodrum01.mp3'),
+            ],
+            kills: []
+        },
+        pawn: {
+            moves: [
+                new Audio('/static/snd/pawn/skindrum01.mp3'),
+                new Audio('/static/snd/pawn/handdrum06.mp3'),
+                new Audio('/static/snd/pawn/handdrum07.mp3'),
+                new Audio('/static/snd/pawn/handdrum13.mp3'),
+                new Audio('/static/snd/pawn/handdrum14.mp3'),
+                new Audio('/static/snd/pawn/dnbconga04.mp3'),
+                new Audio('/static/snd/pawn/cowbell01.mp3'),
+                new Audio('/static/snd/pawn/timbalehi01.mp3'),
+                new Audio('/static/snd/pawn/trashlid01.mp3'),
+            ],
+            kills: []
+        },
+    }
 
-    SFX.move = function(){
-        _move_snd.cloneNode(true).play()
+    SFX.move = function(pieceKind){
+        var pieceMoveSounds = _snds[pieceKind].moves
+        var index = Math.floor(Math.random() * pieceMoveSounds.length)
+        pieceMoveSounds[index].cloneNode(true).play()
     }
 
     return SFX
@@ -2110,8 +2164,6 @@ var Game = (function(){
         }
 
         on.move = function(data){
-            SFX.move()
-
             // remove obj if any at dst
             var deadPiece = Game.removeObjAtXY(data.piece.x, data.piece.y)
             Charge.resetObjClock(deadPiece)
@@ -2120,6 +2172,8 @@ var Game = (function(){
             var obj = Piece.make(data.piece)
             Game.addObj(obj)
             Charge.start(data.piece)
+
+            SFX.move(data.piece.kind)
         }
 
         // todo big splash screen and menu for loser
