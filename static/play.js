@@ -1993,63 +1993,33 @@ var SFX = (function(){
 
     var _snds = {
         king: {
-            moves: [
-                new Audio('/static/snd/king/acousticcrash07.mp3'),
-                new Audio('/static/snd/king/hardcorecrash01.mp3'),
-            ],
-            kills: []
+            move: new Audio('/static/snd/king/technocrash01.mp3'),
+            kill: null
         },
         queen: {
-            moves: [
-                new Audio('/static/snd/queen/acousticride04.mp3'),
-                new Audio('/static/snd/queen/technocrash01.mp3'),
-            ],
-            kills: []
+            move: new Audio('/static/snd/queen/acousticride04.mp3'),
+            kill: null
         },
         bishop: {
-            moves: [
-                new Audio('/static/snd/bishop/knockwood01.mp3'),
-                new Audio('/static/snd/bishop/knockwood02.mp3'),
-            ],
-            kills: []
+            move: new Audio('/static/snd/bishop/acoustickick11.mp3'),
+            kill: null
         },
         knight: {
-            moves: [
-                new Audio('/static/snd/knight/hiphophat01.mp3'),
-                new Audio('/static/snd/knight/hiphophat02.mp3'),
-                new Audio('/static/snd/knight/electrocrash02.mp3'),
-                new Audio('/static/snd/knight/lofihatop04.mp3'),
-            ],
-            kills: []
+            move: new Audio('/static/snd/knight/horsetrot.mp3'),
+            kill: null
         },
         rook: {
-            moves: [
-                new Audio('/static/snd/rook/acoustickick11.mp3'),
-                new Audio('/static/snd/rook/dnbkick08.mp3'),
-                new Audio('/static/snd/rook/ethniclodrum01.mp3'),
-            ],
-            kills: []
+            move: new Audio('/static/snd/rook/knockwood01.mp3'),
+            kill: null
         },
         pawn: {
-            moves: [
-                new Audio('/static/snd/pawn/skindrum01.mp3'),
-                new Audio('/static/snd/pawn/handdrum06.mp3'),
-                new Audio('/static/snd/pawn/handdrum07.mp3'),
-                new Audio('/static/snd/pawn/handdrum13.mp3'),
-                new Audio('/static/snd/pawn/handdrum14.mp3'),
-                new Audio('/static/snd/pawn/dnbconga04.mp3'),
-                new Audio('/static/snd/pawn/cowbell01.mp3'),
-                new Audio('/static/snd/pawn/timbalehi01.mp3'),
-                new Audio('/static/snd/pawn/trashlid01.mp3'),
-            ],
-            kills: []
+            move: new Audio('/static/snd/pawn/ethniclodrum01.mp3'),
+            kill: null
         },
     }
 
     SFX.move = function(pieceKind){
-        var pieceMoveSounds = _snds[pieceKind].moves
-        var index = Math.floor(Math.random() * pieceMoveSounds.length)
-        pieceMoveSounds[index].cloneNode(true).play()
+        _snds[pieceKind].move.cloneNode(true).play()
     }
 
     return SFX
