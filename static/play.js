@@ -294,7 +294,6 @@ var Console = (function(){
                       // + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
                       // + "<li>You can move one piece every 15 seconds.</li>"
                       // + "<li>You can also move any additional piece that has no enemy inside its green border.</li>"
-                      // mach emphasis
                       + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in either zone. Click on your king to highlight available zones.</li>"
                       + "</ol>")
@@ -424,56 +423,6 @@ var Sock = (function(){
     }
 
     return Sock
-}())
-
-var Chat = (function(){
-    var Chat = {}
-
-    var _zone = [] // player's current zone, updated as she moves around the map
-    var _knownZones = {} // keeps track of known zones
-    var CHAT_ZONE_CORNER_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.75, transparent:true});
-
-    Chat.init = function(x, y){
-        _zone = []
-        _knownZones = {}
-        Chat.updateZone(x, y)
-    }
-
-    Chat.updateZone = function(x, y){
-        var X = Chat.toZoneCoordinate(x)
-        var Y = Chat.toZoneCoordinate(y)
-        var zone = [X, Y]
-        if (zone.toString() == _zone.toString()){
-            return
-        } else {
-            _zone = zone
-        }
-        drawChatZoneCorners(X, Y)
-    }
-
-    Chat.toZoneCoordinate = function(x){
-        return H.toZoneCoordinate(x, Conf.chat_zone_size)
-    }
-
-    // Add cross hair corners around the chat zone
-    function drawChatZoneCorners(X, Y){
-        if (_knownZones[[X, Y]]) return // Check if we already rendered this zone
-        else _knownZones[[X, Y]] = true
-
-        var S = Conf.chat_zone_size
-        var l = 0.25
-        var h = 1.1 // NOTE. Raise the cross hair slightly so it's not hidden by the plane
-        var geo = new THREE.Geometry()
-        Map.addCrosshair(geo, X    , Y    , l, h)
-        Map.addCrosshair(geo, X    , Y + S, l, h)
-        Map.addCrosshair(geo, X + S, Y + S, l, h)
-        Map.addCrosshair(geo, X + S, Y    , l, h)
-        var line = new THREE.Line(geo, CHAT_ZONE_CORNER_MAT, THREE.LinePieces);
-        Scene.add(line)
-        Scene.render()
-    }
-
-    return Chat
 }())
 
 var Select = (function(){
@@ -1210,6 +1159,7 @@ var Map = (function(){
     var ZONE_GRID_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.5, transparent: true});
     var ZONE_GRID_DIAGONAL_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.5, transparent: true});
     var ZONE_PLANE_MAT = new THREE.MeshLambertMaterial({color:0x4179E8, transparent:true, opacity:0.9});
+    var ZONE_CORNER_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.75, transparent:true});
 
     var _map = []
     var _knownZones = {} // [X,Y]:[X,Y]
@@ -1439,6 +1389,7 @@ var Map = (function(){
         Scene.add(makeZoneGrid(X, Y, S));
         // Scene.add(makeZoneGridDiagonals(X, Y, S)); // toggle for fancy grid
         Scene.add(makeZoneBorder(X, Y, S));
+        Scene.add(makeZoneCorners(X, Y, S));
         Game.addObj(makeZonePlane(X, Y, S))
         Scene.render()
     }
@@ -1465,8 +1416,16 @@ var Map = (function(){
                 }
             }
         }
-        var line = new THREE.Line(geo, ZONE_GRID_DIAGONAL_MAT, THREE.LinePieces);
-        return line
+        return new THREE.Line(geo, ZONE_GRID_DIAGONAL_MAT, THREE.LinePieces);
+    }
+
+    // makes crosshair at zone lower left corner
+    function makeZoneCorners(X, Y, S){
+        var l = 0.25
+        var h = 1.1 // NOTE. Raise the cross hair slightly so it's not hidden by the plane
+        var geo = new THREE.Geometry()
+        Map.addCrosshair(geo, X    , Y    , l, h)
+        return new THREE.Line(geo, ZONE_CORNER_MAT, THREE.LinePieces);
     }
 
     function addZoneGridDiagonal(geo, X, Y, w, h){
@@ -2009,11 +1968,11 @@ var SFX = (function(){
 
     var _snds = {
         king: {
-            move: new Audio('/static/snd/king/lofituned03.mp3'),
+            move: new Audio('/static/snd/king/lofituned02.mp3'),
             kill: null
         },
         queen: {
-            move: new Audio('/static/snd/queen/lofituned02.mp3'),
+            move: new Audio('/static/snd/queen/lofituned03.mp3'),
             kill: null
         },
         bishop: {
