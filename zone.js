@@ -35,6 +35,12 @@ var Sub = (function(){
         // playerID: {zone:[x, y], cb:onChatMsgCallback},
     }
 
+    // MACH NOTE.
+    var UNSUB_TIMEOUT = 10 * 60000 // one hour
+    var _unsub_timeouts = {
+        // playerID: timeout,
+    }
+
     // every msg must have a zone = [x, y]
     _subscriber.on("message", function(chan, msg){
         try {
@@ -110,6 +116,8 @@ var Sub = (function(){
     // but we only call unsub once when they disconnect
     Sub.subdate = function(playerID, zone, onZoneMsgCallback){
         try {
+            clearPlayerUnsubTimeout(playerID)
+
             // update new zone
             var player = _players[playerID]
             _players[playerID] = {
@@ -132,15 +140,33 @@ var Sub = (function(){
         }
     }
 
+    Sub.playerExists = function(playerID){
+        return _players[playerID] != null
+    }
+
     // Remove player from pubsub
     Sub.unsub = function(playerID){
+        H.log("INFO. ZONE.UNSUB", playerID)
+        // clear any potential timeout before setting a new one
+        clearPlayerUnsubTimeout(playerID)
+        _unsub_timeouts[playerID] = setTimeout(function(){
+            removePlayer(playerID)
+        }, UNSUB_TIMEOUT)
+    }
+
+    function clearPlayerUnsubTimeout(playerID){
+        clearTimeout(_unsub_timeouts[playerID])
+        delete _unsub_timeouts[playerID]
+    }
+
+    function removePlayer(playerID){
         try {
             var zone = _players[playerID].zone
             delete _zones[zone][playerID]
             delete _players[playerID]
-            H.log("INFO. Zone.unsub", playerID, H.length(_players))
+            H.log("INFO. Zone.removePlayer", playerID, H.length(_players))
         } catch (e){
-            H.log("ERROR. Zone.unsub.catch", playerID, e)
+            H.log("ERROR. Zone.removePlayer.catch", playerID, e)
         }
     }
 
@@ -155,7 +181,7 @@ var Zone = module.exports = (function(){
     Zone.init = function(server){
         _server = sockjs.createServer({
             sockjs_url: "./lib/sockjs-0.3.min.js",
-            heartbeat_delay: 25000, // default 25 seconds
+            // heartbeat_delay: 25000, // default 25 seconds
             disconnect_delay: 5000, // default 5 seconds
         });
         _server.on('connection', onConnection);
@@ -171,12 +197,12 @@ var Zone = module.exports = (function(){
     // publish and subscribe to.
     function onConnection(conn){
         try {
-            H.log("INFO. Zone.conn", conn.remoteAddress, conn.headers["user-agent"], conn.address.address)
+            H.log("INFO. ZONE.CONN", conn.remoteAddress, conn.headers["user-agent"], conn.address.address)
         } catch (e){
-            H.log("ERROR. Zone.conn.catch")
-            // console.log(new Date(), "ERROR. Zone.conn.catch", conn) // conn is a circular obj so can't use H.log
+            H.log("ERROR. ZONE.CONN.CATCH")
+            // console.log(new Date(), "ERROR. ZONE.CONN.CATCH", conn) // conn is a circular obj so can't use H.log
         }
-        var _playerID = null
+        var _playerID, _zone = null
 
         // Receiving data from client
         conn.on('data', function(msg) {
@@ -184,10 +210,21 @@ var Zone = module.exports = (function(){
                 var data = JSON.parse(msg)
                 var chan = data.chan
                 _playerID = data.playerID
-                H.log("INFO. Zone.data", _playerID, chan)
+                _zone = data.zone
+                H.log("INFO. Zone.data", _playerID, _zone[0], _zone[1], chan)
+
+                // NOTE. Sometimes sockjs randomly disconnects a ff
+                // client, causing us to remove _playerID from
+                // _players. But the client can still post XHR
+                // requests, so whenever it does we re-subdate the
+                // _playerID and _zone:
+                if (chan != "zone" && !Sub.playerExists(_playerID)){
+                    H.log("DEBUG. Zone.data.playerExists.not", _playerID)
+                    Sub.subdate(_playerID, _zone, onZoneMsgCallback)
+                }
+
                 if (chan == "zone"){
-                    var zone = data.zone
-                    Sub.subdate(_playerID, zone, onZoneMsgCallback)
+                    Sub.subdate(_playerID, _zone, onZoneMsgCallback)
                 } else if (chan == "chat"){
                     Pub.chat(data)
                 } else {
@@ -199,12 +236,8 @@ var Zone = module.exports = (function(){
         });
 
         conn.on("close", function(){
-            try {
-                H.log("INFO. Zone.close", _playerID)
-                Sub.unsub(_playerID)
-            } catch (e){
-                H.log("ERROR. Zone.close.catch", _playerID)
-            }
+            if (!_playerID) return
+            Sub.unsub(_playerID)
         })
 
         function onZoneMsgCallback(msg){

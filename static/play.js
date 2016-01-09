@@ -29,7 +29,7 @@
 // farther
 
 function log(msg, er){
-    console.log(new Date().getTime(), msg, er)
+    console.log(new Date().toLocaleTimeString(), msg, er)
 }
 
 var K = (function(){
@@ -295,7 +295,8 @@ var Console = (function(){
                       // + "<li>You can move one piece every 15 seconds.</li>"
                       // + "<li>You can also move any additional piece that has no enemy inside its green border.</li>"
                       + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
-                      + "enemy pieces in either zone. Click on your king to highlight available zones.</li>"
+                      + "enemy pieces in your zone, and no enemy king in the destination zone. Click on your king to "
+                      + "highlight available zones.</li>"
                       + "</ol>")
         // Console.print("<h2><u>TIPS</u></h2>")
         // Console.print("<ol>"
@@ -376,7 +377,7 @@ var Sock = (function(){
         _sock = new SockJS('http://localhost:8080/game');
 
         _sock.onopen = function(){
-            if (isRetry) Console.info(new Date() + " Connected")
+            if (isRetry) Console.info(new Date().toLocaleTimeString() + " Connected")
             isRetry = true
             Sock.subZone(x, y)
         };
@@ -394,7 +395,7 @@ var Sock = (function(){
         };
 
         _sock.onclose = function() {
-            Console.warn(new Date() + " Lost connection: retrying in 5s")
+            Console.warn(new Date().toLocaleTimeString() + " Lost connection: retrying in 5s")
             setTimeout(function(){
                 Sock.init(_zone[0], _zone[1])
             }, 5000)
@@ -403,6 +404,8 @@ var Sock = (function(){
 
     Sock.send = function(chan, data){
         data.chan = chan
+        data.playerID = _playerID
+        data.zone = _zone
         _sock.send(JSON.stringify(data))
     }
 
@@ -2001,9 +2004,8 @@ var Game = (function(){
         }
 
         on.remove = function(data){
-            // TODO. this could potentially remove another newly added
-            // piece cause it doesn't know what piece it's
-            // removing. fix: remove pieces by ID:
+            // mach remove pieces by ID, because positions can get out
+            // of sync, especially if players lose connections
             Game.removeObjAtXY(data.from[0], data.from[1])
         }
 
