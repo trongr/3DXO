@@ -40,8 +40,8 @@ var K = (function(){
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
         CAM_DIST_MIN: 50,
 
-        CAM_DIST_MAX: 80,
-        // CAM_DIST_MAX: 100,
+        // CAM_DIST_MAX: 80,
+        CAM_DIST_MAX: 100,
         // CAM_DIST_MAX: 150,
         // CAM_DIST_MAX: 1000,
 
@@ -53,6 +53,7 @@ var K = (function(){
         ROLLOVER_XYZ_OFFSET: {x:0, y:0, z:-0.49},
         HIGHLIGHT_XYZ_OFFSET: {x:0, y:0, z:-0.49},
         HIGHLIGHT_ZONE_XYZ_OFFSET: {x:-0.5, y:-0.5, z:-0.49},
+        ZONE_NUMBER_XYZ_OFFSET: {x:2, y:-1.4, z:0},
     }
 
     shearGeo(K.CUBE_GEO)
@@ -1282,16 +1283,22 @@ var Map = (function(){
     // makes crosshair at zone lower left corner
     function makeZoneCorners(X, Y){
         var l = 0.25
-        var h = 1.1 // NOTE. Raise the cross hair slightly so it's not hidden by the plane
+        // mach
+        // var h = 1.1 // NOTE. Raise the cross hair slightly so it's not hidden by the plane
+        var h = 2 // NOTE. Raise the cross hair slightly so it's not hidden by the plane
         var geo = new THREE.Geometry()
         Map.addCrosshair(geo, X    , Y    , l, h)
         return new THREE.Line(geo, ZONE_CORNER_MAT, THREE.LinePieces);
     }
 
     function makeZoneNumber(X, Y){
-        var spritey = Word.makeTextSprite( " Hello, ",
-                                      { fontsize: 24, borderColor: {r:255, g:0, b:0, a:1.0}, backgroundColor: {r:255, g:100, b:100, a:0.8} } );
-        Obj.move(spritey, new THREE.Vector3(0, 0, 2), K.CLOCK_XYZ_OFFSET)
+        var spritey = Word.makeTextSprite("[" + X + ", " + Y + "]", {
+            // fontface: "Arial",
+            fontface: "Courier",
+            fontsize: 12,
+            color: [255, 255, 255, 1],
+        } );
+        Obj.move(spritey, new THREE.Vector3(X, Y, 2), K.ZONE_NUMBER_XYZ_OFFSET)
         return spritey
     }
 
@@ -1313,6 +1320,7 @@ var Map = (function(){
         return line
     }
 
+    // mach cache plane geo
     function makeZonePlane(X, Y, S){
         var geo = new THREE.PlaneBufferGeometry(S, S);
         var plane = new THREE.Mesh(geo, ZONE_PLANE_MAT);
@@ -1849,38 +1857,32 @@ var Word = (function(){
 
     var SPRITE_ALIGNMENT = new THREE.Vector2( 1, -1 )
 
-    Word.makeTextSprite = function( message, parameters )
+    Word.makeTextSprite = function( message, opts )
     {
-        if ( parameters === undefined ) parameters = {};
-        var fontface = parameters.hasOwnProperty("fontface") ? parameters["fontface"] : "Arial";
-        var fontsize = parameters.hasOwnProperty("fontsize") ? parameters["fontsize"] : 18;
-        var borderThickness = parameters.hasOwnProperty("borderThickness") ? parameters["borderThickness"] : 4;
-        var borderColor = parameters.hasOwnProperty("borderColor") ? parameters["borderColor"] : { r:0, g:0, b:0, a:1.0 };
-        var backgroundColor = parameters.hasOwnProperty("backgroundColor") ? parameters["backgroundColor"] : { r:255, g:255, b:255, a:1.0 };
+        var fontface = opts.fontface || "Courier";
+        var fontsize = opts.fontsize || 60;
+        var color = opts.color || [255, 255, 255, 1];
+        var borderthickness = opts.borderthickness || 0;
+        var bordercolor = opts.bordercolor || [255, 255, 255,1];
+        var backgroundcolor = opts.backgroundcolor || [255, 255, 255,1];
 
         var canvas = document.createElement('canvas');
         var context = canvas.getContext('2d');
-        context.font = "Bold " + fontsize + "px " + fontface;
+        // context.font = "Bold " + fontsize + "px " + fontface;
+        context.font = fontsize + "px " + fontface;
 
         // get size data (height depends only on font size)
         var metrics = context.measureText( message );
         var textWidth = metrics.width;
 
-        // background color
-        context.fillStyle   = "rgba(" + backgroundColor.r + "," + backgroundColor.g + ","
-            + backgroundColor.b + "," + backgroundColor.a + ")";
-        // border color
-        context.strokeStyle = "rgba(" + borderColor.r + "," + borderColor.g + ","
-            + borderColor.b + "," + borderColor.a + ")";
+        // NOTE. work around for weird border around text:
+        // http://stackoverflow.com/questions/18992365/unusual-antialias-while-using-basic-texture-material-in-three-js
+        context.fillStyle = 'rgba(255,255,255,0.01)'; // 0.01 used in SpriteMaterial alphaTest
+        // context.fillStyle = 'rgba(0, 0, 0, 1)';
+        context.fillRect(0,0,canvas.width,canvas.height);
 
-        context.lineWidth = borderThickness;
-        roundRect(context, borderThickness/2, borderThickness/2, textWidth + borderThickness, fontsize * 1.4 + borderThickness, 6);
-        // 1.4 is extra height factor for text below baseline: g,j,p,q.
-
-        // text color
-        context.fillStyle = "rgba(0, 0, 0, 1.0)";
-
-        context.fillText( message, borderThickness, fontsize + borderThickness);
+        context.fillStyle = "rgba(" + color[0] + "," + color[1] + "," + color[2] + "," + color[3] + ")";;
+        context.fillText( message, borderthickness, fontsize + borderthickness);
 
         // canvas contents will be used for a texture
         var texture = new THREE.Texture(canvas)
@@ -1888,29 +1890,12 @@ var Word = (function(){
         texture.needsUpdate = true;
 
         var spriteMaterial = new THREE.SpriteMaterial({
-            map: texture, useScreenCoordinates: false, alignment: SPRITE_ALIGNMENT
-        } );
+            map: texture, useScreenCoordinates: false, alignment: SPRITE_ALIGNMENT,
+            alphaTest:0.01
+        });
         var sprite = new THREE.Sprite( spriteMaterial );
-        sprite.scale.set(3, 1.5, 1.0);
+        sprite.scale.set(5, 2.5, 1.0);
         return sprite;
-    }
-
-    // function for drawing rounded rectangles
-    function roundRect(ctx, x, y, w, h, r)
-    {
-        ctx.beginPath();
-        ctx.moveTo(x+r, y);
-        ctx.lineTo(x+w-r, y);
-        ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-        ctx.lineTo(x+w, y+h-r);
-        ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-        ctx.lineTo(x+r, y+h);
-        ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-        ctx.lineTo(x, y+r);
-        ctx.quadraticCurveTo(x, y, x+r, y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
     }
 
     return Word
