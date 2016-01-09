@@ -48,12 +48,16 @@ var K = (function(){
         CAM_DIST_INIT: 70,
         // CAM_DIST_INIT: 150,
         // CAM_DIST_INIT: 700,
-        MODEL_XYZ_OFFSET: {x:0, y:0, z:-0.4},
-        CLOCK_XYZ_OFFSET: {x:0, y:0, z:-0.4},
-        ROLLOVER_XYZ_OFFSET: {x:0, y:0, z:-0.49},
-        HIGHLIGHT_XYZ_OFFSET: {x:0, y:0, z:-0.49},
-        HIGHLIGHT_ZONE_XYZ_OFFSET: {x:-0.5, y:-0.5, z:-0.49},
-        ZONE_NUMBER_XYZ_OFFSET: {x:2, y:-1.4, z:0},
+
+        MODEL_OFFSET: {x:0, y:0, z:-0.4},
+        CLOCK_OFFSET: {x:0, y:0, z:-0.4},
+        ROLLOVER_OFFSET: {x:0, y:0, z:-0.49},
+        HIGHLIGHT_OFFSET: {x:0, y:0, z:-0.49},
+        HIGHLIGHT_ZONE_OFFSET: {x:-0.5, y:-0.5, z:-0.49},
+        CROSSHAIR_OFFSET: {x:-0.5, y:-0.5, z:0},
+        ZONE_NUMBER_OFFSET: {x:2, y:-1.4, z:0},
+        ZONE_GRID_OFFSET: {x:-0.5, y:-0.5, z:-0.51},
+        ZONE_BORDER_OFFSET: {x:-0.5, y:-0.5, z:-0.51},
     }
 
     shearGeo(K.CUBE_GEO)
@@ -226,7 +230,7 @@ var Charge = (function(){
         var ring = new THREE.Mesh(clock_geo, CLOCK_MAT);
         // NOTE. This moves to the center of cell xyz. If you need to
         // adjust say z to raise the ring higher, use something else.
-        Obj.move(ring, new THREE.Vector3(x, y, z), K.CLOCK_XYZ_OFFSET)
+        Obj.move(ring, new THREE.Vector3(x, y, z), K.CLOCK_OFFSET)
         return ring
     }
 
@@ -415,6 +419,7 @@ var Sock = (function(){
         } else {
             _zone = zone
         }
+        log("INFO. Sock.subZone", [_playerID, zone])
         Sock.send("zone", {playerID:_playerID, zone:zone})
     }
 
@@ -527,7 +532,7 @@ var Highlight = (function(){
             var color = move.kill ? "red" : "green"
             var highlight = _highlights[color][i] || Highlight.makeHighlight(color)
             highlight.visible = true
-            Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z), K.HIGHLIGHT_XYZ_OFFSET)
+            Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z), K.HIGHLIGHT_OFFSET)
         }
     }
 
@@ -538,7 +543,7 @@ var Highlight = (function(){
             highlight.visible = true
             Obj.move(highlight, new THREE.Vector3(
                 zones[i][0] + S / 2, zones[i][1] + S / 2, 1.5
-            ), K.HIGHLIGHT_ZONE_XYZ_OFFSET)
+            ), K.HIGHLIGHT_ZONE_OFFSET)
         }
     }
 
@@ -759,7 +764,7 @@ var Piece = (function(){
         var obj = ClassicSet.make(piece.kind, color, pos)
         obj.game = {piece:piece}
         Scene.add(obj);
-        Obj.move(obj, pos, K.MODEL_XYZ_OFFSET)
+        Obj.move(obj, pos, K.MODEL_OFFSET)
         return obj
     }
 
@@ -1017,7 +1022,7 @@ var Obj = (function(){
 
     Obj.highlight = function(obj, isHigh){
         if (!obj) return
-        if (isHigh) Obj.move(Rollover.getMesh(), obj.position, K.ROLLOVER_XYZ_OFFSET)
+        if (isHigh) Obj.move(Rollover.getMesh(), obj.position, K.ROLLOVER_OFFSET)
         else Rollover.hide()
     }
 
@@ -1080,6 +1085,8 @@ var Obj = (function(){
 var Map = (function(){
     var Map = {}
 
+    var PLANE_GEO, CROSSHAIR_GEO, ZONE_GRID_GEO, ZONE_BORDER_GEO;
+
     var ZONE_BORDER_MAT = new THREE.LineBasicMaterial({color: 0xffffff});
     var ZONE_GRID_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.5, transparent: true});
     var ZONE_GRID_DIAGONAL_MAT = new THREE.LineBasicMaterial({color: 0xffffff, opacity: 0.5, transparent: true});
@@ -1092,6 +1099,13 @@ var Map = (function(){
 
     Map.init = function(x, y){
         _map = []
+
+        var S = Conf.zone_size
+        PLANE_GEO = new THREE.PlaneBufferGeometry(S, S)
+        initCrosshairGeo()
+        initZoneGridGeo(S)
+        initZoneBorderGeo(S)
+
         Map.addMouseDragListener(function scrollHandler(){
             var x = Scene.camera.position.x
             var y = Scene.camera.position.y
@@ -1139,7 +1153,7 @@ var Map = (function(){
                 }
             } );
             // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(1, 0, 1), K.MODEL_XYZ_OFFSET)
+            Obj.move(object, new THREE.Vector3(1, 0, 1), K.MODEL_OFFSET)
             Scene.add( object );
         }, onProgress, onError );
 
@@ -1155,7 +1169,7 @@ var Map = (function(){
                 }
             } );
             // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-            Obj.move(object, new THREE.Vector3(2, 0, 1), K.MODEL_XYZ_OFFSET)
+            Obj.move(object, new THREE.Vector3(2, 0, 1), K.MODEL_OFFSET)
             Scene.add( object );
         }, onProgress, onError );
 
@@ -1246,8 +1260,7 @@ var Map = (function(){
             _knownZonesMap[[X, Y]] = [X, Y]
         }
         var S = Conf.zone_size
-        Scene.add(makeZoneGrid(X, Y, S));
-        // Scene.add(makeZoneGridDiagonals(X, Y, S)); // toggle for fancy grid
+        Scene.add(makeZoneGrid(X, Y));
         Scene.add(makeZoneBorder(X, Y, S));
         Scene.add(makeZoneCorners(X, Y));
         Scene.add(makeZoneNumber(X, Y));
@@ -1255,40 +1268,36 @@ var Map = (function(){
         Scene.render()
     }
 
-    function makeZoneGrid(X, Y, S){
-        var geo = new THREE.Geometry();
-        for ( var i = 0; i < S; i++){
-            geo.vertices.push(new THREE.Vector3(X + i, Y + 0, 1));
-            geo.vertices.push(new THREE.Vector3(X + i, Y + S, 1));
-            geo.vertices.push(new THREE.Vector3(X + 0, Y + i, 1));
-            geo.vertices.push(new THREE.Vector3(X + S, Y + i, 1));
-        }
-        var line = new THREE.Line( geo, ZONE_GRID_MAT, THREE.LinePieces );
+    function makeZoneGrid(X, Y){
+        var line = new THREE.Line(ZONE_GRID_GEO, ZONE_GRID_MAT, THREE.LinePieces);
+        Obj.move(line, new THREE.Vector3(X, Y, 1), K.ZONE_GRID_OFFSET)
         return line
     }
 
-    function makeZoneGridDiagonals(X, Y, S){
-        var geo = new THREE.Geometry();
+    function initZoneGridGeo(S){
+        ZONE_GRID_GEO = new THREE.Geometry();
         for ( var i = 0; i < S; i++){
-            for (var j = 0; j < S; j++){
-                if ((i + j) % 2 == 0){
-                    addZoneGridDiagonal(geo, X + i, Y + j, K.CUBE_SIZE, 1.2)
-                    Map.addCrosshair(geo, X + i + K.CUBE_SIZE / 2, Y + j + K.CUBE_SIZE / 2, K.CUBE_SIZE / 2, 1.4)
-                }
-            }
+            ZONE_GRID_GEO.vertices.push(new THREE.Vector3(i, 0, 0));
+            ZONE_GRID_GEO.vertices.push(new THREE.Vector3(i, S, 0));
+            ZONE_GRID_GEO.vertices.push(new THREE.Vector3(0, i, 0));
+            ZONE_GRID_GEO.vertices.push(new THREE.Vector3(S, i, 0));
         }
-        return new THREE.Line(geo, ZONE_GRID_DIAGONAL_MAT, THREE.LinePieces);
     }
 
     // makes crosshair at zone lower left corner
     function makeZoneCorners(X, Y){
+        var ch = new THREE.Line(CROSSHAIR_GEO, ZONE_CORNER_MAT, THREE.LinePieces);
+        Obj.move(ch, new THREE.Vector3(X, Y, 1), K.CROSSHAIR_OFFSET)
+        return ch
+    }
+
+    function initCrosshairGeo(){
         var l = 0.25
-        // mach
-        // var h = 1.1 // NOTE. Raise the cross hair slightly so it's not hidden by the plane
-        var h = 2 // NOTE. Raise the cross hair slightly so it's not hidden by the plane
-        var geo = new THREE.Geometry()
-        Map.addCrosshair(geo, X    , Y    , l, h)
-        return new THREE.Line(geo, ZONE_CORNER_MAT, THREE.LinePieces);
+        CROSSHAIR_GEO = new THREE.Geometry()
+        CROSSHAIR_GEO.vertices.push(new THREE.Vector3(-l, 0, 0));
+        CROSSHAIR_GEO.vertices.push(new THREE.Vector3(l, 0, 0));
+        CROSSHAIR_GEO.vertices.push(new THREE.Vector3(0, -l, 0));
+        CROSSHAIR_GEO.vertices.push(new THREE.Vector3(0, l, 0));
     }
 
     function makeZoneNumber(X, Y){
@@ -1298,43 +1307,33 @@ var Map = (function(){
             fontsize: 12,
             color: [255, 255, 255, 1],
         } );
-        Obj.move(spritey, new THREE.Vector3(X, Y, 2), K.ZONE_NUMBER_XYZ_OFFSET)
+        Obj.move(spritey, new THREE.Vector3(X, Y, 2), K.ZONE_NUMBER_OFFSET)
         return spritey
     }
 
-    function addZoneGridDiagonal(geo, X, Y, w, h){
-        geo.vertices.push(new THREE.Vector3(X    , Y    , h));
-        geo.vertices.push(new THREE.Vector3(X + w, Y + w, h));
-        geo.vertices.push(new THREE.Vector3(X + w, Y    , h));
-        geo.vertices.push(new THREE.Vector3(X    , Y + w, h));
-    }
-
+    // mach
     // add thicker border around the edges
     function makeZoneBorder(X, Y, S){
-        var geo = new THREE.Geometry()
-        geo.vertices.push(new THREE.Vector3(X + 0, Y + 0, 1));
-        geo.vertices.push(new THREE.Vector3(X + 0, Y + S, 1));
-        geo.vertices.push(new THREE.Vector3(X + S, Y + S, 1));
-        geo.vertices.push(new THREE.Vector3(X + S, Y + 0, 1));
-        var line = new THREE.Line( geo, ZONE_BORDER_MAT, THREE.LineStrip );
+        var line = new THREE.Line( ZONE_BORDER_GEO, ZONE_BORDER_MAT, THREE.LineStrip );
+        Obj.move(line, new THREE.Vector3(X, Y, 1), K.ZONE_BORDER_OFFSET)
         return line
     }
 
-    // mach cache plane geo
+    // mach
+    function initZoneBorderGeo(S){
+        ZONE_BORDER_GEO = new THREE.Geometry()
+        ZONE_BORDER_GEO.vertices.push(new THREE.Vector3(0, 0, 0));
+        ZONE_BORDER_GEO.vertices.push(new THREE.Vector3(0, S, 0));
+        ZONE_BORDER_GEO.vertices.push(new THREE.Vector3(S, S, 0));
+        ZONE_BORDER_GEO.vertices.push(new THREE.Vector3(S, 0, 0));
+    }
+
     function makeZonePlane(X, Y, S){
-        var geo = new THREE.PlaneBufferGeometry(S, S);
-        var plane = new THREE.Mesh(geo, ZONE_PLANE_MAT);
+        var plane = new THREE.Mesh(PLANE_GEO, ZONE_PLANE_MAT);
         plane.visible = true;
         plane.receiveShadow = true;
         plane.position.set(X + S / 2, Y + S / 2, 1)
         return plane
-    }
-
-    Map.addCrosshair = function(geo, X, Y, l, h){
-        geo.vertices.push(new THREE.Vector3(X - l, Y,     h));
-        geo.vertices.push(new THREE.Vector3(X + l, Y,     h));
-        geo.vertices.push(new THREE.Vector3(X    , Y - l, h));
-        geo.vertices.push(new THREE.Vector3(X    , Y + l, h));
     }
 
     return Map
@@ -1846,7 +1845,14 @@ var SFX = (function(){
     }
 
     SFX.move = function(pieceKind){
-        _snds[pieceKind].move.cloneNode(true).play()
+        // NOTE. Don't use ...move.cloneNode(true).play() cause it'll
+        // make a request (304) every time you call play(). The
+        // trouble with ...move.play() is that you can't play a sound
+        // while it's already being played. One solution is to make a
+        // few copies of the same sound and play them one after the
+        // other.
+        // mach
+        _snds[pieceKind].move.play()
     }
 
     return SFX
@@ -1924,18 +1930,12 @@ var Game = (function(){
                 })
             },
             function(done){
-                done(null)
                 if (king){
                     x = king.x
                     y = king.y
                 }
                 Sock.init(x, y)
-                // mach don't think this is true anymore:
-                // ClassicSet needs the renderer to finish loading from
-                // Scene.init to init its composers
                 Scene.init(x, y)
-            },
-            function(done){
                 // Piece.make needs ClassicSet.init to load the models
                 ClassicSet.init(function(er){
                     done(er)
