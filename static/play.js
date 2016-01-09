@@ -1311,7 +1311,6 @@ var Map = (function(){
         return spritey
     }
 
-    // mach
     // add thicker border around the edges
     function makeZoneBorder(X, Y, S){
         var line = new THREE.Line( ZONE_BORDER_GEO, ZONE_BORDER_MAT, THREE.LineStrip );
@@ -1319,7 +1318,6 @@ var Map = (function(){
         return line
     }
 
-    // mach
     function initZoneBorderGeo(S){
         ZONE_BORDER_GEO = new THREE.Geometry()
         ZONE_BORDER_GEO.vertices.push(new THREE.Vector3(0, 0, 0));

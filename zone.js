@@ -155,10 +155,8 @@ var Zone = module.exports = (function(){
     Zone.init = function(server){
         _server = sockjs.createServer({
             sockjs_url: "./lib/sockjs-0.3.min.js",
-            // heartbeat_delay: 25000, // default 25 seconds
-            // disconnect_delay: 60000, // default 5 seconds
-            disconnect_delay: 60 * 60 * 1000, // default 5 seconds
-            // disconnect_delay: 5 * 1000, // default 5 seconds
+            heartbeat_delay: 25000, // default 25 seconds
+            disconnect_delay: 5000, // default 5 seconds
         });
         _server.on('connection', onConnection);
         _server.installHandlers(server, {
@@ -178,18 +176,18 @@ var Zone = module.exports = (function(){
             H.log("ERROR. Zone.conn.catch")
             // console.log(new Date(), "ERROR. Zone.conn.catch", conn) // conn is a circular obj so can't use H.log
         }
-        var playerID = null
+        var _playerID = null
 
         // Receiving data from client
         conn.on('data', function(msg) {
             try {
                 var data = JSON.parse(msg)
                 var chan = data.chan
-                playerID = data.playerID
-                H.log("INFO. Zone.data", playerID, chan)
+                _playerID = data.playerID
+                H.log("INFO. Zone.data", _playerID, chan)
                 if (chan == "zone"){
                     var zone = data.zone
-                    Sub.subdate(playerID, zone, onZoneMsgCallback)
+                    Sub.subdate(_playerID, zone, onZoneMsgCallback)
                 } else if (chan == "chat"){
                     Pub.chat(data)
                 } else {
@@ -202,10 +200,10 @@ var Zone = module.exports = (function(){
 
         conn.on("close", function(){
             try {
-                H.log("INFO. Zone.close", playerID)
-                Sub.unsub(playerID)
+                H.log("INFO. Zone.close", _playerID)
+                Sub.unsub(_playerID)
             } catch (e){
-                H.log("ERROR. Zone.close.catch", playerID)
+                H.log("ERROR. Zone.close.catch", _playerID)
             }
         })
 
