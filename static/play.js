@@ -376,7 +376,7 @@ var Sock = (function(){
         _sock = new SockJS('http://localhost:8080/game');
 
         _sock.onopen = function(){
-            if (isRetry) Console.info("Connected")
+            if (isRetry) Console.info(new Date() + " Connected")
             isRetry = true
             Sock.subZone(x, y)
         };
@@ -394,7 +394,7 @@ var Sock = (function(){
         };
 
         _sock.onclose = function() {
-            Console.warn("Lost connection: retrying in 5s")
+            Console.warn(new Date() + " Lost connection: retrying in 5s")
             setTimeout(function(){
                 Sock.init(_zone[0], _zone[1])
             }, 5000)
@@ -403,6 +403,8 @@ var Sock = (function(){
 
     Sock.send = function(chan, data){
         data.chan = chan
+        data.playerID = _playerID
+        data.zone = _zone
         _sock.send(JSON.stringify(data))
     }
 
@@ -419,8 +421,8 @@ var Sock = (function(){
         } else {
             _zone = zone
         }
-        log("INFO. Sock.subZone", [_playerID, zone])
-        Sock.send("zone", {playerID:_playerID, zone:zone})
+        log("INFO. Sock.subZone", [_playerID, _zone])
+        Sock.send("zone", {playerID:_playerID, zone:_zone})
     }
 
     return Sock
