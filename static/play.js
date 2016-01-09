@@ -403,8 +403,6 @@ var Sock = (function(){
 
     Sock.send = function(chan, data){
         data.chan = chan
-        data.playerID = _playerID
-        data.zone = _zone
         _sock.send(JSON.stringify(data))
     }
 

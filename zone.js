@@ -132,10 +132,6 @@ var Sub = (function(){
         }
     }
 
-    Sub.playerExists = function(playerID){
-        return _players[playerID] != null
-    }
-
     // Remove player from pubsub
     Sub.unsub = function(playerID){
         try {
@@ -182,31 +178,18 @@ var Zone = module.exports = (function(){
             H.log("ERROR. Zone.conn.catch")
             // console.log(new Date(), "ERROR. Zone.conn.catch", conn) // conn is a circular obj so can't use H.log
         }
-        var _playerID, _zone = null
+        var playerID = null
 
         // Receiving data from client
         conn.on('data', function(msg) {
             try {
                 var data = JSON.parse(msg)
                 var chan = data.chan
-                _playerID = data.playerID
-                _zone = data.zone
-                H.log("INFO. Zone.data", _playerID, _zone[0], _zone[1], chan)
-
-                // NOTE. This happens sometimes in firefox because it
-                // uses xhr polling, and for reasons unknown sockjs
-                // disconnects the client, so we can't send client
-                // data but it can still POST xhr_send requests. This
-                // condition catches those move/chat/etc. requests and
-                // subdates the _playerID with _zone anyway, as if it
-                // were a subZone msg:
-                if (chan != "zone" && ! Sub.playerExists(_playerID)){
-                    H.log("DEBUG. Zone.playerExists.not: subdate", _playerID)
-                    Sub.subdate(_playerID, _zone, onZoneMsgCallback)
-                }
-
+                playerID = data.playerID
+                H.log("INFO. Zone.data", playerID, chan)
                 if (chan == "zone"){
-                    Sub.subdate(_playerID, _zone, onZoneMsgCallback)
+                    var zone = data.zone
+                    Sub.subdate(playerID, zone, onZoneMsgCallback)
                 } else if (chan == "chat"){
                     Pub.chat(data)
                 } else {
@@ -219,10 +202,10 @@ var Zone = module.exports = (function(){
 
         conn.on("close", function(){
             try {
-                H.log("INFO. Zone.close", _playerID)
-                Sub.unsub(_playerID)
+                H.log("INFO. Zone.close", playerID)
+                Sub.unsub(playerID)
             } catch (e){
-                H.log("ERROR. Zone.close.catch", _playerID)
+                H.log("ERROR. Zone.close.catch", playerID)
             }
         })
 
