@@ -32,11 +32,6 @@ function log(msg, er){
     console.log(new Date().getTime(), msg, er)
 }
 
-var clock = new THREE.Clock()
-var camera, _scene, sceneEdge, sceneDiffuse, renderer, composer, composer2;
-var effectFXAA, cannyEdge, texturePass;
-var renderTargetEdge, renderTargetDiffuse;
-
 var K = (function(){
 
     var S = 1
@@ -671,7 +666,6 @@ var ClassicSet = (function(){
     var _mats = {} // e.g. [r, g, b]: material
 
     ClassicSet.init = function(done){
-        initComposer()
         initGeometries(done)
     }
 
@@ -692,18 +686,6 @@ var ClassicSet = (function(){
         meshDiffuse.rotation.x = angle // fake 3D in real 3D!!! LOL
         meshDiffuse.castShadow = true;
         meshDiffuse.receiveShadow = true;
-
-        // TODO uncomment to enable edge:
-        //
-        // geoEdge = geoDiffuse.clone()
-        // mesh = new THREE.Mesh(geoEdge,mat.edge);
-        // // mesh.scale.set(scale, scale, scale)
-        // mesh.rotation.x = angle // fake 3D in real 3D!!! LOL
-        // Obj.move(mesh, pos)
-        // sceneEdge.add(mesh);
-
-        // NOTE. Only returning one mesh here. If you want to turn on
-        // edge you need to figure out how to handle that
         return meshDiffuse
     }
 
@@ -749,64 +731,6 @@ var ClassicSet = (function(){
         return mat
     }
 
-    function initComposer(){
-        sceneEdge = new THREE.Scene()
-        // sceneDiffuse = new THREE.Scene();
-
-        var renderTargetParameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat, stencilBuffer: false, generateMipmaps: false };
-
-        renderTargetEdge = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetParameters);
-        renderTargetEdge.generateMipmaps = false;
-
-        composer = new THREE.EffectComposer( renderer, renderTargetEdge );
-
-        var effect = new THREE.RenderPass( sceneEdge, camera );
-        effect.renderToScreen = false;
-        composer.addPass( effect );
-
-        // var blur = new THREE.ShaderPass(THREE.MedianFilter);
-        // blur.uniforms.dim.value.copy(new THREE.Vector2(1.0 / window.innerWidth, 1.0 / window.innerHeight));
-        // blur.renderToScreen = false;
-        // composer.addPass(blur);
-
-        cannyEdge = new THREE.ShaderPass(THREE.CannyEdgeFilterPass);
-        cannyEdge.renderToScreen = false;
-        composer.addPass(cannyEdge);
-
-        var effect = new THREE.ShaderPass( THREE.InvertThreshholdPass );
-        effect.renderToScreen = false;
-        composer.addPass( effect );
-
-        var effect = new THREE.ShaderPass(THREE.CopyShader);
-        effect.renderToScreen = false;
-        composer.addPass(effect);
-
-        renderTargetDiffuse = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetParameters);
-
-        composer2 = new THREE.EffectComposer(renderer, renderTargetDiffuse);
-
-        var renderDiffuse = new THREE.RenderPass(sceneDiffuse, camera);
-        renderDiffuse.renderToScreen = false;
-        composer2.addPass(renderDiffuse);
-
-        var multiplyPass = new THREE.ShaderPass(THREE.MultiplyBlendShader);
-        multiplyPass.renderToScreen = false;
-        multiplyPass.uniforms["tEdge"].value = composer.renderTarget2;
-        multiplyPass.needsSwap = true;
-        composer2.addPass(multiplyPass);
-
-        effectFXAA = new THREE.ShaderPass(THREE.FXAAShader);
-        var e = window.innerWidth || 2;
-        var a = window.innerHeight || 2;
-        effectFXAA.uniforms.resolution.value.set(1/e,1/a);
-        effectFXAA.renderToScreen = false;
-        composer2.addPass(effectFXAA);
-
-        var effect = new THREE.ShaderPass(THREE.CopyShader);
-        effect.renderToScreen = true;
-        composer2.addPass(effect);
-    }
-
     return ClassicSet
 }())
 
@@ -833,7 +757,7 @@ var Piece = (function(){
         var color = getPlayerColor(playerID)
         var obj = ClassicSet.make(piece.kind, color, pos)
         obj.game = {piece:piece}
-        sceneDiffuse.add(obj);
+        Scene.add(obj);
         Obj.move(obj, pos, K.MODEL_XYZ_OFFSET)
         return obj
     }
@@ -1173,7 +1097,6 @@ var Map = (function(){
             Sock.subZone(x, y)
             loadZones(x, y, Conf.active_zone_half_width)
             destroyZones(x, y, Conf.active_zone_half_width)
-            Chat.updateZone(x, y)
         })
         loadZones(x, y, Conf.active_zone_half_width) // load map wherever player spawns
         // loadTest() // loads simple model TODO
@@ -1234,70 +1157,6 @@ var Map = (function(){
             Obj.move(object, new THREE.Vector3(2, 0, 1), K.MODEL_XYZ_OFFSET)
             Scene.add( object );
         }, onProgress, onError );
-
-        // var loader = new THREE.OBJMTLLoader();
-        // loader.load( 'static/models/bishop0.obj', 'static/models/bishop0.mtl', function ( object ) {
-        //     object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
-        //     object.traverse( function ( child ) {
-        //         if ( child instanceof THREE.Mesh ) {
-        //             child.material.side = THREE.DoubleSide
-        //             shearModel2(child.geometry)
-        //             child.castShadow = true;
-        //             child.receiveShadow = true
-        //         }
-        //     } );
-        //     // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-        //     Obj.move(object, new THREE.Vector3(3, 0, 1), K.MODEL_XYZ_OFFSET)
-        //     Scene.add( object );
-        // }, onProgress, onError );
-
-        // var loader = new THREE.OBJMTLLoader();
-        // loader.load( 'static/models/knight0.obj', 'static/models/knight0.mtl', function ( object ) {
-        //     object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
-        //     object.traverse( function ( child ) {
-        //         if ( child instanceof THREE.Mesh ) {
-        //             child.material.side = THREE.DoubleSide
-        //             shearModel2(child.geometry)
-        //             child.castShadow = true;
-        //             child.receiveShadow = true
-        //         }
-        //     } );
-        //     // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-        //     Obj.move(object, new THREE.Vector3(4, 0, 1), K.MODEL_XYZ_OFFSET)
-        //     Scene.add( object );
-        // }, onProgress, onError );
-
-        // var loader = new THREE.OBJMTLLoader();
-        // loader.load( 'static/models/rook0.obj', 'static/models/rook0.mtl', function ( object ) {
-        //     object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
-        //     object.traverse( function ( child ) {
-        //         if ( child instanceof THREE.Mesh ) {
-        //             child.material.side = THREE.DoubleSide
-        //             shearModel2(child.geometry)
-        //             child.castShadow = true;
-        //             child.receiveShadow = true
-        //         }
-        //     } );
-        //     // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-        //     Obj.move(object, new THREE.Vector3(5, 0, 1), K.MODEL_XYZ_OFFSET)
-        //     Scene.add( object );
-        // }, onProgress, onError );
-
-        // var loader = new THREE.OBJMTLLoader();
-        // loader.load( 'static/models/pawn0.obj', 'static/models/pawn0.mtl', function ( object ) {
-        //     object.rotation.x = Math.PI / 2 // fake 3D in real 3D!!! LOL
-        //     object.traverse( function ( child ) {
-        //         if ( child instanceof THREE.Mesh ) {
-        //             child.material.side = THREE.DoubleSide
-        //             shearModel2(child.geometry)
-        //             child.castShadow = true;
-        //             child.receiveShadow = true
-        //         }
-        //     } );
-        //     // var newObj = object.clone() // todo reuse this model e.g. for other pieces
-        //     Obj.move(object, new THREE.Vector3(6, 0, 1), K.MODEL_XYZ_OFFSET)
-        //     Scene.add( object );
-        // }, onProgress, onError );
 
     }
 
@@ -1389,7 +1248,8 @@ var Map = (function(){
         Scene.add(makeZoneGrid(X, Y, S));
         // Scene.add(makeZoneGridDiagonals(X, Y, S)); // toggle for fancy grid
         Scene.add(makeZoneBorder(X, Y, S));
-        Scene.add(makeZoneCorners(X, Y, S));
+        Scene.add(makeZoneCorners(X, Y));
+        Scene.add(makeZoneNumber(X, Y));
         Game.addObj(makeZonePlane(X, Y, S))
         Scene.render()
     }
@@ -1420,12 +1280,19 @@ var Map = (function(){
     }
 
     // makes crosshair at zone lower left corner
-    function makeZoneCorners(X, Y, S){
+    function makeZoneCorners(X, Y){
         var l = 0.25
         var h = 1.1 // NOTE. Raise the cross hair slightly so it's not hidden by the plane
         var geo = new THREE.Geometry()
         Map.addCrosshair(geo, X    , Y    , l, h)
         return new THREE.Line(geo, ZONE_CORNER_MAT, THREE.LinePieces);
+    }
+
+    function makeZoneNumber(X, Y){
+        var spritey = Word.makeTextSprite( " Hello, ",
+                                      { fontsize: 24, borderColor: {r:255, g:0, b:0, a:1.0}, backgroundColor: {r:255, g:100, b:100, a:0.8} } );
+        Obj.move(spritey, new THREE.Vector3(0, 0, 2), K.CLOCK_XYZ_OFFSET)
+        return spritey
     }
 
     function addZoneGridDiagonal(geo, X, Y, w, h){
@@ -1835,9 +1702,10 @@ var Scene = (function(){
         camera: null
     }
 
+    var _scene = null;
+
     Scene.init = function(x, y){
-        sceneDiffuse = _scene = new THREE.Scene();
-        // _scene = new THREE.Scene();
+        _scene = new THREE.Scene();
 
         // be careful about ordering of these methods. might need to refactor
         initContainer()
@@ -1891,14 +1759,14 @@ var Scene = (function(){
         var aspect = window.innerWidth / window.innerHeight
         var near = 1
         var far = 200
-        camera = Scene.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+        Scene.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
         Scene.camera.position.z = K.CAM_DIST_INIT
         Scene.camera.position.x = x
         Scene.camera.position.y = y
     }
 
     function initRenderer(){
-        renderer = Scene.renderer = new THREE.WebGLRenderer( { antialias:true, alpha:true } );
+        Scene.renderer = new THREE.WebGLRenderer( { antialias:true, alpha:true } );
         Scene.renderer.autoClear = false;
         Scene.renderer.autoClear = false
         var DPR = (window.devicePixelRatio) ? window.devicePixelRatio : 1;
@@ -1921,43 +1789,19 @@ var Scene = (function(){
 
     Scene.render = function(){
         try {
-            // renderer.clear();
-            // renderer.render(_scene, Scene.camera);
-            // renderer.clearDepth();
-
-            var delta = clock.getDelta()
-            composer.render(delta);
-            composer2.render(delta);
-
-            // renderer.render(sceneEdge, Scene.camera)
-            // renderer.render(sceneDiffuse, Scene.camera)
+            Scene.renderer.clear();
+            Scene.renderer.render(_scene, Scene.camera)
         } catch (e){
             log("ERROR. Renderer not ready")
         }
     }
 
     Scene.refresh = function(){
-        // Scene.camera.aspect = window.innerWidth / window.innerHeight;
-        // Scene.camera.updateProjectionMatrix();
-        // Scene.renderer.setSize(window.innerWidth, window.innerHeight);
-        // Controls.handleResize();
-
-        // Scene.render();
-
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-
-        renderer.setSize( window.innerWidth, window.innerHeight );
-        effectFXAA.uniforms.resolution.value.set(1 / window.innerWidth, 1 / window.innerHeight);
-        // cannyEdge.uniforms.uWindow.value.set(parseFloat(window.innerWidth), parseFloat(window.innerHeight));
-        composer.reset();
-        composer2.reset();
-        renderTargetEdge.width = renderTargetDiffuse.width = parseFloat(window.innerWidth);
-        renderTargetEdge.height = renderTargetDiffuse.height = parseFloat(window.innerHeight);
-
-        composer.render();
-        composer2.render();
-
+        Scene.camera.aspect = window.innerWidth / window.innerHeight;
+        Scene.camera.updateProjectionMatrix();
+        Scene.renderer.setSize(window.innerWidth, window.innerHeight);
+        Controls.handleResize();
+        Scene.render();
     }
 
     return Scene
@@ -2000,6 +1844,78 @@ var SFX = (function(){
     return SFX
 }())
 
+var Word = (function(){
+    var Word = {}
+
+    var SPRITE_ALIGNMENT = new THREE.Vector2( 1, -1 )
+
+    Word.makeTextSprite = function( message, parameters )
+    {
+        if ( parameters === undefined ) parameters = {};
+        var fontface = parameters.hasOwnProperty("fontface") ? parameters["fontface"] : "Arial";
+        var fontsize = parameters.hasOwnProperty("fontsize") ? parameters["fontsize"] : 18;
+        var borderThickness = parameters.hasOwnProperty("borderThickness") ? parameters["borderThickness"] : 4;
+        var borderColor = parameters.hasOwnProperty("borderColor") ? parameters["borderColor"] : { r:0, g:0, b:0, a:1.0 };
+        var backgroundColor = parameters.hasOwnProperty("backgroundColor") ? parameters["backgroundColor"] : { r:255, g:255, b:255, a:1.0 };
+
+        var canvas = document.createElement('canvas');
+        var context = canvas.getContext('2d');
+        context.font = "Bold " + fontsize + "px " + fontface;
+
+        // get size data (height depends only on font size)
+        var metrics = context.measureText( message );
+        var textWidth = metrics.width;
+
+        // background color
+        context.fillStyle   = "rgba(" + backgroundColor.r + "," + backgroundColor.g + ","
+            + backgroundColor.b + "," + backgroundColor.a + ")";
+        // border color
+        context.strokeStyle = "rgba(" + borderColor.r + "," + borderColor.g + ","
+            + borderColor.b + "," + borderColor.a + ")";
+
+        context.lineWidth = borderThickness;
+        roundRect(context, borderThickness/2, borderThickness/2, textWidth + borderThickness, fontsize * 1.4 + borderThickness, 6);
+        // 1.4 is extra height factor for text below baseline: g,j,p,q.
+
+        // text color
+        context.fillStyle = "rgba(0, 0, 0, 1.0)";
+
+        context.fillText( message, borderThickness, fontsize + borderThickness);
+
+        // canvas contents will be used for a texture
+        var texture = new THREE.Texture(canvas)
+        texture.minFilter = THREE.LinearFilter
+        texture.needsUpdate = true;
+
+        var spriteMaterial = new THREE.SpriteMaterial({
+            map: texture, useScreenCoordinates: false, alignment: SPRITE_ALIGNMENT
+        } );
+        var sprite = new THREE.Sprite( spriteMaterial );
+        sprite.scale.set(3, 1.5, 1.0);
+        return sprite;
+    }
+
+    // function for drawing rounded rectangles
+    function roundRect(ctx, x, y, w, h, r)
+    {
+        ctx.beginPath();
+        ctx.moveTo(x+r, y);
+        ctx.lineTo(x+w-r, y);
+        ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+        ctx.lineTo(x+w, y+h-r);
+        ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+        ctx.lineTo(x+r, y+h);
+        ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+        ctx.lineTo(x, y+r);
+        ctx.quadraticCurveTo(x, y, x+r, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    return Word
+}())
+
 var Game = (function(){
     var Game = {}
 
@@ -2029,7 +1945,7 @@ var Game = (function(){
                     y = king.y
                 }
                 Sock.init(x, y)
-                // Chat.init(x, y) // todo move cross hair rendering to map
+                // mach don't think this is true anymore:
                 // ClassicSet needs the renderer to finish loading from
                 // Scene.init to init its composers
                 Scene.init(x, y)
