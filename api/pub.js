@@ -38,10 +38,9 @@ var Pub = module.exports = (function(){
         })
     }
 
-    Pub.remove = function(piece, from, zone){
+    Pub.remove = function(piece, zone){
         Pub.publish("remove", {
             piece: piece,
-            from: from,
             zone: zone
         })
     }

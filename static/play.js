@@ -1029,18 +1029,23 @@ var Obj = (function(){
         else Rollover.hide()
     }
 
-    // todo. Store objs in dictionary for faster get
-    Obj.findObjAtPosition = function(x, y, z){
+    Obj.findGameObjAtXY = function(x, y){
         for (var i = 0; i < Obj.objs.length; i++){
             var obj = Obj.objs[i]
             var X = Math.floor(obj.position.x)
             var Y = Math.floor(obj.position.y)
-            var Z = Math.floor(obj.position.z)
             // need to check that obj.game exists, cause ground planes
             // don't have that and we don't want ground planes
-            if (X == x && Y == y && Z == z && obj.game) return obj
+            if (X == x && Y == y && obj.game) return obj
         }
         return null
+    }
+
+    Obj.findObjsByPieceID = function(pieceID){
+        return Obj.objs.filter(function(obj){
+            return (obj.game && obj.game.piece &&
+                   obj.game.piece._id == pieceID)
+        })
     }
 
     Obj.findObjsByPlayerID = function(playerID){
@@ -1075,6 +1080,12 @@ var Obj = (function(){
     }
 
     Obj.remove = function(obj){
+        // REMEMBER!!! a.indexOf(null) == -1 and a.splice(-1, 1) will
+        // remove the last item from a, which is usually not what you
+        // want, because chances are your arbitrary obj won't be the
+        // last item in the array! This misunderstanding caused a
+        // minor goose chase:
+        if (!obj) return // so check for null here.
         Obj.objs.splice(Obj.objs.indexOf(obj), 1);
     }
 
@@ -1550,7 +1561,7 @@ var Move = (function(){
     }
 
     Move.validateMove = function(obj, x, y, z, isKill){
-        var box = Obj.findObjAtPosition(x, y, z)
+        var box = Obj.findGameObjAtXY(x, y)
         if (!box || !box.game){ // empty cell
             return {xyz:{x:x, y:y, z:z}, more:true}
         } else if (box.game.piece.player == obj.game.piece.player){ // blocked by friendly
@@ -2047,9 +2058,16 @@ var Game = (function(){
         }
 
         on.remove = function(data){
-            // mach remove pieces by ID, because positions can get out
-            // of sync, especially if players lose connections
-            Game.removeObjAtXY(data.from[0], data.from[1])
+            try {
+                Game.removeObjByPieceID(data.piece._id)
+            } catch (e){
+                Console.warn("ERROR. Can't remove piece: " + e
+                             + " This can sometimes happen on Firefox when the browser is out of sync with the "
+                             + "server. Please refresh the game by pressing F5 or Ctrl + R or Cmd + R.")
+                Console.warn("It should veeery rarely happen on Google Chrome, so please use that if you haven't already. "
+                             + "Also let us know if the problem persists: type <code> /bug msg </code> into the chat box, "
+                             + "where msg is your tweet-long message describing the bug.")
+            }
         }
 
         on.move = function(data){
@@ -2122,12 +2140,30 @@ var Game = (function(){
 
     // Returns removed obj
     Game.removeObjAtXY = function(x, y){
-        var obj = Obj.findObjAtPosition(Math.floor(x), Math.floor(y), 1)
-        if (obj && obj.game){
-            Scene.remove(obj);
-            Obj.remove(obj)
-        }
+        var obj = Obj.findGameObjAtXY(Math.floor(x), Math.floor(y))
+        Scene.remove(obj);
+        Obj.remove(obj)
         return obj
+    }
+
+    Game.removeObjByPieceID = function(pieceID){
+        // since we're sending separate events for on.remove and
+        // on.move, there may be one or two instances of the piece
+        // when it moves. in either case we remove the older one,
+        // i.e. earlier piece.moved
+        var objs = Obj.findObjsByPieceID(pieceID)
+        if (objs.length){
+            objs.sort(function(o1, o2){ // sort to get earliest moved
+                // NOTE. New pieces will have moved == null, but this
+                // comparison should still work
+                return new Date(o1.game.piece.moved).getTime()
+                    - new Date(o2.game.piece.moved).getTime()
+            })
+            Scene.remove(objs[0]);
+            Obj.remove(objs[0])
+        } else {
+            throw "Piece not found."
+        }
     }
 
     Game.removePiecesByArmyID = function(army_id){
