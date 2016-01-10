@@ -1820,40 +1820,83 @@ var SFX = (function(){
 
     var _snds = {
         king: {
-            move: new Audio('/static/snd/king/lofituned02.mp3'),
+            i: 0,
+            move: [
+                new Audio('/static/snd/king/lofituned02.mp3'),
+                new Audio('/static/snd/king/lofituned02.mp3'),
+                new Audio('/static/snd/king/lofituned02.mp3'),
+                new Audio('/static/snd/king/lofituned02.mp3'),
+                new Audio('/static/snd/king/lofituned02.mp3'),
+            ],
             kill: null
         },
         queen: {
-            move: new Audio('/static/snd/queen/lofituned03.mp3'),
+            i: 0,
+            move: [
+                new Audio('/static/snd/queen/lofituned03.mp3'),
+                new Audio('/static/snd/queen/lofituned03.mp3'),
+                new Audio('/static/snd/queen/lofituned03.mp3'),
+                new Audio('/static/snd/queen/lofituned03.mp3'),
+                new Audio('/static/snd/queen/lofituned03.mp3'),
+            ],
             kill: null
         },
         bishop: {
-            move: new Audio('/static/snd/bishop/acoustickick11.mp3'),
+            i: 0,
+            move: [
+                new Audio('/static/snd/bishop/acoustickick11.mp3'),
+                new Audio('/static/snd/bishop/acoustickick11.mp3'),
+                new Audio('/static/snd/bishop/acoustickick11.mp3'),
+                new Audio('/static/snd/bishop/acoustickick11.mp3'),
+                new Audio('/static/snd/bishop/acoustickick11.mp3'),
+            ],
             kill: null
         },
         knight: {
-            move: new Audio('/static/snd/knight/horsetrot.mp3'),
+            i: 0,
+            move: [
+                new Audio('/static/snd/knight/horsetrot.mp3'),
+                new Audio('/static/snd/knight/horsetrot.mp3'),
+                new Audio('/static/snd/knight/horsetrot.mp3'),
+                new Audio('/static/snd/knight/horsetrot.mp3'),
+                new Audio('/static/snd/knight/horsetrot.mp3'),
+            ],
             kill: null
         },
         rook: {
-            move: new Audio('/static/snd/rook/knockwood01.mp3'),
+            i: 0,
+            move: [
+                new Audio('/static/snd/rook/knockwood01.mp3'),
+                new Audio('/static/snd/rook/knockwood01.mp3'),
+                new Audio('/static/snd/rook/knockwood01.mp3'),
+                new Audio('/static/snd/rook/knockwood01.mp3'),
+                new Audio('/static/snd/rook/knockwood01.mp3'),
+            ],
             kill: null
         },
         pawn: {
-            move: new Audio('/static/snd/pawn/ethniclodrum01.mp3'),
+            i: 0,
+            move: [
+                new Audio('/static/snd/pawn/ethniclodrum01.mp3'),
+                new Audio('/static/snd/pawn/ethniclodrum01.mp3'),
+                new Audio('/static/snd/pawn/ethniclodrum01.mp3'),
+                new Audio('/static/snd/pawn/ethniclodrum01.mp3'),
+                new Audio('/static/snd/pawn/ethniclodrum01.mp3'),
+            ],
             kill: null
         },
     }
 
     SFX.move = function(pieceKind){
         // NOTE. Don't use ...move.cloneNode(true).play() cause it'll
-        // make a request (304) every time you call play(). The
+        // make a 304 request every time you call play(). OTOH The
         // trouble with ...move.play() is that you can't play a sound
         // while it's already being played. One solution is to make a
         // few copies of the same sound and play them one after the
         // other.
-        // mach
-        _snds[pieceKind].move.play()
+        var i = (_snds[pieceKind].i + 1) % _snds[pieceKind].move.length
+        _snds[pieceKind].i = i
+        _snds[pieceKind].move[i].play()
     }
 
     return SFX

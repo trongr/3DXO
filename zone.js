@@ -35,8 +35,19 @@ var Sub = (function(){
         // playerID: {zone:[x, y], cb:onChatMsgCallback},
     }
 
-    // MACH NOTE.
-    var UNSUB_TIMEOUT = 10 * 60000 // one hour
+    // NOTE. _unsub_timeouts stores a playerID and a timeout function
+    // when a client disconnects, to unsub later at UNSUB_TIMEOUT. We
+    // don't want to unsub right away because sockjs can call conn on
+    // close and still keep some connection to the client open, so we
+    // don't want to unsub on one of those calls, because that'll
+    // remove the playerID and its on msg callback for the remaining
+    // connection(s), and the server can't send data to the client by
+    // playerID. Instead we want to keep that playerID and on msg
+    // callback around for say 10 minutes. In those 10 minutes, the
+    // player will most likely make some kind of move, and send us a
+    // new playerID and zone, so we can re-subdate him, and clear and
+    // remove this timeout.
+    var UNSUB_TIMEOUT = 10 * 60000 // 10 minutes
     var _unsub_timeouts = {
         // playerID: timeout,
     }
@@ -236,7 +247,14 @@ var Zone = module.exports = (function(){
         });
 
         conn.on("close", function(){
-            if (!_playerID) return
+            // if a client connects multiple times one right after the
+            // other (e.g. on firefox when you refresh the browser),
+            // one of those times it will send an on data, which
+            // creates a non null _playerID, while the other times it
+            // won't, so _playerID is null. This is the on close event
+            // fired by one of those null _playerID "threads":
+            if (!_playerID) return H.log("DEBUG. ZONE.CLOSE: null playerID")
+
             Sub.unsub(_playerID)
         })
 
