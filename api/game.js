@@ -487,13 +487,13 @@ var Game = module.exports = (function(){
         ["0", "0", "0", "0", "0", "0", "0", "0"],
     ];
 
-    // // 4 x 4
-    // var ARMY_CONFIG = [
-    //     ["0", "0", "0", "0"],
-    //     ["0", "0", "k", "0"],
-    //     ["0", "q", "0", "0"],
-    //     ["0", "0", "0", "0"],
-    // ];
+    // 4 x 4
+    var ARMY_CONFIG = [
+        ["0", "0", "0", "0"],
+        ["0", "0", "k", "0"],
+        ["0", "q", "0", "0"],
+        ["0", "0", "0", "0"],
+    ];
 
     Game.buildArmy = function(playerID, done){
         var player, zone = null

@@ -55,7 +55,7 @@ var K = (function(){
         HIGHLIGHT_OFFSET: {x:0, y:0, z:-0.49},
         HIGHLIGHT_ZONE_OFFSET: {x:-0.5, y:-0.5, z:-0.49},
         CROSSHAIR_OFFSET: {x:-0.5, y:-0.5, z:0},
-        ZONE_NUMBER_OFFSET: {x:2, y:-1.4, z:0},
+        ZONE_NUMBER_OFFSET: {x:2.1, y:-1.4, z:0},
         ZONE_GRID_OFFSET: {x:-0.5, y:-0.5, z:-0.51},
         ZONE_BORDER_OFFSET: {x:-0.5, y:-0.5, z:-0.51},
     }
@@ -268,7 +268,7 @@ var Console = (function(){
         Console.print("<span style='font-size:3em'>Ragnarook</span>")
         Console.print("[ Chess 2.0: Pre-alpha Release ]")
         Console.print("<hr>")
-        Console.print("Ragnarook is a <b style='color:yellow'>Massively Multiplayer Open World Strategy Game</b> "
+        Console.print("Ragnarook is a <b style='color:yellow'>Massively Multiplayer Persistent Open World Game</b> "
                       + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
                       + "Prepare to destroy your enemies in a semi-turn-based fashion!")
         // Console.print("Ragnarook is a <i><b>Massively Multiplayer Online Open World Exploration Creative Building Semi-Real Time Strategy Role-Playing Game</b></i> "
@@ -768,6 +768,11 @@ var Piece = (function(){
         obj.game = {piece:piece}
         Scene.add(obj);
         Obj.move(obj, pos, K.MODEL_OFFSET)
+
+        if (piece.kind == "king"){
+            Nametag.make(piece._id, "trong", pos.x, pos.y)
+        }
+
         return obj
     }
 
@@ -1315,14 +1320,14 @@ var Map = (function(){
     }
 
     function makeZoneNumber(X, Y){
-        var spritey = Word.makeTextSprite("[" + X + ", " + Y + "]", {
+        var sprite = Word.makeTextSprite("[" + X + ", " + Y + "]", {
             // fontface: "Arial",
             fontface: "Courier",
             fontsize: 12,
             color: [255, 255, 255, 1],
         } );
-        Obj.move(spritey, new THREE.Vector3(X, Y, 2), K.ZONE_NUMBER_OFFSET)
-        return spritey
+        Obj.move(sprite, new THREE.Vector3(X, Y, 2), K.ZONE_NUMBER_OFFSET)
+        return sprite
     }
 
     // add thicker border around the edges
@@ -1913,6 +1918,40 @@ var SFX = (function(){
     return SFX
 }())
 
+var Nametag = (function(){
+    var Nametag = {}
+
+    var NAMETAG_OFFSET = {x:2.1, y:0, z:0}
+
+    var _tags = {
+        // pieceID: nameTagOBJ,
+    }
+
+    Nametag.make = function(pieceID, text, x, y){
+        var sprite = Word.makeTextSprite(text, {
+            fontface: "Arial",
+            // fontface: "Courier",
+            fontsize: 12,
+            color: [255, 255, 255, 1],
+        } );
+        Obj.move(sprite, new THREE.Vector3(x, y, 5), NAMETAG_OFFSET)
+        _tags[pieceID] = sprite
+        Scene.add(sprite)
+    }
+
+    Nametag.remove = function(pieceID){
+        var obj = _tags[pieceID]
+        if (obj){
+            Scene.remove(obj)
+            obj.geometry.dispose()
+            obj.material.map.dispose()
+            obj.material.dispose()
+        }
+    }
+
+    return Nametag
+}())
+
 var Word = (function(){
     var Word = {}
 
@@ -1921,7 +1960,7 @@ var Word = (function(){
     Word.makeTextSprite = function( message, opts )
     {
         var fontface = opts.fontface || "Courier";
-        var fontsize = opts.fontsize || 60;
+        var fontsize = opts.fontsize || 10;
         var color = opts.color || [255, 255, 255, 1];
         var borderthickness = opts.borderthickness || 0;
         var bordercolor = opts.bordercolor || [255, 255, 255,1];
@@ -1939,7 +1978,7 @@ var Word = (function(){
         // NOTE. work around for weird border around text:
         // http://stackoverflow.com/questions/18992365/unusual-antialias-while-using-basic-texture-material-in-three-js
         context.fillStyle = 'rgba(255,255,255,0.01)'; // 0.01 used in SpriteMaterial alphaTest
-        // context.fillStyle = 'rgba(0, 0, 0, 1)';
+        // context.fillStyle = 'rgba(0, 0, 0, 1)'; // toggle to see bounding rect
         context.fillRect(0,0,canvas.width,canvas.height);
 
         context.fillStyle = "rgba(" + color[0] + "," + color[1] + "," + color[2] + "," + color[3] + ")";;
@@ -2060,6 +2099,9 @@ var Game = (function(){
         on.remove = function(data){
             try {
                 Game.removeObjByPieceID(data.piece._id)
+                if (data.piece.kind == "king"){
+                    Nametag.remove(data.piece._id)
+                }
             } catch (e){
                 Console.warn("ERROR. Can't remove piece: " + e
                              + " This can sometimes happen on Firefox when the browser is out of sync with the "
