@@ -28,8 +28,8 @@
 // free roaming lets you move any piece to a neighbouring grid, but no
 // farther
 
-function log(msg, er){
-    console.log(new Date().toLocaleTimeString(), msg, er)
+function log(msg, data){
+    console.log(new Date().toLocaleTimeString(), msg, data)
 }
 
 var K = (function(){
@@ -288,13 +288,13 @@ var Console = (function(){
                       // any number of pieces, some 4 at a time, some 2, some just 1, per army.
                       // mode 1
                       + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
-                      + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
-                      + " 30 seconds to recharge before it can move again.</li>"
+                      // + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
+                      // + " 30 seconds to recharge before it can move again.</li>"
                       // mode 2
-                      // + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
-                      // + "<li>You can move one piece every 15 seconds.</li>"
+                      + "<li>You can move one piece per army every 15 seconds. Capturing an enemy king will give "
+                      + "you its remaining army.</li>"
                       // + "<li>You can also move any additional piece that has no enemy inside its green border.</li>"
-                      + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
+                      + "<li>You can move all your pieces from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in your zone, and no enemy king in the destination zone. Click on your king to "
                       + "highlight available zones.</li>"
                       + "</ol>")
@@ -368,18 +368,23 @@ var Sock = (function(){
 
     var _playerID = null
     var _sock = null
-    var isRetry = false
+    var _isRetry = false
     var _zone = [] // keeps track of current zone
 
-    Sock.init = function(x, y){
+    function initSocket(x, y){
+        log("INFO. Sock.initSocket", [x, y])
         _zone = []
-        _playerID = Player.getPlayer()._id
-        _sock = new SockJS('http://localhost:8080/game');
+        Sock.subZone(x, y)
+    }
 
+    Sock.init = function(x, y){
+        _playerID = Player.getPlayer()._id
+
+        _sock = new SockJS('http://localhost:8080/game');
         _sock.onopen = function(){
-            if (isRetry) Console.info(new Date().toLocaleTimeString() + " Connected")
-            isRetry = true
-            Sock.subZone(x, y)
+            if (_isRetry) Console.info(new Date().toLocaleTimeString() + " Connected")
+            _isRetry = true
+            authenticateSocket(_playerID, "todo. get this from server")
         };
 
         // re.data should always be an obj and contain a channel
@@ -391,6 +396,20 @@ var Sock = (function(){
                 if (re) return Console.error(re.data)
                 else return Console.error("FATAL ERROR. Server socket response")
             }
+            // only once the server sends this can we start sending
+            // other data over socket:
+            if (data.chan == "auth"){
+                if (data.ok){
+                    initSocket(x, y)
+                } else {
+                    Console.error(new Date().toLocaleTimeString()
+                                  + " FATAL ERROR. Can't authenticate socket. Please try logging in again. "
+                                  + "This should never happen, so if you see it more than once please let us know: "
+                                  + "type <code> /bug msg </code> into the chat box, "
+                                  + "where msg is your tweet-long message describing the bug.")
+                }
+                return
+            }
             Game.on[data.chan](data)
         };
 
@@ -400,6 +419,11 @@ var Sock = (function(){
                 Sock.init(_zone[0], _zone[1])
             }, 5000)
         };
+    }
+
+    // todo get pass from server over http
+    function authenticateSocket(playerID, pass){
+        Sock.send("auth", {playerID:playerID, pass:pass})
     }
 
     Sock.send = function(chan, data){
@@ -422,7 +446,7 @@ var Sock = (function(){
         } else {
             _zone = zone
         }
-        log("INFO. Sock.subZone", [_playerID, _zone])
+        log("INFO. Sock.subZone", _zone)
         Sock.send("zone", {playerID:_playerID, zone:_zone})
     }
 

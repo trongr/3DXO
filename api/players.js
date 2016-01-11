@@ -70,6 +70,26 @@ var Players = module.exports = (function(){
         })
     }
 
+    // used by zone.js to update player's online status when they log
+    // in or out over socket
+    Players.updateOnline = function(playerID, status, done){
+        H.log("INFO. Players.updateOnline", playerID, status)
+        Player.findOneAndUpdate({
+            _id: playerID
+        }, {
+            $set: {
+                online: status,
+                modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
+            },
+        }, {
+            new: true
+        }, function(er, player){
+            if (er) var error = ["ERROR. Players.updateOnline", playerID, inc, er]
+            if (done) done(error, player)
+            else if (er) H.log(er)
+        })
+    }
+
     return Players
 }())
 

@@ -18,6 +18,7 @@ var schema = mongoose.Schema({
     //     _id: false, // stop mongoose from creating default _id
     //     name: {type: String},
     // }]
+    online: {type: Number}, // online or offline. see conf.json/status
 });
 
 schema.pre("save", function(next) {

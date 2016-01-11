@@ -10,12 +10,12 @@ var H = module.exports = (function(){
 
     H.log = function(msg, obj1, obj2, obj3, obj4, obj5, obj6){
         var out = new Date() + " " + msg
-        out += " " + (obj1 ? str(obj1) : "-")
-        out += " " + (obj2 ? str(obj2) : "-")
-        out += " " + (obj3 ? str(obj3) : "-")
-        out += " " + (obj4 ? str(obj4) : "-")
-        out += " " + (obj5 ? str(obj5) : "-")
-        out += " " + (obj6 ? str(obj6) : "-")
+        out += " " + (obj1 != null ? str(obj1) : "-")
+        out += " " + (obj2 != null ? str(obj2) : "-")
+        out += " " + (obj3 != null ? str(obj3) : "-")
+        out += " " + (obj4 != null ? str(obj4) : "-")
+        out += " " + (obj5 != null ? str(obj5) : "-")
+        out += " " + (obj6 != null ? str(obj6) : "-")
         console.log(out)
     }
 

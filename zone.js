@@ -3,6 +3,7 @@ var redis   = require('redis');
 var H = require("./static/js/h.js")
 var Conf = require("./static/conf.json") // shared with client
 var Game = require("./api/game.js")
+var Players = require("./api/players.js")
 var Pub = require("./api/pub.js")
 
 var Sub = (function(){
@@ -47,7 +48,8 @@ var Sub = (function(){
     // player will most likely make some kind of move, and send us a
     // new playerID and zone, so we can re-subdate him, and clear and
     // remove this timeout.
-    var UNSUB_TIMEOUT = 10 * 60000 // 10 minutes
+    // var UNSUB_TIMEOUT = 10 * 60000
+    var UNSUB_TIMEOUT = 60000
     var _unsub_timeouts = {
         // playerID: timeout,
     }
@@ -162,6 +164,7 @@ var Sub = (function(){
         clearPlayerUnsubTimeout(playerID)
         _unsub_timeouts[playerID] = setTimeout(function(){
             removePlayer(playerID)
+            Players.updateOnline(playerID, Conf.status.offline)
         }, UNSUB_TIMEOUT)
     }
 
@@ -201,6 +204,11 @@ var Zone = module.exports = (function(){
         });
     }
 
+    function authenticate(playerID, pass, done){
+        H.log("INFO. ZONE.AUTHENTICATE: TODO")
+        done(null, true)
+    }
+
     // todo. authenticate client. right now there's no way to know if
     // a client is who they say they are
     //
@@ -214,6 +222,7 @@ var Zone = module.exports = (function(){
             // console.log(new Date(), "ERROR. ZONE.CONN.CATCH", conn) // conn is a circular obj so can't use H.log
         }
         var _playerID, _zone = null
+        var _auth = false // set to true if connection authenticated
 
         // Receiving data from client
         conn.on('data', function(msg) {
@@ -221,6 +230,30 @@ var Zone = module.exports = (function(){
                 var data = JSON.parse(msg)
                 var chan = data.chan
                 _playerID = data.playerID
+                if (chan == "auth"){
+                    // mach this method isn't doing any real
+                    // authentication right now. we need the rest
+                    // server to give the client a pass token for
+                    // that. just adding a stub here for the structure
+                    authenticate(_playerID, data.pass, function(er, ok){
+                        if (er){
+                            H.log(er)
+                            conn.close()
+                        } else if (ok){
+                            H.log("INFO. Zone.authenticate", ok, _playerID, data.pass)
+                            _auth = true
+                            Players.updateOnline(_playerID, Conf.status.online)
+                            // tell client auth ok so they can start
+                            // sending data on other channels
+                            conn.write(JSON.stringify({chan:"auth", ok:true}))
+                        } else {
+                            H.log("INFO. Zone.authenticate", ok, _playerID, data.pass)
+                            conn.close()
+                        }
+                    })
+                    return // don't proceed to the other channels
+                }
+
                 _zone = data.zone
                 H.log("INFO. Zone.data", _playerID, _zone[0], _zone[1], chan)
 
@@ -232,6 +265,7 @@ var Zone = module.exports = (function(){
                 if (chan != "zone" && !Sub.playerExists(_playerID)){
                     H.log("DEBUG. Zone.data.playerExists.not", _playerID)
                     Sub.subdate(_playerID, _zone, onZoneMsgCallback)
+                    Players.updateOnline(_playerID, Conf.status.online)
                 }
 
                 if (chan == "zone"){
