@@ -770,7 +770,7 @@ var Piece = (function(){
         Obj.move(obj, pos, K.MODEL_OFFSET)
 
         if (piece.kind == "king"){
-            Nametag.make(piece._id, "trong", pos.x, pos.y)
+            Nametag.make(piece._id, "trong", piece.x, piece.y)
         }
 
         return obj
@@ -1838,33 +1838,33 @@ var SFX = (function(){
         king: {
             i: 0,
             move: [
-                new Audio('/static/snd/king/lofituned02.mp3'),
-                new Audio('/static/snd/king/lofituned02.mp3'),
-                new Audio('/static/snd/king/lofituned02.mp3'),
-                new Audio('/static/snd/king/lofituned02.mp3'),
-                new Audio('/static/snd/king/lofituned02.mp3'),
+                new Audio('/static/snd/king/cinematicfg.mp3'),
+                new Audio('/static/snd/king/cinematicfg.mp3'),
+                new Audio('/static/snd/king/cinematicfg.mp3'),
+                new Audio('/static/snd/king/cinematicfg.mp3'),
+                new Audio('/static/snd/king/cinematicfg.mp3'),
             ],
             kill: null
         },
         queen: {
             i: 0,
             move: [
-                new Audio('/static/snd/queen/lofituned03.mp3'),
-                new Audio('/static/snd/queen/lofituned03.mp3'),
-                new Audio('/static/snd/queen/lofituned03.mp3'),
-                new Audio('/static/snd/queen/lofituned03.mp3'),
-                new Audio('/static/snd/queen/lofituned03.mp3'),
+                new Audio('/static/snd/queen/acekick.mp3'),
+                new Audio('/static/snd/queen/acekick.mp3'),
+                new Audio('/static/snd/queen/acekick.mp3'),
+                new Audio('/static/snd/queen/acekick.mp3'),
+                new Audio('/static/snd/queen/acekick.mp3'),
             ],
             kill: null
         },
         bishop: {
             i: 0,
             move: [
-                new Audio('/static/snd/bishop/acoustickick11.mp3'),
-                new Audio('/static/snd/bishop/acoustickick11.mp3'),
-                new Audio('/static/snd/bishop/acoustickick11.mp3'),
-                new Audio('/static/snd/bishop/acoustickick11.mp3'),
-                new Audio('/static/snd/bishop/acoustickick11.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
             ],
             kill: null
         },
@@ -1924,7 +1924,8 @@ var Nametag = (function(){
     var NAMETAG_OFFSET = {x:2.1, y:0, z:0}
 
     var _tags = {
-        // pieceID: nameTagOBJ,
+        // NOTE. need x and y to distinguish the same piece at two locations:
+        // pieceID + "." + x + "." + y: nameTagOBJ,
     }
 
     Nametag.make = function(pieceID, text, x, y){
@@ -1935,18 +1936,22 @@ var Nametag = (function(){
             color: [255, 255, 255, 1],
         } );
         Obj.move(sprite, new THREE.Vector3(x, y, 5), NAMETAG_OFFSET)
-        _tags[pieceID] = sprite
+        _tags[uniquePieceIDXY(pieceID, x, y)] = sprite
         Scene.add(sprite)
     }
 
-    Nametag.remove = function(pieceID){
-        var obj = _tags[pieceID]
+    Nametag.remove = function(pieceID, x, y){
+        var obj = _tags[uniquePieceIDXY(pieceID, x, y)]
         if (obj){
             Scene.remove(obj)
             obj.geometry.dispose()
             obj.material.map.dispose()
             obj.material.dispose()
         }
+    }
+
+    function uniquePieceIDXY(pieceID, x, y){
+        return pieceID + "." + x + "." + y
     }
 
     return Nametag
@@ -2100,7 +2105,7 @@ var Game = (function(){
             try {
                 Game.removeObjByPieceID(data.piece._id)
                 if (data.piece.kind == "king"){
-                    Nametag.remove(data.piece._id)
+                    Nametag.remove(data.piece._id, data.piece.px, data.piece.py)
                 }
             } catch (e){
                 Console.warn("ERROR. Can't remove piece: " + e
