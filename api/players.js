@@ -11,8 +11,26 @@ var Players = module.exports = (function(){
         router: express.Router()
     }
 
-    Players.router.route("/")
+    Players.router.route("/:playerID")
         .get(function(req, res){
+            try {
+                var playerID = req.params.playerID
+            } catch (e){
+                H.log("ERROR. Players.getPlayerByID: invalid data", req.params)
+                return res.send({info:Conf.code.get_player})
+            }
+            Player.findOne({_id:playerID}, function(er, player){
+                if (player){
+                    res.send({ok:true, player:player})
+                } else {
+                    H.log("ERROR. Players.getPlayerByID", playerID)
+                    res.send({info:Conf.code.get_player})
+                }
+            })
+        })
+
+    Players.router.route("/")
+        .get(function(req, res){ // get player by name
             try {
                 // client can provide name to query other players, otw defaults to themself
                 var name = H.param(req, "name") || req.session.player.name

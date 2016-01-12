@@ -78,6 +78,14 @@ var API = (function(){
             })
         }
 
+        Player.getPlayerByID = function(id, done){
+            var url = API_PREFIX + "player/" + id
+            API.req("get", url, {}, function(er, re){
+                if (re && re.ok) done(null, re)
+                else done(er)
+            })
+        }
+
         return Player
     }())
 

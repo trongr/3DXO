@@ -293,7 +293,7 @@ var Console = (function(){
                       // mode 2
                       + "<li>You can move one piece per army every 15 seconds. Capturing an enemy king will give "
                       + "you its remaining army.</li>"
-                      // + "<li>You can also move any additional piece that has no enemy inside its green border.</li>"
+                      + "<li>You can also move any piece in an 8 x 8 zone if there are no enemy pieces in that zone.</li>"
                       + "<li>You can move all your pieces from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in your zone, and no enemy king in the destination zone. Click on your king to "
                       + "highlight available zones.</li>"
@@ -611,6 +611,74 @@ var Highlight = (function(){
     return Highlight
 }())
 
+// keeps track of all players
+var Players = (function(){
+    var Players = {}
+
+    var PLAYERS_UPDATE_INTERVAL = 30000
+    var _players = {
+        // playerID: player OBJ,
+    }
+
+    Players.init = function(){
+        var working = false
+
+        // the first time we want to update a few seconds after all
+        // the pieces are loaded. we don't want to update right away,
+        // because pieces might not be ready yet, so wait a few
+        // seconds
+        setTimeout(function(){
+            Players.findPlayersInRange(function(er, players){
+                _players = players
+            })
+        }, 5000)
+
+        setInterval(function(){
+            if (working) return
+            working = true
+            Players.findPlayersInRange(function(er, players){
+                _players = players
+                working = false
+            })
+        }, PLAYERS_UPDATE_INTERVAL)
+    }
+
+    // done(null, players), players = {playerID:playerOBJ,...}
+    // NOTE. this method never returns any error, only list of players
+    // it can find on client and get info for from server
+    Players.findPlayersInRange = function(done){
+        var start = new Date().getTime()
+        var playerIDs = {} // playerID: true
+        var players = {} // playerID: player OBJ
+        // find unique playerID's
+        Obj.objs.forEach(function(obj){
+            try {
+                var playerID = obj.game.piece.player._id ? obj.game.piece.player._id : obj.game.piece.player
+                if (!playerIDs[playerID]) playerIDs[playerID] = true
+            } catch (e){
+                // ignore: obj doesn't have game data: not a piece
+            }
+        })
+        // get player objs from server
+        async.each(Object.keys(playerIDs), function(playerID, done){
+            API.Player.getPlayerByID(playerID, function(er, re){
+                if (er){
+                    log("ERROR. Players.findPlayersInRange")
+                }  else {
+                    players[playerID]  = re.player
+                }
+                done(null)
+            })
+        }, function(er){
+            log("INFO. Players.findPlayersInRange", [new Date().getTime() - start, Obj.objs.length])
+            done(null, players) // this method never returns any error
+        })
+    }
+
+    return Players
+}())
+
+// keeps track of you the player
 var Player = (function(){
     var Player = {}
 
@@ -2068,6 +2136,7 @@ var Game = (function(){
                 Obj.init()
                 Piece.init() // load piece textures
                 Map.init(x, y) // load map and pieces
+                Players.init()
                 Menu.init(player)
                 Console.init()
                 Controls.init(x, y)
