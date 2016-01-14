@@ -294,7 +294,7 @@ var Console = (function(){
                       + "<li>You can move one piece per army every 15 seconds. Capturing an enemy king will give "
                       + "you its remaining army.</li>"
                       + "<li>You can also move any piece in an 8 x 8 zone if there are no enemy pieces in that zone.</li>"
-                      + "<li>You can move all your pieces from an 8 x 8 zone to a neighbouring zone if there are no "
+                      + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in your zone, and no enemy king in the destination zone. Click on your king to "
                       + "highlight available zones.</li>"
                       + "</ol>")
@@ -628,25 +628,33 @@ var Players = (function(){
         // because pieces might not be ready yet, so wait a few
         // seconds
         setTimeout(function(){
-            Players.findPlayersInRange(function(er, players){
+            findPlayersInRange(function(er, players){
                 _players = players
             })
-        }, 5000)
+        }, 3000)
 
         setInterval(function(){
             if (working) return
             working = true
-            Players.findPlayersInRange(function(er, players){
+            findPlayersInRange(function(er, players){
                 _players = players
                 working = false
             })
         }, PLAYERS_UPDATE_INTERVAL)
     }
 
+    Players.getPlayer = function(playerID){
+        return _players[playerID]
+    }
+
+    Players.getPlayers = function(){
+        return _players
+    }
+
     // done(null, players), players = {playerID:playerOBJ,...}
     // NOTE. this method never returns any error, only list of players
     // it can find on client and get info for from server
-    Players.findPlayersInRange = function(done){
+    function findPlayersInRange(done){
         var start = new Date().getTime()
         var playerIDs = {} // playerID: true
         var players = {} // playerID: player OBJ
@@ -862,7 +870,7 @@ var Piece = (function(){
         Obj.move(obj, pos, K.MODEL_OFFSET)
 
         if (piece.kind == "king"){
-            Nametag.make(piece._id, "trong", piece.x, piece.y)
+            Nametag.make(piece.player, piece.x, piece.y)
         }
 
         return obj
@@ -934,39 +942,39 @@ var Piece = (function(){
         palevioletred: [219,112,147],
         lightseagreen: [32, 178,170],
         aquamarine: [127,255,212],
-        // deeppink: [255,20,147],
+        deeppink: [255,20,147],
         peru: [205,133,63],
         deepskyblue: [0,191,255],
-        // darkturquoise: [0,206,209],
+        darkturquoise: [0,206,209],
         lightsteelblue: [176,196,222],
         pink: [255,192,203],
-        // lightpink: [255,182,193],
-        // beige: [245,245,220],
-        // whitesmoke: [245,245,245],
-        // mintcream: [245,255,250],
-        // ghostwhite: [248,248,255],
-        // lightyellow: [255,255,224],
+        lightpink: [255,182,193],
+        beige: [245,245,220],
+        whitesmoke: [245,245,245],
+        mintcream: [245,255,250],
+        ghostwhite: [248,248,255],
+        lightyellow: [255,255,224],
         dodgerblue: [30,144,255],
         lime: [0,255,0],
         limegreen: [50,205,50],
         purple: [128,0,128],
-        // darkmagenta: [139,0,139],
+        darkmagenta: [139,0,139],
         red: [225,0,0],
         blue: [0,0,255],
-        // mediumblue: [0,0,205],
+        mediumblue: [0,0,205],
         forestgreen: [34,139,34],
-        // magenta: [255,0,255],
-        // fuchsia: [255,0,255],
+        magenta: [255,0,255],
+        fuchsia: [255,0,255],
         rosybrown: [188,143,143],
         blueviolet: [138,43,226],
         royalblue: [65,105,225],
         brown: [165,42,42],
-        // firebrick: [178,34,34],
+        firebrick: [178,34,34],
         mediumaquamarine: [102,205,170],
         saddlebrown: [139,69,19],
         burlywood: [222,184,135],
         salmon: [250,128,114],
-        // lightcoral: [240,128,128],
+        lightcoral: [240,128,128],
         cadetblue: [95,158,160],
         gold: [255,215,0],
         mediumorchid: [186,85,211],
@@ -977,99 +985,99 @@ var Piece = (function(){
         chocolate: [210,105,30],
         mediumseagreen: [60,179,113],
         coral: [255,127,80],
-        // tomato: [253,99,71],
+        tomato: [253,99,71],
         green: [0,128,0],
-        // darkgreen: [0,100,0],
+        darkgreen: [0,100,0],
         sienna: [160,82,45],
         cornflowerblue: [100,149,237],
         greenyellow: [173,255,47],
         azure: [240,255,255],
-        // honeydew: [240,255,240],
-        // aliceblue: [240,248,255],
+        honeydew: [240,255,240],
+        aliceblue: [240,248,255],
         mediumturquoise: [72,209,204],
         skyblue: [135,206,235],
-        // lightskyblue: [135,206,250],
+        lightskyblue: [135,206,250],
         crimson: [220,20,60],
         hotpink: [255,105,180],
-        // mediumvioletred: [199,21,133],
+        mediumvioletred: [199,21,133],
         slateblue: [106,90,205],
-        // mediumslateblue: [123,104,238],
+        mediumslateblue: [123,104,238],
         cyan: [0,255,255],
         indianred: [205,92,92],
-        // midnightblue: [25,25,112],
+        midnightblue: [25,25,112],
         indigo: [75,0,130],
-        // darkslateblue: [72,61,139],
+        darkslateblue: [72,61,139],
         springgreen: [0,255,127],
-        // mediumspringgreen: [0,250,154],
+        mediumspringgreen: [0,250,154],
         darkgoldenrod: [184,134,11],
         khaki: [240,230,140],
-        // palegoldenrod: [238,232,170],
+        palegoldenrod: [238,232,170],
         steelblue: [70,130,180],
         lavender: [230,230,250],
-        // gainsboro: [220,220,220],
+        gainsboro: [220,220,220],
         navajowhite: [255,222,173],
-        // lemonchiffon: [255,250,205],
-        // cornsilk: [255,248,220],
-        // seashell: [255,245,238],
-        // papayawhip: [255,239,213],
-        // blanchedalmond: [255,255,205],
-        // bisque: [255,228,196],
-        // moccasin: [255,228,181],
-        // mistyrose: [255,228,225],
-        // peachpuff: [255,239,213],
-        // lavenderblush: [255,240,245],
+        lemonchiffon: [255,250,205],
+        cornsilk: [255,248,220],
+        seashell: [255,245,238],
+        papayawhip: [255,239,213],
+        blanchedalmond: [255,255,205],
+        bisque: [255,228,196],
+        moccasin: [255,228,181],
+        mistyrose: [255,228,225],
+        peachpuff: [255,239,213],
+        lavenderblush: [255,240,245],
         tan: [210,180,140],
-        // navy: [0,0,128],
-        // darkblue: [0,0,139],
+        navy: [0,0,128],
+        darkblue: [0,0,139],
         teal: [0,128,128],
-        // darkcyan: [0,139,139],
+        darkcyan: [0,139,139],
         darkkhaki: [189,183,107],
         lawngreen: [124,252,0],
-        // chartreuse: [127,255,0],
-        // oldlace: [253,245,230],
-        // lightgoldenrodyellow: [250,250,210],
-        // floralwhite: [255,250,240],
-        // snow: [255,250,250],
-        // ivory: [255,240,240],
-        // linen: [250,240,230],
-        // antiquewhite: [250,235,215],
-        // olive: [128,128,0],
+        chartreuse: [127,255,0],
+        oldlace: [253,245,230],
+        lightgoldenrodyellow: [250,250,210],
+        floralwhite: [255,250,240],
+        snow: [255,250,250],
+        ivory: [255,240,240],
+        linen: [250,240,230],
+        antiquewhite: [250,235,215],
+        olive: [128,128,0],
         darkolivegreen: [85,107,47],
         lightblue: [173,216,230],
-        // powderblue: [176,224,230],
-        // paleturquoise: [175,238,238],
+        powderblue: [176,224,230],
+        paleturquoise: [175,238,238],
         olivedrab: [107,142,35],
         turquoise: [64,224,208],
         darkorange: [255,140,0],
         orange: [255,165,0],
         violet: [238,130,238],
-        // plum: [221,160,221],
-        // orchid: [218,112,214],
+        plum: [221,160,221],
+        orchid: [218,112,214],
         darkorchid: [153,50,204],
-        // darkviolet: [148,0,211],
+        darkviolet: [148,0,211],
         lightcyan: [224,255,255],
         orangered: [255,69,0],
         wheat: [245,222,179],
         darkred: [139,0,0],
-        // maroon: [128,0,0],
+        maroon: [128,0,0],
         white: [255,255,255],
         darksalmon: [233,150,122],
         darkseagreen: [143,188,143],
         palegreen: [152,251,152],
-        // lightgreen: [144,238,144],
+        lightgreen: [144,238,144],
         yellow: [255,255,0],
         yellowgreen: [154,205,50],
         // // NOTE. Please.js just makes these colors look black
-        // black: [0,0,0],
+        black: [0,0,0],
         darkslategray: [47,79,79],
         darkgray: [169,169,169],
         slategray: [112,128,144],
-        // lightslategray: [119,136,153],
+        lightslategray: [119,136,153],
         thistle: [216,191,216],
-        // silver: [192,192,192],
-        // lightgrey: [211,211,211],
+        silver: [192,192,192],
+        lightgrey: [211,211,211],
         gray: [128,128,128],
-        // dimgray: [105,105,105],
+        dimgray: [105,105,105],
     }
     var COLOR_NAMES = Object.keys(COLORS)
 
@@ -2013,14 +2021,69 @@ var SFX = (function(){
 var Nametag = (function(){
     var Nametag = {}
 
-    var NAMETAG_OFFSET = {x:2.1, y:0, z:0}
+    var NAMETAG_UPDATE_INTERVAL = 30000
+    var NAMETAG_OFFSET = {x:1.7, y:0, z:0}
 
     var _tags = {
-        // NOTE. need x and y to distinguish the same piece at two locations:
-        // pieceID + "." + x + "." + y: nameTagOBJ,
+        // NOTE. need x and y to distinguish the same nametag at two
+        // locations, namely when it's being removed and added at a new
+        // location:
+        // playerID: {
+        //     [x, y]: nameTagOBJ,
+        // },
     }
 
-    Nametag.make = function(pieceID, text, x, y){
+    Nametag.init = function(){
+        var working = false
+
+        // the first time we want to update a few seconds after all
+        // the pieces are loaded. we don't want to update right away,
+        // because pieces might not be ready yet, so wait a few
+        // seconds
+        setTimeout(function(){
+            updateNametags()
+        }, 5000)
+
+        setInterval(function(){
+            if (working) return
+            working = true
+            updateNametags()
+            working = false
+        }, NAMETAG_UPDATE_INTERVAL)
+    }
+
+    function updateNametags(){
+        var players = Players.getPlayers()
+        log("INFO. Nametag.updateNametags", H.length(players))
+        for (var playerID in players){
+            if (players.hasOwnProperty(playerID)){
+                updateNametag(players[playerID])
+            }
+        }
+    }
+
+    function updateNametag(player){
+        var playerID = player._id
+        var tags = _tags[playerID]
+        for (var tagXY in tags){
+            if (tags.hasOwnProperty(tagXY)){
+                var xy = tagXY.split(",")
+                var x = parseInt(xy[0])
+                var y = parseInt(xy[1])
+                Nametag.remove(playerID, x, y)
+                Nametag.make(playerID, x, y)
+            }
+        }
+    }
+
+    Nametag.make = function(player, x, y){
+        var playerID = player._id || player
+        try {
+            var playerOBJ = Players.getPlayer(playerID)
+            var text = (playerOBJ.online == Conf.status.online ? "ONLINE. " : "OFFLINE. ") + playerOBJ.name
+        } catch (e){
+            var text = playerID
+        }
         var sprite = Word.makeTextSprite(text, {
             fontface: "Arial",
             // fontface: "Courier",
@@ -2028,22 +2091,25 @@ var Nametag = (function(){
             color: [255, 255, 255, 1],
         } );
         Obj.move(sprite, new THREE.Vector3(x, y, 5), NAMETAG_OFFSET)
-        _tags[uniquePieceIDXY(pieceID, x, y)] = sprite
+        _tags[playerID] = _tags[playerID] || {}
+        _tags[playerID][[x, y]] = sprite
         Scene.add(sprite)
     }
 
-    Nametag.remove = function(pieceID, x, y){
-        var obj = _tags[uniquePieceIDXY(pieceID, x, y)]
-        if (obj){
-            Scene.remove(obj)
-            obj.geometry.dispose()
-            obj.material.map.dispose()
-            obj.material.dispose()
+    Nametag.remove = function(player, x, y){
+        try {
+            var playerID = player._id || player
+            var obj = _tags[playerID][[x, y]]
+            if (obj){
+                Scene.remove(obj)
+                obj.geometry.dispose()
+                obj.material.map.dispose()
+                obj.material.dispose()
+                delete _tags[playerID][[x, y]]
+            }
+        } catch (e){
+            log("ERROR. Nametag.remove.catch", [playerID, x, y])
         }
-    }
-
-    function uniquePieceIDXY(pieceID, x, y){
-        return pieceID + "." + x + "." + y
     }
 
     return Nametag
@@ -2137,6 +2203,7 @@ var Game = (function(){
                 Piece.init() // load piece textures
                 Map.init(x, y) // load map and pieces
                 Players.init()
+                Nametag.init()
                 Menu.init(player)
                 Console.init()
                 Controls.init(x, y)
@@ -2198,7 +2265,7 @@ var Game = (function(){
             try {
                 Game.removeObjByPieceID(data.piece._id)
                 if (data.piece.kind == "king"){
-                    Nametag.remove(data.piece._id, data.piece.px, data.piece.py)
+                    Nametag.remove(data.piece.player, data.piece.px, data.piece.py)
                 }
             } catch (e){
                 Console.warn("ERROR. Can't remove piece: " + e
