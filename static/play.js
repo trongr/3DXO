@@ -287,17 +287,15 @@ var Console = (function(){
                       // alternatively different zones have different rules, e.g. some zones lets you move
                       // any number of pieces, some 4 at a time, some 2, some just 1, per army.
 
-                      // mode 1
-                      + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
-                      + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
-                      + " 30 seconds to recharge before it can move again. (In future releases there'll be "
-                      + "new regions with different sets of rules that will allow e.g. deeper strategies, or more "
-                      + "chaotic gameplay, etc.)</li>"
+                      // // mode 1
+                      // + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
+                      // + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
+                      // + " 30 seconds to recharge before it can move again.</li>"
 
-                      // // mode 2
-                      // + "<li>You can move one piece per army every 15 seconds. Capturing an enemy king will give "
-                      // + "you its remaining army.</li>"
-                      // + "<li>You can also move any piece in an 8 x 8 zone if there are no enemy pieces in that zone.</li>"
+                      // mode 2
+                      + "<li>You can move one piece every 15 seconds per 8 x 8 zone. Capturing an enemy king will give "
+                      + "you its remaining army.</li>"
+                      + "<li>You can also move any piece in an 8 x 8 zone if there are no enemy pieces in that zone.</li>"
 
                       + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in your zone, and no enemy king in the destination zone. Click on your king to "
@@ -1131,8 +1129,7 @@ var Obj = (function(){
     Obj.destroyZone = function(x, y){
         var zoneObjs = Obj.findObjsInZone(x, y)
         zoneObjs.forEach(function(obj){
-            Scene.remove(obj)
-            Obj.remove(obj)
+            Game.removeObj(obj)
         })
     }
 
@@ -2287,9 +2284,6 @@ var Game = (function(){
         on.remove = function(data){
             try {
                 Game.removeObjByPieceID(data.piece._id)
-                if (data.piece.kind == "king"){
-                    Nametag.remove(data.piece.player, data.piece.px, data.piece.py)
-                }
             } catch (e){
                 Console.warn("ERROR. Can't remove piece: " + e
                              + " This can sometimes happen on Firefox when the browser is out of sync with the "
@@ -2372,11 +2366,24 @@ var Game = (function(){
         }
     }
 
+    Game.removeObj = function(obj){
+        if (obj == null) return
+        Scene.remove(obj)
+        Obj.remove(obj)
+        try {
+            var piece = obj.game.piece
+            if (piece.kind == "king"){
+                Nametag.remove(piece.player, piece.x, piece.y)
+            }
+        } catch (e){
+
+        }
+    }
+
     // Returns removed obj
     Game.removeObjAtXY = function(x, y){
         var obj = Obj.findGameObjAtXY(Math.floor(x), Math.floor(y))
-        Scene.remove(obj);
-        Obj.remove(obj)
+        Game.removeObj(obj)
         return obj
     }
 
@@ -2393,8 +2400,7 @@ var Game = (function(){
                 return new Date(o1.game.piece.moved).getTime()
                     - new Date(o2.game.piece.moved).getTime()
             })
-            Scene.remove(objs[0]);
-            Obj.remove(objs[0])
+            Game.removeObj(objs[0])
         } else {
             throw "Piece not found."
         }
@@ -2403,8 +2409,7 @@ var Game = (function(){
     Game.removePiecesByArmyID = function(army_id){
         var objs = Obj.findObjsByArmyID(army_id)
         var pieces = objs.map(function(obj){
-            Scene.remove(obj);
-            Obj.remove(obj)
+            Game.removeObj(obj)
             return obj.game.piece
         })
         return pieces

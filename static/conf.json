@@ -1,5 +1,5 @@
 {
-    "recharge": 30000,
+    "recharge": 15000,
     "zone_size": 8,
     "scout_range": 6,
     "active_zone_half_width": 5,
