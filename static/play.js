@@ -2318,9 +2318,14 @@ var Game = (function(){
         return on
     }())
 
+    // mach
     // change pieces' playerID to defecteeID
     Game.defect = function(pieces, defecteeID){
         pieces.forEach(function(piece, i){
+            // nametag using previous player's ID before replacing with new playerID
+            if (piece.kind == "king"){
+                Nametag.remove(piece.player, piece.x, piece.y)
+            }
             piece.player = defecteeID
         })
     }
