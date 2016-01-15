@@ -9,7 +9,7 @@ var H = module.exports = (function(){
     }
 
     H.log = function(msg, obj1, obj2, obj3, obj4, obj5, obj6){
-        var out = new Date() + " " + msg
+        var out = new Date().toISOString() + " " + msg
         out += " " + (obj1 != null ? str(obj1) : "-")
         out += " " + (obj2 != null ? str(obj2) : "-")
         out += " " + (obj3 != null ? str(obj3) : "-")
@@ -59,6 +59,10 @@ var H = module.exports = (function(){
     // rounds x or y or z coordinate to a the zone's lower left coordinate
     H.toZoneCoordinate = function(x, zone_size){
         return Math.floor(x / zone_size) * zone_size
+    }
+
+    H.shortTime = function(){
+        return "[" + new Date().toLocaleTimeString().replace(/ AM| PM/, "") + "]"
     }
 
     return H

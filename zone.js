@@ -58,8 +58,13 @@ var Sub = (function(){
     _subscriber.on("message", function(chan, msg){
         try {
             var data = JSON.parse(msg)
-            if (data.playerID){
-                callbackPlayer(data.playerID, msg)
+            if (data.players){
+                // NOTE. removing players from payload cause we don't
+                // want all players knowing about all the other
+                // players we're sending this message to
+                var players = data.players
+                delete data.players
+                callbackPlayers(players, JSON.stringify(data))
             } else if (data.zone){
                 callbackZones(data.zone, msg)
             } else {
@@ -112,13 +117,16 @@ var Sub = (function(){
         }
     }
 
+    function callbackPlayers(players, msg){
+        players.forEach(function(playerID){
+            callbackPlayer(playerID, msg)
+        })
+    }
+
     function callbackPlayer(playerID, msg){
         try {
             if (_players[playerID]){
                 _players[playerID].cb(msg)
-            } else {
-                // this can happen if they disconnect and unsub before the operation finishes
-                H.log("ERROR. zone.callbackPlayer: _players has no playerID", playerID)
             }
         } catch (e){
             H.log("ERROR. zone.callbackPlayer.catch", playerID, msg, e)
@@ -271,7 +279,7 @@ var Zone = module.exports = (function(){
                 if (chan == "zone"){
                     Sub.subdate(_playerID, _zone, onZoneMsgCallback)
                 } else if (chan == "chat"){
-                    Pub.chat(data)
+                    pubChat(data)
                 } else {
                     Game.sock(data)
                 }
@@ -296,6 +304,29 @@ var Zone = module.exports = (function(){
             conn.write(msg);
         }
 
+    }
+
+    function pubChat(data){
+        try {
+            var players = data.players
+            if (players && players.length < Conf.max_chatters){
+                H.log("INFO. Zone.pubChatPlayers", data.zone[0], data.zone[1], data.text, players.length)
+                Pub.chat(data)
+            } else if (players){
+                // this means someone's sending us unauthorized data
+                // outside our client, because our client code has its
+                // own check for players && players.length <
+                // Conf.max_chatters, and won't send players if that
+                // fails, so this should never happen:
+                H.log("ERROR. Zone.pubChat: client sending more than Conf.max_chatters players")
+            } else {
+                // log players_length for diagnostics
+                H.log("INFO. Zone.pubChatZone", data.zone[0], data.zone[1], data.text, data.players_length)
+                Pub.chat(data)
+            }
+        } catch (e){
+            H.log("ERROR. Zone.pubChat.catch", data)
+        }
     }
 
     return Zone

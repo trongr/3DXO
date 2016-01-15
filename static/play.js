@@ -29,7 +29,7 @@
 // farther
 
 function log(msg, data){
-    console.log(new Date().toLocaleTimeString(), msg, data)
+    console.log(H.shortTime(), msg, data)
 }
 
 var K = (function(){
@@ -286,14 +286,19 @@ var Console = (function(){
                       // + "<li></li>"
                       // alternatively different zones have different rules, e.g. some zones lets you move
                       // any number of pieces, some 4 at a time, some 2, some just 1, per army.
+
                       // mode 1
                       + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
-                      // + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
-                      // + " 30 seconds to recharge before it can move again.</li>"
-                      // mode 2
-                      + "<li>You can move one piece per army every 15 seconds. Capturing an enemy king will give "
-                      + "you its remaining army.</li>"
-                      + "<li>You can also move any piece in an 8 x 8 zone if there are no enemy pieces in that zone.</li>"
+                      + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
+                      + " 30 seconds to recharge before it can move again. (In future releases there'll be "
+                      + "new regions with different sets of rules that will allow e.g. deeper strategies, or more "
+                      + "chaotic gameplay, etc.)</li>"
+
+                      // // mode 2
+                      // + "<li>You can move one piece per army every 15 seconds. Capturing an enemy king will give "
+                      // + "you its remaining army.</li>"
+                      // + "<li>You can also move any piece in an 8 x 8 zone if there are no enemy pieces in that zone.</li>"
+
                       + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in your zone, and no enemy king in the destination zone. Click on your king to "
                       + "highlight available zones.</li>"
@@ -382,7 +387,7 @@ var Sock = (function(){
 
         _sock = new SockJS('http://localhost:8080/game');
         _sock.onopen = function(){
-            if (_isRetry) Console.info(new Date().toLocaleTimeString() + " Connected")
+            if (_isRetry) Console.info(H.shortTime() + " Connected")
             _isRetry = true
             authenticateSocket(_playerID, "todo. get this from server")
         };
@@ -402,7 +407,7 @@ var Sock = (function(){
                 if (data.ok){
                     initSocket(x, y)
                 } else {
-                    Console.error(new Date().toLocaleTimeString()
+                    Console.error(H.shortTime()
                                   + " FATAL ERROR. Can't authenticate socket. Please try logging in again. "
                                   + "This should never happen, so if you see it more than once please let us know: "
                                   + "type <code> /bug msg </code> into the chat box, "
@@ -414,7 +419,7 @@ var Sock = (function(){
         };
 
         _sock.onclose = function() {
-            Console.warn(new Date().toLocaleTimeString() + " Lost connection: retrying in 5s")
+            Console.warn(H.shortTime() + " Lost connection: retrying in 5")
             setTimeout(function(){
                 Sock.init(_zone[0], _zone[1])
             }, 5000)
@@ -433,8 +438,26 @@ var Sock = (function(){
         _sock.send(JSON.stringify(data))
     }
 
+    var _suppress_sock_chat_warning = false
     Sock.chat = function(text){
-        Sock.send("chat", {zone:_zone, text:text})
+        var players = Object.keys(Players.getPlayers())
+        // Conf.max_chatters is the max number of players we want to
+        // chat by playerID.  If there are more players than that, we'll chat by zone.
+        // Chatting by playerID means that even if a player isn't looking at a zone, you
+        // can still talk to them as long as you can see their pieces. Chatting by zone
+        // OTOH won't send your msg to them if they're looking somewhere else.
+        if (players.length < Conf.max_chatters){
+            Sock.send("chat", {zone:_zone, text:text, players:players})
+        } else {
+            if (!_suppress_sock_chat_warning){
+                Console.warn(H.shortTime() + " WARNING. There are too many players nearby, "
+                            + "so players who aren't looking at this region won't receive your messages, "
+                            + "even if they have pieces here. But, if you can see someone move their pieces, "
+                            + "and they haven't navigated to another region, you can talk to them.")
+                _suppress_sock_chat_warning = true // so we don't show this warning again
+            }
+            Sock.send("chat", {zone:_zone, text:text, players_length:players.length})
+        }
     }
 
     Sock.subZone = function(x, y){
@@ -1068,7 +1091,7 @@ var Piece = (function(){
         yellow: [255,255,0],
         yellowgreen: [154,205,50],
         // // NOTE. Please.js just makes these colors look black
-        black: [0,0,0],
+        // black: [0,0,0],
         darkslategray: [47,79,79],
         darkgray: [169,169,169],
         slategray: [112,128,144],
@@ -1420,7 +1443,7 @@ var Map = (function(){
     }
 
     function makeZoneNumber(X, Y){
-        var sprite = Word.makeTextSprite("[" + X + ", " + Y + "]", {
+        var sprite = Word.makeTextSprite("[" + X + " " + Y + "]", {
             // fontface: "Arial",
             fontface: "Courier",
             fontsize: 12,
@@ -2271,7 +2294,7 @@ var Game = (function(){
                 Console.warn("ERROR. Can't remove piece: " + e
                              + " This can sometimes happen on Firefox when the browser is out of sync with the "
                              + "server. Please refresh the game by pressing F5 or Ctrl + R or Cmd + R.")
-                Console.warn("It should veeery rarely happen on Google Chrome, so please use that if you haven't already. "
+                Console.warn("It should happen very rarely on Google Chrome, so please use that if you aren't already. "
                              + "Also let us know if the problem persists: type <code> /bug msg </code> into the chat box, "
                              + "where msg is your tweet-long message describing the bug.")
             }
@@ -2318,7 +2341,6 @@ var Game = (function(){
         return on
     }())
 
-    // mach
     // change pieces' playerID to defecteeID
     Game.defect = function(pieces, defecteeID){
         pieces.forEach(function(piece, i){
