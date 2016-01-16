@@ -61,12 +61,14 @@ var Sub = (function(){
             if (data.players){
                 // NOTE. removing players from payload cause we don't
                 // want all players knowing about all the other
-                // players we're sending this message to
+                // players we're sending this message to. no good
+                // reason why not, but feels like a good idea. also
+                // saves some bandwidth
                 var players = data.players
                 delete data.players
                 callbackPlayers(players, JSON.stringify(data))
             } else if (data.zone){
-                callbackZones(data.zone, msg)
+                callbackZones(data.zone, msg, data.ignore || {})
             } else {
                 H.log("ERROR. Zone.message: no playerID or zone", chan, msg)
             }
@@ -80,13 +82,13 @@ var Sub = (function(){
     //
     // NOTE. assuming zone canonical, meaning its x and y coordinates
     // are of the lower left corner of the zone
-    function callbackZones(zone, msg){
+    function callbackZones(zone, msg, ignore){
         try {
             var x = zone[0], y = zone[1]
             var player = null
             for (var i = -N; i <= N; i++){
                 for (var j = -N; j <= N; j++){
-                    callbackZone([x + i * S, y + j * S], msg)
+                    callbackZone([x + i * S, y + j * S], msg, ignore)
                 }
             }
         } catch (e){
@@ -94,7 +96,7 @@ var Sub = (function(){
         }
     }
 
-    function callbackZone(zone, msg){
+    function callbackZone(zone, msg, ignore){
         try {
             var players = _zones[zone]
 
@@ -109,6 +111,7 @@ var Sub = (function(){
             for (var player in players) {
                 if (players.hasOwnProperty(player)){
                     var playerID = players[player]
+                    if (ignore[playerID]) return
                     callbackPlayer(playerID, msg)
                 }
             }
@@ -186,7 +189,8 @@ var Sub = (function(){
             var zone = _players[playerID].zone
             delete _zones[zone][playerID]
             delete _players[playerID]
-            H.log("INFO. Zone.removePlayer", playerID, H.length(_players))
+            // H.log("INFO. Zone.removePlayer", playerID, H.length(_players))
+            H.log("INFO. Zone.removePlayer", playerID)
         } catch (e){
             H.log("ERROR. Zone.removePlayer.catch", playerID, e)
         }
@@ -309,9 +313,18 @@ var Zone = module.exports = (function(){
     function pubChat(data){
         try {
             var players = data.players
-            if (players && players.length < Conf.max_chatters){
+            if (data.text.length > 140){
+                return Pub.error(data.playerID, "ERROR. Message too long: must be 140 characters or less")
+            }
+            if (players && players.length < Conf.max_chatters){ // pub chat by playerID's
                 H.log("INFO. Zone.pubChatPlayers", data.zone[0], data.zone[1], data.text, players.length)
                 Pub.chat(data)
+                // since we're publishing chat by playerID, spectators
+                // (players that don't have pieces in that region)
+                // won't get their ID's picked up by the client, and
+                // won't receive these messages. so we need to pub
+                // to them separately
+                pubChatSpectators(data)
             } else if (players){
                 // this means someone's sending us unauthorized data
                 // outside our client, because our client code has its
@@ -319,7 +332,7 @@ var Zone = module.exports = (function(){
                 // Conf.max_chatters, and won't send players if that
                 // fails, so this should never happen:
                 H.log("ERROR. Zone.pubChat: client sending more than Conf.max_chatters players")
-            } else {
+            } else { // pub chat by zone
                 // log players_length for diagnostics
                 H.log("INFO. Zone.pubChatZone", data.zone[0], data.zone[1], data.text, data.players_length)
                 Pub.chat(data)
@@ -327,6 +340,20 @@ var Zone = module.exports = (function(){
         } catch (e){
             H.log("ERROR. Zone.pubChat.catch", data)
         }
+    }
+
+    function pubChatSpectators(data){
+        var spectatorData = {
+            zone: data.zone,
+            text: data.text,
+            ignore: {}
+        }
+        // populate spectatorData.ignore so callbackZone can ignore a
+        // player if it's in this list
+        data.players.forEach(function(playerID){
+            spectatorData.ignore[playerID] = true
+        })
+        Pub.chat(spectatorData)
     }
 
     return Zone
