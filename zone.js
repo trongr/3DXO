@@ -171,12 +171,14 @@ var Sub = (function(){
     // Remove player from pubsub
     Sub.unsub = function(playerID){
         H.log("INFO. ZONE.UNSUB", playerID)
-        // clear any potential timeout before setting a new one
-        clearPlayerUnsubTimeout(playerID)
-        _unsub_timeouts[playerID] = setTimeout(function(){
+        // mach remove
+        // // clear any potential timeout before setting a new one
+        // clearPlayerUnsubTimeout(playerID)
+        // _unsub_timeouts[playerID] = setTimeout(function(){
             removePlayer(playerID)
+        // mach only updateOnline if it's the last connection for this player
             Players.updateOnline(playerID, Conf.status.offline)
-        }, UNSUB_TIMEOUT)
+        // }, UNSUB_TIMEOUT)
     }
 
     function clearPlayerUnsubTimeout(playerID){
@@ -269,16 +271,17 @@ var Zone = module.exports = (function(){
                 _zone = data.zone
                 H.log("INFO. Zone.data", _playerID, _zone[0], _zone[1], chan)
 
-                // NOTE. Sometimes sockjs randomly disconnects a ff
-                // client, causing us to remove _playerID from
-                // _players. But the client can still post XHR
-                // requests, so whenever it does we re-subdate the
-                // _playerID and _zone:
-                if (chan != "zone" && !Sub.playerExists(_playerID)){
-                    H.log("DEBUG. Zone.data.playerExists.not", _playerID)
-                    Sub.subdate(_playerID, _zone, onZoneMsgCallback)
-                    Players.updateOnline(_playerID, Conf.status.online)
-                }
+                // mach remove
+                // // NOTE. Sometimes sockjs randomly disconnects a ff
+                // // client, causing us to remove _playerID from
+                // // _players. But the client can still post XHR
+                // // requests, so whenever it does we re-subdate the
+                // // _playerID and _zone:
+                // if (chan != "zone" && !Sub.playerExists(_playerID)){
+                //     H.log("DEBUG. Zone.data.playerExists.not", _playerID)
+                //     Sub.subdate(_playerID, _zone, onZoneMsgCallback)
+                //     Players.updateOnline(_playerID, Conf.status.online)
+                // }
 
                 if (chan == "zone"){
                     Sub.subdate(_playerID, _zone, onZoneMsgCallback)
@@ -314,7 +317,7 @@ var Zone = module.exports = (function(){
         try {
             var players = data.players
             if (data.text.length > 140){
-                return Pub.error(data.playerID, "ERROR. Message too long: must be 140 characters or less")
+                return Pub.error(data.playerID, "ERROR. Message too long: 140 characters or less it must be")
             }
             if (players && players.length < Conf.max_chatters){ // pub chat by playerID's
                 H.log("INFO. Zone.pubChatPlayers", data.zone[0], data.zone[1], data.text, players.length)
