@@ -32,26 +32,13 @@ var Sub = (function(){
         // [x, y]: {playerID:playerID, playerID:playerID},
     }
     var _players = {
-        // playerID: {zone:[x, y], cb:onChatMsgCallback},
-        // playerID: {zone:[x, y], cb:onChatMsgCallback},
+        // playerID: {
+        //     zone: [x, y],
+        //     sessionID: sessionID
+        // },
     }
-
-    // NOTE. _unsub_timeouts stores a playerID and a timeout function
-    // when a client disconnects, to unsub later at UNSUB_TIMEOUT. We
-    // don't want to unsub right away because sockjs can call conn on
-    // close and still keep some connection to the client open, so we
-    // don't want to unsub on one of those calls, because that'll
-    // remove the playerID and its on msg callback for the remaining
-    // connection(s), and the server can't send data to the client by
-    // playerID. Instead we want to keep that playerID and on msg
-    // callback around for say 10 minutes. In those 10 minutes, the
-    // player will most likely make some kind of move, and send us a
-    // new playerID and zone, so we can re-subdate him, and clear and
-    // remove this timeout.
-    // var UNSUB_TIMEOUT = 10 * 60000
-    var UNSUB_TIMEOUT = 60000
-    var _unsub_timeouts = {
-        // playerID: timeout,
+    var _sessions = {
+        // sessionID: onMsgCallback,
     }
 
     // every msg must have a zone = [x, y]
@@ -129,7 +116,8 @@ var Sub = (function(){
     function callbackPlayer(playerID, msg){
         try {
             if (_players[playerID]){
-                _players[playerID].cb(msg)
+                var sessionID = _players[playerID].sessionID
+                _sessions[sessionID](msg)
             }
         } catch (e){
             H.log("ERROR. zone.callbackPlayer.catch", playerID, msg, e)
@@ -138,63 +126,66 @@ var Sub = (function(){
 
     // Client updates their zone every time they move to a new zone,
     // but we only call unsub once when they disconnect
-    Sub.subdate = function(playerID, zone, onZoneMsgCallback){
+    Sub.subdate = function(playerID, sessionID, zone, onMsgCallback){
         try {
-            clearPlayerUnsubTimeout(playerID)
+            // update session
+            _sessions[sessionID] = onMsgCallback
 
-            // update new zone
+            // update player
             var player = _players[playerID]
             _players[playerID] = {
                 zone: zone,
-                cb: onZoneMsgCallback
+                sessionID: sessionID
             }
+
+            // update new zone
             _zones[zone] = _zones[zone] || {}
             _zones[zone][playerID] = playerID
 
-            // remove player's old zone if any
+            // remove player's old zone if any: do it last because if
+            // we do it first, someone could have sent a message to
+            // the old zone in between and player would have no way of
+            // receiving it
             if (player){
                 var oldZone = player.zone
                 if (oldZone.toString() != zone.toString()){
                     delete _zones[oldZone][playerID]
                 }
             }
-            H.log("INFO. Zone.subdate", playerID, zone[0], zone[1], H.length(_zones[zone]))
+            H.log("INFO. Zone.subdate", playerID, sessionID, zone[0], zone[1], H.length(_zones[zone]))
         } catch (e){
             H.log("ERROR. Zone.subdate.catch", playerID, zone, e)
         }
     }
 
-    Sub.playerExists = function(playerID){
-        return _players[playerID] != null
-    }
-
     // Remove player from pubsub
-    Sub.unsub = function(playerID){
-        H.log("INFO. ZONE.UNSUB", playerID)
-        // mach remove
-        // // clear any potential timeout before setting a new one
-        // clearPlayerUnsubTimeout(playerID)
-        // _unsub_timeouts[playerID] = setTimeout(function(){
-            removePlayer(playerID)
-        // mach only updateOnline if it's the last connection for this player
-            Players.updateOnline(playerID, Conf.status.offline)
-        // }, UNSUB_TIMEOUT)
-    }
-
-    function clearPlayerUnsubTimeout(playerID){
-        clearTimeout(_unsub_timeouts[playerID])
-        delete _unsub_timeouts[playerID]
-    }
-
-    function removePlayer(playerID){
+    Sub.unsub = function(playerID, sessionID){
+        H.log("INFO. ZONE.UNSUB", playerID, sessionID)
         try {
-            var zone = _players[playerID].zone
-            delete _zones[zone][playerID]
-            delete _players[playerID]
-            // H.log("INFO. Zone.removePlayer", playerID, H.length(_players))
-            H.log("INFO. Zone.removePlayer", playerID)
+            if (!playerID){
+                return H.log("DEBUG. ZONE.UNSUB: null playerID: outputs should be null:", playerID, _sessions[sessionID])
+            }
+            if (_players[playerID].sessionID == sessionID){
+                var zone = _players[playerID].zone
+                delete _zones[zone][playerID]
+                delete _players[playerID]
+                delete _sessions[sessionID]
+                Players.updateOnline(playerID, Conf.status.offline)
+                H.log("INFO. Zone.removePlayer", playerID, sessionID)
+            } else {
+                // this is a duplicate session that's been replaced by
+                // a new session, so we only remove the session's
+                // callback, but keep player's zone and player data
+                // around for the other session
+                delete _sessions[sessionID]
+                H.log("INFO. Zone.removeSession", playerID, sessionID)
+            }
         } catch (e){
-            H.log("ERROR. Zone.removePlayer.catch", playerID, e)
+            // this happens if playerID is null, in which case client
+            // has a connection that hasn't authenticated yet, or sent
+            // any other data, like subdate, so there's nothing to
+            // remove, in particular _sessions[sessionID should be null
+            H.log("ERROR. ZONE.UNSUB.catch", playerID, sessionID, e)
         }
     }
 
@@ -235,8 +226,12 @@ var Zone = module.exports = (function(){
             H.log("ERROR. ZONE.CONN.CATCH")
             // console.log(new Date(), "ERROR. ZONE.CONN.CATCH", conn) // conn is a circular obj so can't use H.log
         }
-        var _playerID, _zone = null
+        var _sessionID = conn.id // this is actually the connection id, but eh
+        var _playerID,  _zone = null
         var _auth = false // set to true if connection authenticated
+
+        // tell client to send playerID and pass to authenticate
+        conn.write(JSON.stringify({chan:"authstart"}))
 
         // Receiving data from client
         conn.on('data', function(msg) {
@@ -244,7 +239,7 @@ var Zone = module.exports = (function(){
                 var data = JSON.parse(msg)
                 var chan = data.chan
                 _playerID = data.playerID
-                if (chan == "auth"){
+                if (chan == "authstart"){
                     // mach this method isn't doing any real
                     // authentication right now. we need the rest
                     // server to give the client a pass token for
@@ -254,14 +249,14 @@ var Zone = module.exports = (function(){
                             H.log(er)
                             conn.close()
                         } else if (ok){
-                            H.log("INFO. Zone.authenticate", ok, _playerID, data.pass)
+                            H.log("INFO. Zone.authenticate", ok, _playerID, _sessionID, data.pass)
                             _auth = true
                             Players.updateOnline(_playerID, Conf.status.online)
                             // tell client auth ok so they can start
                             // sending data on other channels
-                            conn.write(JSON.stringify({chan:"auth", ok:true}))
+                            conn.write(JSON.stringify({chan:"authend", ok:true}))
                         } else {
-                            H.log("INFO. Zone.authenticate", ok, _playerID, data.pass)
+                            H.log("INFO. Zone.authenticate", ok, _playerID, _sessionID, data.pass)
                             conn.close()
                         }
                     })
@@ -269,22 +264,10 @@ var Zone = module.exports = (function(){
                 }
 
                 _zone = data.zone
-                H.log("INFO. Zone.data", _playerID, _zone[0], _zone[1], chan)
-
-                // mach remove
-                // // NOTE. Sometimes sockjs randomly disconnects a ff
-                // // client, causing us to remove _playerID from
-                // // _players. But the client can still post XHR
-                // // requests, so whenever it does we re-subdate the
-                // // _playerID and _zone:
-                // if (chan != "zone" && !Sub.playerExists(_playerID)){
-                //     H.log("DEBUG. Zone.data.playerExists.not", _playerID)
-                //     Sub.subdate(_playerID, _zone, onZoneMsgCallback)
-                //     Players.updateOnline(_playerID, Conf.status.online)
-                // }
+                H.log("INFO. Zone.data", _playerID, _sessionID, _zone[0], _zone[1], chan)
 
                 if (chan == "zone"){
-                    Sub.subdate(_playerID, _zone, onZoneMsgCallback)
+                    Sub.subdate(_playerID, _sessionID, _zone, onMsgCallback)
                 } else if (chan == "chat"){
                     pubChat(data)
                 } else {
@@ -296,18 +279,10 @@ var Zone = module.exports = (function(){
         });
 
         conn.on("close", function(){
-            // if a client connects multiple times one right after the
-            // other (e.g. on firefox when you refresh the browser),
-            // one of those times it will send an on data, which
-            // creates a non null _playerID, while the other times it
-            // won't, so _playerID is null. This is the on close event
-            // fired by one of those null _playerID "threads":
-            if (!_playerID) return H.log("DEBUG. ZONE.CLOSE: null playerID")
-
-            Sub.unsub(_playerID)
+            Sub.unsub(_playerID, _sessionID)
         })
 
-        function onZoneMsgCallback(msg){
+        function onMsgCallback(msg){
             conn.write(msg);
         }
 

@@ -270,10 +270,10 @@ var Console = (function(){
         Console.print("<hr>")
         Console.print("Ragnarook is a <b style='color:yellow'>Massively Multiplayer Persistent Open World Game</b> "
                       + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
-                      + "Prepare to destroy your enemies in a semi-turn-based fashion!")
+                      + "Prepare to punish your enemies in a semi-turn-based fashion!")
         // Console.print("Ragnarook is a <i><b>Massively Multiplayer Online Open World Exploration Creative Building Semi-Real Time Strategy Role-Playing Game</b></i> "
         //               + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
-        //               + "Prepare to destroy your enemies in a semi-turn-based fashion!")
+        //               + "Prepare to punish your enemies in a semi-turn-based fashion!")
         Console.print("<hr>")
         Console.print("<h2><u>CONTROLS</u></h2>")
         Console.print("<ol>"
@@ -293,8 +293,7 @@ var Console = (function(){
                       // + " 30 seconds to recharge before it can move again.</li>"
 
                       // mode 2
-                      + "<li>You can move one piece every 15 seconds per 8 x 8 zone. Capturing an enemy king will give "
-                      + "you its remaining army.</li>"
+                      + "<li>You can move one piece every 15 seconds per 8 x 8 zone.</li>"
                       + "<li>You can also move any piece in an 8 x 8 zone if there are no enemy pieces in that zone.</li>"
 
                       + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
@@ -384,10 +383,10 @@ var Sock = (function(){
         _playerID = Player.getPlayer()._id
 
         _sock = new SockJS('http://localhost:8080/game');
+
         _sock.onopen = function(){
             if (_isRetry) Console.info(H.shortTime() + " Connected")
             _isRetry = true
-            authenticateSocket(_playerID, "todo. get this from server")
         };
 
         // re.data should always be an obj and contain a channel
@@ -399,18 +398,16 @@ var Sock = (function(){
                 if (re) return Console.error(re.data)
                 else return Console.error("FATAL ERROR. Server socket response")
             }
-            // only once the server sends this can we start sending
-            // other data over socket:
-            if (data.chan == "auth"){
-                if (data.ok){
-                    initSocket(x, y)
-                } else {
-                    Console.error(H.shortTime()
-                                  + " FATAL ERROR. Can't authenticate socket. Please try logging in again. "
-                                  + "This should never happen, so if you see it more than once please let us know: "
-                                  + "type <code> /bug msg </code> into the chat box, "
-                                  + "where msg is your tweet-long message describing the bug.")
-                }
+            // when the client connects, the server will tell it to
+            // authstart, then client sends playerID and password to
+            // server to authenticate. if it checks out, server will
+            // send an authend with the result. only then can the
+            // client start sending other data.
+            if (data.chan == "authstart"){
+                authstart(_playerID, "todo. get this from server")
+                return
+            } else if (data.chan == "authend"){
+                authend(data, x, y)
                 return
             }
             Game.on[data.chan](data)
@@ -422,11 +419,24 @@ var Sock = (function(){
                 Sock.init(_zone[0], _zone[1])
             }, 5000)
         };
+
     }
 
     // todo get pass from server over http
-    function authenticateSocket(playerID, pass){
-        Sock.send("auth", {playerID:playerID, pass:pass})
+    function authstart(playerID, pass){
+        Sock.send("authstart", {playerID:playerID, pass:pass})
+    }
+
+    function authend(data, x, y){
+        if (data.ok){
+            initSocket(x, y)
+        } else {
+            Console.error(H.shortTime()
+                          + " FATAL ERROR. Can't authenticate socket. Please try logging in again. "
+                          + "This should never happen, so if you see it more than once please let us know: "
+                          + "type <code> /bug msg </code> into the chat box, "
+                          + "where msg is your tweet-long message describing the bug.")
+        }
     }
 
     Sock.send = function(chan, data){
