@@ -5,7 +5,7 @@ var H = require("../static/js/h.js")
 var Conf = require("../static/conf.json") // shared with client
 
 var Pub = module.exports = (function(){
-    Pub = {}
+    var Pub = {}
 
     var _publisher = redis.createClient();
     var S = Conf.zone_size

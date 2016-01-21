@@ -10,7 +10,7 @@ var Sanitize = require("../lib/sanitize.js")
 var S = Conf.zone_size
 
 var Pieces = module.exports = (function(){
-    Pieces = {
+    var Pieces = {
         router: express.Router()
     }
 

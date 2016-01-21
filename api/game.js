@@ -9,6 +9,7 @@ var Player = require("../models/player.js")
 var Pub = require("../api/pub.js")
 var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
+var Clocks = require("../api/clocks.js")
 var DB = require("../db.js")
 
 var S = Conf.zone_size
@@ -439,7 +440,7 @@ var Move = (function(){
 }())
 
 var Game = module.exports = (function(){
-    Game = {
+    var Game = {
         router: express.Router()
     }
 

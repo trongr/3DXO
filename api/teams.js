@@ -4,7 +4,7 @@ var Team = require("../models/team.js")
 var H = require("../static/js/h.js")
 
 var Teams = module.exports = (function(){
-    Teams = {
+    var Teams = {
         router: express.Router()
     }
 

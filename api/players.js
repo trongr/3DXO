@@ -7,7 +7,7 @@ var Player = require("../models/player.js")
 var Piece = require("../models/piece.js")
 
 var Players = module.exports = (function(){
-    Players = {
+    var Players = {
         router: express.Router()
     }
 
