@@ -261,7 +261,7 @@ var Console = (function(){
     }
 
     Console.error = function(text){
-        Console.print("<span class='console_error'>" + text + "</span>")
+        Console.print("<span class='console_error'>" + H.shortTime() + " " + text + "</span>")
     }
 
     function helloConsole(){
@@ -431,8 +431,7 @@ var Sock = (function(){
         if (data.ok){
             initSocket(x, y)
         } else {
-            Console.error(H.shortTime()
-                          + " FATAL ERROR. Can't authenticate socket. Please try logging in again. "
+            Console.error("FATAL ERROR. Can't authenticate socket. Please try logging in again. "
                           + "This should never happen, so if you see it more than once please let us know: "
                           + "type <code> /bug msg </code> into the chat box, "
                           + "where msg is your tweet-long message describing the bug.")

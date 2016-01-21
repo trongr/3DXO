@@ -696,35 +696,75 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
+                    validatePlayerZoneClock(playerID, to[0], to[1], function(er, ok, msg){
+                        if (er) done(er)
+                        else if (ok) done(null)
+                        else {
+                            Pub.error(playerID, msg)
+                            done(OK)
+                        }
+                    })
+                    // REF for diff mechanics later
+                    // Pieces.validatePieceTimeout(piece, function(er){
+                    //     if (er){
+                    //         Pub.error(playerID, er)
+                    //         done(OK)
+                    //     } else done(null)
+                    // })
+                },
+                function(done){
                     // this means the king is making a zone move:
                     if (piece.kind == "king" && (Math.abs(piece.x - to[0]) > 1 || Math.abs(piece.y - to[1]) > 1)){
-                        zoneMove(playerID, player, piece, to)
+                        zoneMove(playerID, player, piece, to, done)
                     } else { // regular single piece move
-                        oneMove(playerID, player, piece, to)
+                        oneMove(playerID, player, piece, to, done)
                     }
-                    done(null)
+                },
+                function(done){
+                    createPlayerZoneClock(playerID, to[0], to[1], done)
                 }
             ], function(er){
-                if (er){
+                if (er == OK){
+                    // ignore
+                } else if (er){
                     H.log("ERROR. Game.move", playerID, pieceID, to, er)
                 }
             })
         }
 
+        function createPlayerZoneClock(playerID, x, y, done){
+            var X = H.toZoneCoordinate(x, S)
+            var Y = H.toZoneCoordinate(y, S)
+            Clocks.upsert(playerID, X, Y, new Date(), function(er, _clock){
+                done(er)
+            })
+        }
+
+        function validatePlayerZoneClock(playerID, x, y, done){
+            var X = H.toZoneCoordinate(x, S)
+            var Y = H.toZoneCoordinate(y, S)
+            Clocks.get(playerID, X, Y, function(er, _clock){
+                if (er){
+                    done(["ERROR. Game.validatePlayerZoneClock", playerID, x, y])
+                } else if (_clock){
+                    var elapsed = new Date().getTime() - new Date(_clock.t).getTime()
+                    if (elapsed >= Conf.recharge){
+                        done(null, true)
+                    } else {
+                        done(null, false, "ERROR. You can only move once every 15 seconds per zone. Next turn in " + parseInt((Conf.recharge - elapsed) / 1000))
+                    }
+                } else {
+                    done(null, true)
+                }
+            })
+        }
+
         // regular single piece move, as opposed to moving an entire army from one zone to another
-        function oneMove(playerID, player, piece, to){
+        function oneMove(playerID, player, piece, to, done){
             var nPiece = null
             var capturedKing = null
             var from = [piece.x, piece.y] // save this to pub remove from later this method
             async.waterfall([
-                function(done){
-                    Pieces.validatePieceTimeout(piece, function(er){
-                        if (er){
-                            Pub.error(playerID, er)
-                            done(OK)
-                        } else done(null)
-                    })
-                },
                 function(done){
                     Move.validateOneMove(player, piece, to, function(er){
                         done(er)
@@ -740,15 +780,16 @@ var Game = module.exports = (function(){
                 },
             ], function(er){
                 if (er == OK){
-                    // ignore
-                }else if (er){
-                    H.log("ERROR. Game.oneMove", er)
+                    done(er)
+                } else if (er){
+                    done(["ERROR. Game.oneMove", player, piece, to, er])
                 } else if (capturedKing){
                     Game.on.gameover(capturedKing.player, playerID, capturedKing)
                     Pub.move(nPiece, [
                         H.toZoneCoordinate(nPiece.x, S),
                         H.toZoneCoordinate(nPiece.y, S)
                     ])
+                    done(null)
                 } else {
                     Pub.remove(nPiece, [
                         H.toZoneCoordinate(from[0], S),
@@ -758,22 +799,15 @@ var Game = module.exports = (function(){
                         H.toZoneCoordinate(nPiece.x, S),
                         H.toZoneCoordinate(nPiece.y, S)
                     ])
+                    done(null)
                 }
             })
         }
 
         // moving an entire army from one zone to another
-        function zoneMove(playerID, player, king, to){
+        function zoneMove(playerID, player, king, to, done){
             var start = new Date().getTime()
             async.waterfall([
-                function(done){
-                    Pieces.validatePieceTimeout(king, function(er){
-                        if (er){
-                            Pub.error(playerID, er)
-                            done(OK)
-                        } else done(null)
-                    })
-                },
                 function(done){
                     // _pieces are pieces from the origin zone, so
                     // Move.zoneMove can skip a query to save time
@@ -784,11 +818,12 @@ var Game = module.exports = (function(){
                 },
             ], function(er, pieces){
                 if (er == OK){
-                    // ignore
+                    done(er)
                 } else if (er){
-                    H.log("ERROR. Game.zoneMove", player, king, to, er)
+                    done(["ERROR. Game.zoneMove", player, king, to, er])
                 } else {
                     pubZoneMovePieces(pieces)
+                    done(null)
                 }
                 alertElapsed(start, 2000, "Game.zoneMove")
             })

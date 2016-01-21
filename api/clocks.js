@@ -14,7 +14,7 @@ var Clocks = module.exports = (function(){
     // caller and this method might be in different servers, and
     // creating date here and checking it at caller will cause timing
     // out of sync
-    Clocks.upsert = function(playerID, x, y, date){
+    Clocks.upsert = function(playerID, x, y, date, done){
         Clock.findOneAndUpdate({
             player: playerID, x: x, y: y
         }, {
@@ -28,7 +28,7 @@ var Clocks = module.exports = (function(){
     }
 
     // done(null, null) if clock not found
-    Clocks.get = function(playerID, x, y){
+    Clocks.get = function(playerID, x, y, done){
         Clock.findOne({
             player:playerID, x:x, y:y
         }).exec(function(er, _clock){
