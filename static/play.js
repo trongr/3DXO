@@ -287,18 +287,19 @@ var Console = (function(){
                       // alternatively different zones have different rules, e.g. some zones lets you move
                       // any number of pieces, some 4 at a time, some 2, some just 1, per army.
 
+                      + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
+
                       // // mode 1
-                      // + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
                       // + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
                       // + " 30 seconds to recharge before it can move again.</li>"
 
                       // mode 2
                       + "<li>You can move one piece every 15 seconds per 8 x 8 zone.</li>"
-                      + "<li>You can also move any piece in an 8 x 8 zone if there are no enemy pieces in that zone.</li>"
+                      // + "<li>You can also move any piece in an 8 x 8 zone if there are no enemy pieces in that zone.</li>"
 
                       + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
-                      + "enemy pieces in your zone, and no enemy king in the destination zone. Click on your king to "
-                      + "highlight available zones.</li>"
+                      + "enemy pieces in your zone, and no king in the destination zone. If there are non-king pieces in "
+                      + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
                       + "</ol>")
         // Console.print("<h2><u>TIPS</u></h2>")
         // Console.print("<ol>"
