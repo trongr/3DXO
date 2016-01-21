@@ -669,6 +669,7 @@ var Game = module.exports = (function(){
                 var playerID = data.playerID
                 var pieceID = data.pieceID
                 var player, piece = null
+                var px, py = null
                 var to = [
                     Math.floor(data.to[0]),
                     Math.floor(data.to[1]),
@@ -696,6 +697,17 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
+                    px = piece.x, py = piece.y
+                    validatePlayerZoneClock(playerID, px, py, function(er, ok, msg){
+                        if (er) done(er)
+                        else if (ok) done(null)
+                        else {
+                            Pub.error(playerID, msg)
+                            done(OK)
+                        }
+                    })
+                },
+                function(done){
                     validatePlayerZoneClock(playerID, to[0], to[1], function(er, ok, msg){
                         if (er) done(er)
                         else if (ok) done(null)
@@ -719,6 +731,9 @@ var Game = module.exports = (function(){
                     } else { // regular single piece move
                         oneMove(playerID, player, piece, to, done)
                     }
+                },
+                function(done){
+                    createPlayerZoneClock(playerID, px, py, done)
                 },
                 function(done){
                     createPlayerZoneClock(playerID, to[0], to[1], done)
@@ -751,7 +766,7 @@ var Game = module.exports = (function(){
                     if (elapsed >= Conf.recharge){
                         done(null, true)
                     } else {
-                        done(null, false, "ERROR. You can only move once every 15 seconds per zone. Next turn in " + parseInt((Conf.recharge - elapsed) / 1000))
+                        done(null, false, "You can only move once every 15 seconds per zone. A cross-zone move counts in both zones. Next turn in " + parseInt((Conf.recharge - elapsed) / 1000) + ".")
                     }
                 } else {
                     done(null, true)
