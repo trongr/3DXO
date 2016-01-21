@@ -12,7 +12,8 @@ var schema = mongoose.Schema({
     },
     t: {
         type: Date,
-        default: null
+        default: null,
+        expires: 24 * 60 * 60, // seconds
     }
 });
 
