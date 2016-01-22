@@ -839,7 +839,10 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Pieces.removeNonKingPiecesInZone(to[0], to[1], done)
+                    Pieces.removeNonKingsInZone(to[0], to[1], function(er, _pieces){
+                        if (_pieces) pubZoneRemoveDstPieces(_pieces)
+                        done(er)
+                    })
                 },
                 function(done){
                     Move.zoneMove(pieces, dx, dy, done)
@@ -864,6 +867,15 @@ var Game = module.exports = (function(){
                     H.toZoneCoordinate(piece.py, S)
                 ])
                 Pub.move(piece, [
+                    H.toZoneCoordinate(piece.x, S),
+                    H.toZoneCoordinate(piece.y, S)
+                ])
+            })
+        }
+
+        function pubZoneRemoveDstPieces(pieces){
+            pieces.forEach(function(piece){
+                Pub.remove(piece, [
                     H.toZoneCoordinate(piece.x, S),
                     H.toZoneCoordinate(piece.y, S)
                 ])

@@ -134,16 +134,35 @@ var Pieces = module.exports = (function(){
         })
     }
 
-    Pieces.removeNonKingPiecesInZone = function(x, y, done){
+    Pieces.removeNonKingsInZone = function(x, y, done){
         var X = H.toZoneCoordinate(x, S)
         var Y = H.toZoneCoordinate(y, S)
-        Piece.remove({
-            x: {$gte: X, $lt: X + S},
-            y: {$gte: Y, $lt: Y + S},
-            kind: {$ne:"king"}
-        }, function(er) {
-            done(er)
-        });
+        var pieces = []
+        async.waterfall([
+            function(done){
+                Piece.find({
+                    x: {$gte: X, $lt: X + S},
+                    y: {$gte: Y, $lt: Y + S},
+                    kind: {$ne:"king"}
+                }).exec(function(er, _pieces){
+                    pieces = _pieces
+                    done(er)
+                });
+            },
+            function(done){
+                // might not be most efficient to do another dup search here, but eh:
+                Piece.remove({
+                    x: {$gte: X, $lt: X + S},
+                    y: {$gte: Y, $lt: Y + S},
+                    kind: {$ne:"king"}
+                }, function(er) {
+                    done(er)
+                });
+            }
+        ], function(er){
+            if (er) done(["ERROR. Pieces.removeNonKingsInZone", x, y, er])
+            else done(null, pieces)
+        })
     }
 
     return Pieces
