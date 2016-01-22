@@ -376,8 +376,8 @@ var Move = (function(){
         var pieces = []
         async.waterfall([
             function(done){
-                if (dx == 0 && dy == 0) done("dx dy zero")
-                else if (Math.abs(dx) > S || Math.abs(dy) > S) done("dx dy gt S")
+                if (dx == 0 && dy == 0) done("ERROR. dx dy zero")
+                else if (Math.abs(dx) > S || Math.abs(dy) > S) done("ERROR. dx dy gt S")
                 else done(null)
             },
             function(done){
@@ -388,14 +388,14 @@ var Move = (function(){
             },
             function(done){
                 if (checkAllPiecesBelongToPlayer(pieces, playerID)) done(null)
-                else done("enemy in origin zone")
+                else done("ERROR. enemy in origin zone")
             },
             function(done){
                 Pieces.findPiecesInZone(X, Y, done)
             },
             function(dstPieces, done){
-                if (checkAllPiecesBelongToPlayer(dstPieces, playerID)) done(null)
-                else done("enemy in dst zone")
+                if (checkPiecesNonKing(dstPieces)) done(null)
+                else done("ERROR. king in dst zone")
             }
         ], function(er){
             if (er) done(["ERROR. Game.Move.validateZoneMove", player, king, to, er])
@@ -406,6 +406,12 @@ var Move = (function(){
     function checkAllPiecesBelongToPlayer(pieces, playerID){
         return pieces.every(function(piece){
             return piece.player.equals(playerID)
+        })
+    }
+
+    function checkPiecesNonKing(pieces){
+        return pieces.every(function(piece){
+            return piece.kind != "king"
         })
     }
 
@@ -766,7 +772,7 @@ var Game = module.exports = (function(){
                     if (elapsed >= Conf.recharge){
                         done(null, true)
                     } else {
-                        done(null, false, "You can only move once every 15 seconds per zone. A cross-zone move counts in both zones. Next turn in " + parseInt((Conf.recharge - elapsed) / 1000) + ".")
+                        done(null, false, "You can only move once every 15 seconds per zone. A cross-zone move counts towards both zones. Next turn in " + parseInt((Conf.recharge - elapsed) / 1000) + ".")
                     }
                 } else {
                     done(null, true)

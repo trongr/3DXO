@@ -299,7 +299,8 @@ var Console = (function(){
 
                       + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in your zone, and no king in the destination zone. If there are non-king pieces in "
-                      + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
+                      + "the destination zone, they will be killed, regardless of whose side they are on. Click on your king "
+                      + "to highlight available zones.</li>"
                       + "</ol>")
         // Console.print("<h2><u>TIPS</u></h2>")
         // Console.print("<ol>"
@@ -1590,7 +1591,7 @@ var Move = (function(){
         var x = H.toZoneCoordinate(king.x, S)
         var y = H.toZoneCoordinate(king.y, S)
 
-        if (!checkZoneHasNoEnemy(x, y)) return zones
+        if (checkZoneHasEnemy(x, y)) return zones
 
         var N = 1
         for (var i = -N; i <= N; i++){
@@ -1598,7 +1599,7 @@ var Move = (function(){
                 if (i == 0 && j == 0) continue // ignore origin zone
                 var X = x + i * S
                 var Y = y + j * S
-                if (checkZoneHasNoEnemy(X, Y)){
+                if (!checkZoneHasKing(X, Y)){
                     zones.push([X, Y])
                 }
             }
@@ -1606,14 +1607,25 @@ var Move = (function(){
         return zones
     }
 
-    function checkZoneHasNoEnemy(x, y){
+    function checkZoneHasEnemy(x, y){
         var enemies = Obj.findObjsInZone(x, y).filter(function(obj){
             return ! Player.isFriendly(obj.game.piece)
         })
         if (enemies.length > 0){
-            return false
-        } else {
             return true
+        } else {
+            return false
+        }
+    }
+
+    function checkZoneHasKing(x, y){
+        var kings = Obj.findObjsInZone(x, y).filter(function(obj){
+            return obj.game.piece.kind == "king"
+        })
+        if (kings.length > 0){
+            return true
+        } else {
+            return false
         }
     }
 
@@ -2254,6 +2266,7 @@ var Game = (function(){
         var player = Player.getPlayer()
         async.waterfall([
             function(done){
+                // return done(null) // NOTE. toggle to test server validation
                 if (Move.isValidated(x, y, z)){
                     done(null)
                 } else if (piece.kind == "king" && Move.isValidatedZoneMove(x, y)){
