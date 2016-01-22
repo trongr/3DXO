@@ -828,22 +828,29 @@ var Game = module.exports = (function(){
         // moving an entire army from one zone to another
         function zoneMove(playerID, player, king, to, done){
             var start = new Date().getTime()
+            var pieces, dx, dy
             async.waterfall([
                 function(done){
                     // _pieces are pieces from the origin zone, so
                     // Move.zoneMove can skip a query to save time
-                    Move.validateZoneMove(player, king, to, done)
+                    Move.validateZoneMove(player, king, to, function(er, _pieces, _dx, _dy){
+                        pieces = _pieces, dx = _dx, dy = _dy
+                        done(er)
+                    })
                 },
-                function(pieces, dx, dy, done){
+                function(done){
+                    Pieces.removeNonKingPiecesInZone(to[0], to[1], done)
+                },
+                function(done){
                     Move.zoneMove(pieces, dx, dy, done)
                 },
-            ], function(er, pieces){
+            ], function(er, _pieces){
                 if (er == OK){
                     done(er)
                 } else if (er){
                     done(["ERROR. Game.zoneMove", player, king, to, er])
                 } else {
-                    pubZoneMovePieces(pieces)
+                    pubZoneMovePieces(_pieces)
                     done(null)
                 }
                 alertElapsed(start, 2000, "Game.zoneMove")

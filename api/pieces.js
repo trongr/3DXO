@@ -19,7 +19,6 @@ var Pieces = module.exports = (function(){
     Pieces.router.route("/:x/:y/:r")
         .get(function(req, res){
             try {
-                var S = Conf.zone_size
                 var x = Math.floor(Sanitize.integer(H.param(req, "x")) / S) * S
                 var y = Math.floor(Sanitize.integer(H.param(req, "y")) / S) * S
                 // var r = Sanitize.integer(H.param(req, "r"))
@@ -133,6 +132,18 @@ var Pieces = module.exports = (function(){
                 H.log("ERROR. Pieces.correctPlayerArmiesCount", playerID, count, er)
             }
         })
+    }
+
+    Pieces.removeNonKingPiecesInZone = function(x, y, done){
+        var X = H.toZoneCoordinate(x, S)
+        var Y = H.toZoneCoordinate(y, S)
+        Piece.remove({
+            x: {$gte: X, $lt: X + S},
+            y: {$gte: Y, $lt: Y + S},
+            kind: {$ne:"king"}
+        }, function(er) {
+            done(er)
+        });
     }
 
     return Pieces
