@@ -2306,7 +2306,8 @@ var Game = (function(){
 
         on.remove = function(data){
             try {
-                Game.removeObjByPieceID(data.piece._id)
+                var deadPiece = Game.removeObjByPieceID(data.piece._id)
+                Charge.resetObjClock(deadPiece)
             } catch (e){
                 Console.warn("ERROR. Can't remove piece: " + e
                              + " This can sometimes happen on Firefox when the browser is out of sync with the "
@@ -2423,7 +2424,9 @@ var Game = (function(){
                 return new Date(o1.game.piece.moved).getTime()
                     - new Date(o2.game.piece.moved).getTime()
             })
-            Game.removeObj(objs[0])
+            var obj = objs[0]
+            Game.removeObj(obj)
+            return obj
         } else {
             throw "Piece not found."
         }
