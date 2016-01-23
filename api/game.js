@@ -320,7 +320,13 @@ var Move = (function(){
             function(done){
                 dstPiece.remove(function(er){
                     if (er) done(["remove dst piece", er])
-                    else done(null)
+                    else {
+                        // remove piece's clock if any, so player can
+                        // immediately move if dstPiece was the piece on the
+                        // clock
+                        Clocks.removeOne(dstPiece.player, dstPiece._id)
+                        done(null)
+                    }
                 })
             },
             function(done){
@@ -739,10 +745,10 @@ var Game = module.exports = (function(){
                     }
                 },
                 function(done){
-                    createPlayerZoneClock(playerID, px, py, done)
+                    createPlayerZoneClock(playerID, piece._id, px, py, done)
                 },
                 function(done){
-                    createPlayerZoneClock(playerID, to[0], to[1], done)
+                    createPlayerZoneClock(playerID, piece._id, to[0], to[1], done)
                 }
             ], function(er){
                 if (er == OK){
@@ -753,10 +759,10 @@ var Game = module.exports = (function(){
             })
         }
 
-        function createPlayerZoneClock(playerID, x, y, done){
+        function createPlayerZoneClock(playerID, pieceID, x, y, done){
             var X = H.toZoneCoordinate(x, S)
             var Y = H.toZoneCoordinate(y, S)
-            Clocks.upsert(playerID, X, Y, new Date(), function(er, _clock){
+            Clocks.upsert(playerID, pieceID, X, Y, new Date(), function(er, _clock){
                 done(er)
             })
         }
@@ -840,7 +846,10 @@ var Game = module.exports = (function(){
                 },
                 function(done){
                     Pieces.removeNonKingsInZone(to[0], to[1], function(er, _pieces){
-                        if (_pieces) pubZoneRemoveDstPieces(_pieces)
+                        if (_pieces){
+                            pubZoneRemoveDstPieces(_pieces)
+                            Clocks.removeMany(_pieces)
+                        }
                         done(er)
                     })
                 },

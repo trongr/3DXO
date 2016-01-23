@@ -14,6 +14,11 @@ var schema = mongoose.Schema({
         type: Date,
         default: null,
         expires: 24 * 60 * 60, // seconds
+    },
+    piece: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Piece',
+        required: true,
     }
 });
 

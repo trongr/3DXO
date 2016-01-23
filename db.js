@@ -1,6 +1,4 @@
 var mongoose = require('mongoose');
-// mach remove
-// var H = require("./lib/h.js")
 var H = require("./static/js/h.js")
 
 var DB = module.exports = (function(){

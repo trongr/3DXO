@@ -14,11 +14,13 @@ var Clocks = module.exports = (function(){
     // caller and this method might be in different servers, and
     // creating date here and checking it at caller will cause timing
     // out of sync
-    Clocks.upsert = function(playerID, x, y, date, done){
+    Clocks.upsert = function(playerID, pieceID, x, y, date, done){
         Clock.findOneAndUpdate({
             player: playerID, x: x, y: y
         }, {
-            $set: {t: date}
+            $set: {
+                t: date, piece: pieceID
+            }
         }, {
             new: true, upsert: true,
         }, function(er, _clock){
@@ -34,6 +36,27 @@ var Clocks = module.exports = (function(){
         }).exec(function(er, _clock){
             done(er, _clock)
         });
+    }
+
+    Clocks.removeOne = function(playerID, pieceID){
+        Clock.remove({
+            player: playerID,
+            piece: pieceID,
+        }, function(er) {
+            if (er) H.log("ERROR. Clocks.removeOne", playerID, pieceID, er)
+        });
+    }
+
+    Clocks.removeMany = function(pieces){
+        if (!pieces) return
+        pieces.forEach(function(piece){
+            Clock.remove({
+                player: (piece.player._id ? piece.player._id : piece.player),
+                piece: piece._id,
+            }, function(er) {
+                if (er) H.log("ERROR. Clocks.removeMany", pieces, er)
+            });
+        })
     }
 
     return Clocks
