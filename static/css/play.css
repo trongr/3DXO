@@ -106,6 +106,18 @@ hr {
     font-weight: bold;
 }
 
+.chat_player_name {
+    font-weight: bold;
+}
+
+.chat_time {
+    color: #BFBFBF;
+}
+
+.chat_msg {
+    font-weight: bold;
+}
+
 /* end console css */
 /* end console css */
 /* end console css */

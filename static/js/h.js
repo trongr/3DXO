@@ -61,8 +61,25 @@ var H = module.exports = (function(){
         return Math.floor(x / zone_size) * zone_size
     }
 
-    H.shortTime = function(){
+    H.shortTimeBrackets = function(){
         return "[" + new Date().toLocaleTimeString().replace(/ AM| PM/, "") + "]"
+    }
+
+    H.shortTime = function(){
+        return new Date().toLocaleTimeString()
+    }
+
+    // color looks like [0.12, 0.23, 0.34], representing RGB from 0 to
+    // 1, as opposed to 0 to 255
+    H.RGBFractionToHexString = function(color){
+        if (!color) return ""
+        var r = "00" + (color[0] * 255).toString(16);
+        var g = "00" + (color[1] * 255).toString(16);
+        var b = "00" + (color[2] * 255).toString(16);
+        r = r.substr(r.length - 2)
+        g = g.substr(g.length - 2)
+        b = b.substr(b.length - 2)
+        return r + g + b
     }
 
     return H

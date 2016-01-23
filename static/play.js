@@ -29,7 +29,7 @@
 // farther
 
 function log(msg, data){
-    console.log(H.shortTime(), msg, data)
+    console.log(H.shortTimeBrackets(), msg, data)
 }
 
 var K = (function(){
@@ -316,7 +316,7 @@ var Console = (function(){
     }
 
     Console.error = function(text){
-        Console.print("<span class='console_error'>" + H.shortTime() + " " + text + "</span>")
+        Console.print("<span class='console_error'>" + H.shortTimeBrackets() + " " + text + "</span>")
     }
 
     function helloConsole(){
@@ -442,7 +442,7 @@ var Sock = (function(){
         _sock = new SockJS('http://localhost:8080/game');
 
         _sock.onopen = function(){
-            if (_isRetry) Console.info(H.shortTime() + " Connected")
+            if (_isRetry) Console.info(H.shortTimeBrackets() + " Connected")
             _isRetry = true
         };
 
@@ -471,7 +471,7 @@ var Sock = (function(){
         };
 
         _sock.onclose = function() {
-            Console.warn(H.shortTime() + " Lost connection: retrying in 5")
+            Console.warn(H.shortTimeBrackets() + " Lost connection: retrying in 5")
             setTimeout(function(){
                 Sock.init(_zone[0], _zone[1])
             }, 5000)
@@ -514,7 +514,7 @@ var Sock = (function(){
             Sock.send("chat", {zone:_zone, text:text, players:players})
         } else {
             if (!_suppress_sock_chat_warning){
-                Console.warn(H.shortTime() + " WARNING. There are too many players nearby, "
+                Console.warn(H.shortTimeBrackets() + " WARNING. There are too many players nearby, "
                             + "so players who aren't looking at this region won't receive your messages, "
                             + "even if they have pieces here. But, if you can see someone move their pieces, "
                             + "and they haven't navigated to another region, you can talk to them.")
@@ -950,7 +950,7 @@ var Piece = (function(){
             return Console.error("FATAL ERROR. Piece.make: no playerID: " + JSON.stringify(piece, 0, 2))
         }
         var pos = new THREE.Vector3(piece.x, piece.y, 1)
-        var color = getPlayerColor(playerID)
+        var color = Piece.getPlayerColor(playerID)
         var obj = ClassicSet.make(piece.kind, color, pos)
         obj.game = {piece:piece}
         Scene.add(obj);
@@ -964,7 +964,7 @@ var Piece = (function(){
     }
 
     // returns [r, g, b], values between 0 and 1
-    function getPlayerColor(playerID){
+    Piece.getPlayerColor = function(playerID){
         if (_colors[playerID]) return _colors[playerID]
 
         // try {
@@ -2400,8 +2400,13 @@ var Game = (function(){
         }
 
         on.chat = function(data){
+            var playerName = data.playerName
+            var playerID = data.playerID
             var text = data.text
-            Console.print(text)
+            var color = H.RGBFractionToHexString(Piece.getPlayerColor(playerID))
+            Console.print("<b class='chat_player_name' style='color:#" + color + "'>" + playerName + "</b> "
+                          + "<span class='chat_time'>" + H.shortTime() + "</span>")
+            Console.print("<span class='chat_msg'>" + text + "</span>")
         }
 
         return on

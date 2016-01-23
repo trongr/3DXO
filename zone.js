@@ -1,9 +1,11 @@
+var _ = require("lodash")
 var sockjs  = require('sockjs');
 var redis   = require('redis');
 var H = require("./static/js/h.js")
 var Conf = require("./static/conf.json") // shared with client
 var Game = require("./api/game.js")
 var Players = require("./api/players.js")
+var Player = require("./models/player.js")
 var Pub = require("./api/pub.js")
 
 var Sub = (function(){
@@ -212,7 +214,9 @@ var Zone = module.exports = (function(){
 
     function authenticate(playerID, pass, done){
         H.log("INFO. ZONE.AUTHENTICATE: TODO")
-        done(null, true)
+        Player.findOneByID(playerID, function(er, _player){
+            done(er, _player)
+        })
     }
 
     // todo. authenticate client. right now there's no way to know if
@@ -228,7 +232,7 @@ var Zone = module.exports = (function(){
             // console.log(new Date(), "ERROR. ZONE.CONN.CATCH", conn) // conn is a circular obj so can't use H.log
         }
         var _sessionID = conn.id // this is actually the connection id, but eh
-        var _playerID,  _zone = null
+        var _playerID, _player,  _zone = null
         var _auth = false // set to true if connection authenticated
 
         // tell client to send playerID and pass to authenticate
@@ -245,19 +249,17 @@ var Zone = module.exports = (function(){
                     // authentication right now. we need the rest
                     // server to give the client a pass token for
                     // that. just adding a stub here for the structure
-                    authenticate(_playerID, data.pass, function(er, ok){
-                        if (er){
-                            H.log(er)
-                            conn.close()
-                        } else if (ok){
-                            H.log("INFO. Zone.authenticate", ok, _playerID, _sessionID, data.pass)
+                    authenticate(_playerID, data.pass, function(er, player){
+                        if (player){
+                            _player = player
+                            H.log("INFO. Zone.authenticate.ok", _playerID, _sessionID, data.pass)
                             _auth = true
                             Players.updateOnline(_playerID, Conf.status.online)
                             // tell client auth ok so they can start
                             // sending data on other channels
                             conn.write(JSON.stringify({chan:"authend", ok:true}))
                         } else {
-                            H.log("INFO. Zone.authenticate", ok, _playerID, _sessionID, data.pass)
+                            H.log("INFO. Zone.authenticate.ko", _playerID, _sessionID, data.pass, er)
                             conn.close()
                         }
                     })
@@ -270,7 +272,7 @@ var Zone = module.exports = (function(){
                 if (chan == "zone"){
                     Sub.subdate(_playerID, _sessionID, _zone, onMsgCallback)
                 } else if (chan == "chat"){
-                    pubChat(data)
+                    pubChat(_player, data)
                 } else {
                     Game.sock(data)
                 }
@@ -289,9 +291,14 @@ var Zone = module.exports = (function(){
 
     }
 
-    function pubChat(data){
+    function pubChat(player, data){
         try {
             var players = data.players
+
+            // useful data for client to render chat messages
+            data.playerName = player.name
+            data.playerID = player._id
+
             if (data.text.length > 140){
                 return Pub.error(data.playerID, "ERROR. Message too long: 140 characters or less it must be")
             }
@@ -323,10 +330,11 @@ var Zone = module.exports = (function(){
 
     function pubChatSpectators(data){
         var spectatorData = {
-            zone: data.zone,
-            text: data.text,
             ignore: {}
         }
+        _.merge(spectatorData, data)
+        delete spectatorData.players // cause otw _subscriber on message will pub to players instead of by zone
+
         // populate spectatorData.ignore so callbackZone can ignore a
         // player if it's in this list
         data.players.forEach(function(playerID){

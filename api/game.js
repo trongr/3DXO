@@ -767,7 +767,7 @@ var Game = module.exports = (function(){
                     if (elapsed >= Conf.recharge){
                         done(null, true)
                     } else {
-                        done(null, false, "You can only move once every 15 seconds per zone. Next turn in " + parseInt((Conf.recharge - elapsed) / 1000) + ".")
+                        done(null, false, "Next turn in " + parseInt((Conf.recharge - elapsed) / 1000) + ".  See Rule 2.")
                     }
                 } else {
                     done(null, true)
