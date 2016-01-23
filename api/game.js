@@ -25,17 +25,6 @@ function alertElapsed(start, max_dur, msg){
 var Move = (function(){
     var Move = {}
 
-    // NOTE. Client also has a copy of this. TODO. Put them both in conf.json
-    var MAX_RANGE = 5
-    Move.range = {
-        pawn: 1,
-        rook: MAX_RANGE,
-        bishop: MAX_RANGE,
-        queen: MAX_RANGE,
-        king: 1,
-        knight: 1,
-    }
-
     Move.directions = {
         ioo: [ 1,  0],
         oio: [ 0,  1],
@@ -154,8 +143,8 @@ var Move = (function(){
             var dy = to[1] - piece.y
             var distance = Math.max(Math.abs(dx), Math.abs(dy))
             if (piece.kind == "knight"){
-                done(null, Move.range.knight)  // knight "distance" == 1
-            } else if (distance <= Move.range[piece.kind]){
+                done(null, Conf.range.knight)  // knight "distance" == 1
+            } else if (distance <= Conf.range[piece.kind]){
                 done(null, distance)
             } else {
                 done(["ERROR. Move.validateDistance: too far", piece, to])

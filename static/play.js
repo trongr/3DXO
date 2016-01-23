@@ -1490,17 +1490,6 @@ var Map = (function(){
 var Move = (function(){
     var Move = {}
 
-    // NOTE. Server has a copy of this. TODO. Put them both in conf.json
-    var MAX_RANGE = 5
-    Move.range = {
-        pawn: 1,
-        rook: MAX_RANGE,
-        bishop: MAX_RANGE,
-        queen: MAX_RANGE,
-        king: 1,
-        knight: 1,
-    }
-
     Move.directions = {
         ioo: [ 1,  0,  0],
         oio: [ 0,  1,  0],
@@ -1737,7 +1726,7 @@ var Move = (function(){
     }
 
     Move.getRange = function(objKind){
-        return Move.range[objKind]
+        return Conf.range[objKind]
     }
 
     return Move
