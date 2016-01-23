@@ -445,7 +445,7 @@ var Game = module.exports = (function(){
         router: express.Router()
     }
 
-    var ERROR_BUILD_ARMY = "ERROR. Can't build army"
+    var ERROR_BUILD_ARMY = "Can't build army"
 
     Game.router.route("/:playerID/buildArmy")
         .post(function(req, res){
@@ -456,7 +456,7 @@ var Game = module.exports = (function(){
             }
             Game.buildArmy(playerID, function(er, pieces, zone){
                 if (er == OK){
-                    // ignore
+                    res.send({info:ERROR_BUILD_ARMY})
                 } else if (er){
                     H.log(er)
                     res.send({info:ERROR_BUILD_ARMY})
@@ -767,7 +767,7 @@ var Game = module.exports = (function(){
                     if (elapsed >= Conf.recharge){
                         done(null, true)
                     } else {
-                        done(null, false, "You can only move once every 15 seconds per zone. A cross-zone move counts towards both zones. Next turn in " + parseInt((Conf.recharge - elapsed) / 1000) + ".")
+                        done(null, false, "You can only move once every 15 seconds per zone. Next turn in " + parseInt((Conf.recharge - elapsed) / 1000) + ".")
                     }
                 } else {
                     done(null, true)

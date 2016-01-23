@@ -349,7 +349,7 @@ var Console = (function(){
                       // + " 30 seconds to recharge before it can move again.</li>"
 
                       // mode 2
-                      + "<li>You can move one piece every 15 seconds per 8 x 8 zone.</li>"
+                      + "<li>You can move one piece every 15 seconds per 8 x 8 zone. A cross-zone move counts towards both zones.</li>"
                       // + "<li>You can also move any piece in an 8 x 8 zone if there are no enemy pieces in that zone.</li>"
 
                       + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
