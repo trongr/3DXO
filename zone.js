@@ -21,6 +21,7 @@ var Sub = (function(){
     _subscriber.subscribe('new_army');
     _subscriber.subscribe('remove');
     _subscriber.subscribe('move');
+    _subscriber.subscribe('zonemoveclock');
     _subscriber.subscribe('gameover');
     _subscriber.subscribe('defect');
 

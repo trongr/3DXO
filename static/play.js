@@ -51,6 +51,7 @@ var K = (function(){
 
         MODEL_OFFSET: {x:0, y:0, z:-0.4},
         CLOCK_OFFSET: {x:0, y:0, z:-0.4},
+        ZONE_CLOCK_OFFSET: {x:3.5, y:3.5, z:-0.4},
         ROLLOVER_OFFSET: {x:0, y:0, z:-0.49},
         HIGHLIGHT_OFFSET: {x:0, y:0, z:-0.49},
         HIGHLIGHT_ZONE_OFFSET: {x:-0.5, y:-0.5, z:-0.49},
@@ -172,11 +173,26 @@ var Charge = (function(){
         //     interval: interval
         // }
     }
+    var _zoneClocks = {
+        // [x, y]: {
+        //     clock: clock, // the THREEJS clock obj
+        //     interval: interval
+        // }
+    }
 
     var CLOCK_OUTER_RADIUS = 0.5
     var CLOCK_WIDTH = 0.1
     var CLOCK_INNER_RADIUS = CLOCK_OUTER_RADIUS - CLOCK_WIDTH
     var CLOCK_MAT = new THREE.MeshLambertMaterial({
+        color:0xFFFA66,
+        side:THREE.DoubleSide, // Need DoubleSide otw ring won't render
+        transparent:true, opacity:0.8
+    });
+
+    var ZONE_CLOCK_OUTER_RADIUS = 4
+    var ZONE_CLOCK_WIDTH = 1
+    var ZONE_CLOCK_INNER_RADIUS = ZONE_CLOCK_OUTER_RADIUS - ZONE_CLOCK_WIDTH
+    var ZONE_CLOCK_MAT = new THREE.MeshLambertMaterial({
         color:0xFFFA66,
         side:THREE.DoubleSide, // Need DoubleSide otw ring won't render
         transparent:true, opacity:0.8
@@ -228,9 +244,48 @@ var Charge = (function(){
     function makeRechargeClock(x, y, z, percent){
         var clock_geo = new THREE.RingGeometry(CLOCK_INNER_RADIUS, CLOCK_OUTER_RADIUS, 32, 8, Math.PI / 2, 2 * Math.PI * (percent - 1));
         var ring = new THREE.Mesh(clock_geo, CLOCK_MAT);
-        // NOTE. This moves to the center of cell xyz. If you need to
-        // adjust say z to raise the ring higher, use something else.
         Obj.move(ring, new THREE.Vector3(x, y, z), K.CLOCK_OFFSET)
+        return ring
+    }
+
+    Charge.startZoneMoveClock = function(x, y){
+        var zone = [x, y]
+        var total = Conf.recharge
+        var delta = 50 // change this for smoother or rougher ticks
+        var time = total
+        resetZoneClock(zone)
+        _zoneClocks[zone] = {}
+        _zoneClocks[zone].interval = setInterval(function(){
+            removeZoneClockMesh(zone)
+            time = time - delta
+            var clock = makeRechargeZoneClock(x, y, 1, time / total)
+            _zoneClocks[zone].clock = clock
+            Scene.add(clock)
+            if (time < 1){
+                resetZoneClock(zone)
+            }
+        }, delta);
+    }
+
+    function resetZoneClock(zone){
+        var clock = _zoneClocks[zone]
+        if (clock){
+            clearInterval(clock.interval)
+            removeZoneClockMesh(zone)
+            _zoneClocks[zone] = {}
+        }
+    }
+
+    function removeZoneClockMesh(zone){
+        var obj = _zoneClocks[zone].clock
+        Scene.remove(obj)
+        if (obj) obj.geometry.dispose();
+    }
+
+    function makeRechargeZoneClock(x, y, z, percent){
+        var zone_clock_geo = new THREE.RingGeometry(ZONE_CLOCK_INNER_RADIUS, ZONE_CLOCK_OUTER_RADIUS, 64, 8, Math.PI / 2, 2 * Math.PI * (percent - 1));
+        var ring = new THREE.Mesh(zone_clock_geo, ZONE_CLOCK_MAT);
+        Obj.move(ring, new THREE.Vector3(x, y, z), K.ZONE_CLOCK_OFFSET)
         return ring
     }
 
@@ -2315,9 +2370,13 @@ var Game = (function(){
             // create new piece at dst
             var obj = Piece.make(data.piece)
             Game.addObj(obj)
-            Charge.start(data.piece)
+            if (data.showClock) Charge.start(data.piece)
 
             SFX.move(data.piece.kind)
+        }
+
+        on.zonemoveclock = function(data){
+            Charge.startZoneMoveClock(data.x, data.y)
         }
 
         // todo big splash screen and menu for loser

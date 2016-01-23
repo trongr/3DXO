@@ -40,9 +40,17 @@ var Pub = module.exports = (function(){
         })
     }
 
-    Pub.move = function(piece, zone){
+    Pub.move = function(piece, showClock, zone){
         Pub.publish("move", {
             piece: piece,
+            showClock: showClock,
+            zone: zone
+        })
+    }
+
+    Pub.zoneMoveClock = function(x, y, zone){
+        Pub.publish("zonemoveclock", {
+            x: x, y: y,
             zone: zone
         })
     }

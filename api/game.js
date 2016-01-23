@@ -795,13 +795,14 @@ var Game = module.exports = (function(){
                     })
                 },
             ], function(er){
+                var showClock = true
                 if (er == OK){
                     done(er)
                 } else if (er){
                     done(["ERROR. Game.oneMove", player, piece, to, er])
                 } else if (capturedKing){
                     Game.on.gameover(capturedKing.player, playerID, capturedKing)
-                    Pub.move(nPiece, [
+                    Pub.move(nPiece, showClock, [
                         H.toZoneCoordinate(nPiece.x, S),
                         H.toZoneCoordinate(nPiece.y, S)
                     ])
@@ -811,7 +812,7 @@ var Game = module.exports = (function(){
                         H.toZoneCoordinate(from[0], S),
                         H.toZoneCoordinate(from[1], S)
                     ])
-                    Pub.move(nPiece, [
+                    Pub.move(nPiece, showClock, [
                         H.toZoneCoordinate(nPiece.x, S),
                         H.toZoneCoordinate(nPiece.y, S)
                     ])
@@ -859,16 +860,24 @@ var Game = module.exports = (function(){
         }
 
         function pubZoneMovePieces(pieces){
+            var showClock = false // tell client not to render clocks for each individual pieces
             pieces.forEach(function(piece){
                 Pub.remove(piece, [
                     H.toZoneCoordinate(piece.px, S),
                     H.toZoneCoordinate(piece.py, S)
                 ])
-                Pub.move(piece, [
+                Pub.move(piece, showClock, [
                     H.toZoneCoordinate(piece.x, S),
                     H.toZoneCoordinate(piece.y, S)
                 ])
             })
+            // tell client to render the zone move clock
+            var piece = pieces[0]
+            if (piece){
+                var x = H.toZoneCoordinate(piece.x, S)
+                var y = H.toZoneCoordinate(piece.y, S)
+                Pub.zoneMoveClock(x, y, [x, y])
+            }
         }
 
         function pubZoneRemoveDstPieces(pieces){
