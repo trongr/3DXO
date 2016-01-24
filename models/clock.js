@@ -12,8 +12,11 @@ var schema = mongoose.Schema({
     },
     t: {
         type: Date,
-        default: null,
-        expires: 24 * 60 * 60, // seconds
+        expires: 24 * 60 * 60, // in seconds
+        // NOTE. if you change expires, you have to drop the index in
+        // mongo, otw it'll stay the same in the db. use:
+        // db.clocks.dropIndex('t_1'). to see a list of indices, use:
+        // db.clocks.getIndexes()
     },
     piece: {
         type: mongoose.Schema.Types.ObjectId,
