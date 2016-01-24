@@ -51,7 +51,7 @@ var API = (function(){
             var url = API_PREFIX + "auth"
             API.req("get", url, data, function(er, re){
                 if (re && re.player) done(null, re.player)
-                else done(er)
+                else done("API.Auth.get: " + er)
             })
         }
 
@@ -59,7 +59,7 @@ var API = (function(){
             var url = API_PREFIX + "auth"
             API.req("post", url, data, function(er, re){
                 if (re && re.player) done(null, re.player)
-                else done(er)
+                else done("API.Auth.post: " + er)
             })
         }
 
@@ -74,7 +74,7 @@ var API = (function(){
             var url = API_PREFIX + "player"
             API.req("get", url, data, function(er, re){
                 if (re && re.ok) done(null, re)
-                else done(er)
+                else done("API.Player.get: " + er)
             })
         }
 
@@ -82,7 +82,7 @@ var API = (function(){
             var url = API_PREFIX + "player/" + id
             API.req("get", url, {}, function(er, re){
                 if (re && re.ok) done(null, re)
-                else done(er)
+                else done("API.Player.getPlayerByID: " + er)
             })
         }
 
@@ -99,7 +99,7 @@ var API = (function(){
             API.req("get", url, {}, function(er, re){
                 if (re && re.pieces){
                     done(null, re.pieces)
-                } else done(er)
+                } else done("API.Pieces.get: " + er)
             })
         }
 
@@ -113,7 +113,7 @@ var API = (function(){
             var url = API_PREFIX + "game/" + playerID + "/buildArmy"
             API.req("post", url, {}, function(er, re){
                 if (re && re.ok) done(null, re.pieces)
-                else done(er)
+                else done("Build army: " + er)
             })
         }
 

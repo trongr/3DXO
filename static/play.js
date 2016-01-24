@@ -139,10 +139,11 @@ var Menu = (function(){
 
     function new_game(){
         API.Game.buildArmy(_you._id, function(er, pieces){
-            if (er) Console.error(er)
-            else {
+            if (pieces){
                 Console.info("Building new army")
                 window.location.href = "/play"
+            } else {
+                Console.error(er)
             }
         })
     }
@@ -757,10 +758,10 @@ var Players = (function(){
         // get player objs from server
         async.each(Object.keys(playerIDs), function(playerID, done){
             API.Player.getPlayerByID(playerID, function(er, re){
-                if (er){
+                if (re && re.player){
+                    players[playerID] = re.player
+                } else {
                     log("ERROR. Players.findPlayersInRange")
-                }  else {
-                    players[playerID]  = re.player
                 }
                 done(null)
             })
@@ -781,9 +782,10 @@ var Player = (function(){
 
     Player.init = function(done){
         API.Player.get({}, function(er, re){
-            if (er) return done(er)
-            _player = re.player
-            done(null, re)
+            if (re && re.player){
+                _player = re.player
+                done(null, re)
+            } else done(er)
         })
     }
 
@@ -1185,9 +1187,10 @@ var Obj = (function(){
 
     Obj.loadZone = function(x, y, done){
         API.Pieces.get({x:x, y:y, r:10}, function(er, _pieces){
-            if (er && done) return done(er)
-            Game.loadPieces(_pieces)
-            if (done) done(null)
+            if (_pieces){
+                Game.loadPieces(_pieces)
+            }
+            if (done) done(er)
         })
     }
 

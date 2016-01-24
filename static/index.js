@@ -8,9 +8,12 @@ var Bind = (function(){
             name: username,
             pass: password,
         }, function(er, player){
-            if (er) return msg.error(er)
-            msg.info("Login successful")
-            location.href = "/play";
+            if (player){
+                msg.info("Login successful")
+                location.href = "/play";
+            } else {
+                msg.error(er)
+            }
         })
     }
 
