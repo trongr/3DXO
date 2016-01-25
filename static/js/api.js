@@ -95,7 +95,7 @@ var API = (function(){
         // get pieces within x, y, r
         // NOTE. atm r is ignored by server
         Pieces.get = function(data, done){
-            var url = API_PREFIX + "piece/" + data.x + "/" + data.y + "/" + data.r
+            var url = API_PREFIX + "piece/" + data.x + "/" + data.y
             API.req("get", url, {}, function(er, re){
                 if (re && re.pieces){
                     done(null, re.pieces)

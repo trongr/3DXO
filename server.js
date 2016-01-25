@@ -67,7 +67,7 @@ app.get('/play', function(req, res){
     res.sendFile(path.join(__dirname + '/static/play.html'))
 });
 
-// todo Auth.authenticate for all routes
+// todo Auth.authenticate for some routes
 app.use('/api/v1/auth', Auth.router); // login and register
 app.use('/api/v1/piece', Pieces.router);
 app.use('/api/v1/player', Players.router);

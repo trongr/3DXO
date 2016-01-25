@@ -16,7 +16,7 @@ var Pieces = module.exports = (function(){
 
     var ERROR_GET_PIECES = "ERROR. Can't populate pieces"
 
-    Pieces.router.route("/:x/:y/:r")
+    Pieces.router.route("/:x/:y")
         .get(function(req, res){
             try {
                 var x = Math.floor(Sanitize.integer(H.param(req, "x")) / S) * S

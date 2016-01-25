@@ -457,18 +457,17 @@ var Sock = (function(){
                 else return Console.error("FATAL ERROR. Server socket response")
             }
             // when the client connects, the server will tell it to
-            // authstart, then client sends playerID and password to
+            // authstart, then client sends playerID and token to
             // server to authenticate. if it checks out, server will
             // send an authend with the result. only then can the
             // client start sending other data.
             if (data.chan == "authstart"){
-                authstart(_playerID, "todo. get this from server")
-                return
+                authstart(_playerID, Player.getSocketToken())
             } else if (data.chan == "authend"){
                 authend(data, x, y)
-                return
+            } else {
+                Game.on[data.chan](data)
             }
-            Game.on[data.chan](data)
         };
 
         _sock.onclose = function() {
@@ -480,9 +479,8 @@ var Sock = (function(){
 
     }
 
-    // todo get pass from server over http
-    function authstart(playerID, pass){
-        Sock.send("authstart", {playerID:playerID, pass:pass})
+    function authstart(playerID, token){
+        Sock.send("authstart", {playerID:playerID, token:token})
     }
 
     function authend(data, x, y){
@@ -781,16 +779,31 @@ var Player = (function(){
     var _player = null
 
     Player.init = function(done){
+        API.Auth.get({}, function(er, player){
+            if (player){
+                _player = player
+                done(null)
+            } else done(er)
+        })
+    }
+
+    // TODO. don't really need to get player here. that's already done
+    // by Player.init. just need the king. make a separate end point
+    // to get the player's last moved king
+    Player.getPlayerKing = function(done){
         API.Player.get({}, function(er, re){
             if (re && re.player){
-                _player = re.player
-                done(null, re)
+                done(null, re.player, re.king)
             } else done(er)
         })
     }
 
     Player.getPlayer = function(){
         return _player
+    }
+
+    Player.getSocketToken = function(){
+        return _player.token
     }
 
     Player.objBelongsToPlayer = function(obj){
@@ -1186,7 +1199,7 @@ var Obj = (function(){
     }
 
     Obj.loadZone = function(x, y, done){
-        API.Pieces.get({x:x, y:y, r:10}, function(er, _pieces){
+        API.Pieces.get({x:x, y:y}, function(er, _pieces){
             if (_pieces){
                 Game.loadPieces(_pieces)
             }
@@ -2171,7 +2184,7 @@ var Nametag = (function(){
             var playerOBJ = Players.getPlayer(playerID)
             var text = (playerOBJ.online == Conf.status.online ? "ONLINE. " : "OFFLINE. ") + playerOBJ.name
         } catch (e){
-            var text = playerID
+            var text = "Loading . . . "
         }
         var sprite = Word.makeTextSprite(text, {
             fontface: "Arial",
@@ -2261,17 +2274,20 @@ var Game = (function(){
         var x = y = 0
         async.waterfall([
             function(done){
+                Player.init(function(er){
+                    done(er)
+                })
+            },
+            function(done){
                 API.get("/static/conf.json", function(er, re){
                     Conf = re
                     done(er)
                 })
             },
             function(done){
-                Player.init(function(er, re){
-                    if (re){
-                        king = re.king
-                        player = re.player
-                    }
+                Player.getPlayerKing(function(er, _player, _king){
+                    player = _player
+                    king = _king
                     done(er)
                 })
             },
@@ -2299,9 +2315,7 @@ var Game = (function(){
                 Events.init()
             }
         ], function(er){
-            if (er == Conf.code.get_player){
-                window.location.href = "/"
-            } else if (er) Console.error(er)
+            if (er) window.location.href = "/"
         })
     }
 

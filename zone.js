@@ -212,10 +212,15 @@ var Zone = module.exports = (function(){
         });
     }
 
-    function authenticate(playerID, pass, done){
-        H.log("INFO. ZONE.AUTHENTICATE: TODO")
-        Player.findOneByID(playerID, function(er, _player){
-            done(er, _player)
+    function authenticate(playerID, token, done){
+        H.log("INFO. Zone.authenticate", playerID, token)
+        Player.findOne({
+            _id: playerID
+        }, "+token", function(er, player){
+            if (player){
+                if (player.token == token) done(null, player)
+                else done(["ERROR. Zone.authenticate: wrong token", playerID, token, player.token])
+            } else done(["ERROR. Zone.authenticate", playerID, token, er])
         })
     }
 
@@ -235,7 +240,7 @@ var Zone = module.exports = (function(){
         var _playerID, _player,  _zone = null
         var _auth = false // set to true if connection authenticated
 
-        // tell client to send playerID and pass to authenticate
+        // tell client to send playerID and token to authenticate
         conn.write(JSON.stringify({chan:"authstart"}))
 
         // Receiving data from client
@@ -249,17 +254,17 @@ var Zone = module.exports = (function(){
                     // authentication right now. we need the rest
                     // server to give the client a pass token for
                     // that. just adding a stub here for the structure
-                    authenticate(_playerID, data.pass, function(er, player){
+                    authenticate(_playerID, data.token, function(er, player){
                         if (player){
                             _player = player
-                            H.log("INFO. Zone.authenticate.ok", _playerID, _sessionID, data.pass)
+                            H.log("INFO. Zone.authenticate.ok", _playerID, _sessionID, data.token)
                             _auth = true
                             Players.updateOnline(_playerID, Conf.status.online)
                             // tell client auth ok so they can start
                             // sending data on other channels
                             conn.write(JSON.stringify({chan:"authend", ok:true}))
                         } else {
-                            H.log("INFO. Zone.authenticate.ko", _playerID, _sessionID, data.pass, er)
+                            H.log("INFO. Zone.authenticate.ko", _playerID, _sessionID, data.token, er)
                             conn.close()
                         }
                     })
