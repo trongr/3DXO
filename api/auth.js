@@ -3,6 +3,7 @@ var _ = require("lodash")
 var async = require("async")
 var express = require('express');
 var H = require("../static/js/h.js")
+var Validate = require("../lib/validate.js")
 var Player = require("../models/player.js")
 
 var OK = "OK"
@@ -20,65 +21,88 @@ var Auth = module.exports = (function(){
 
     var ERROR_LOGIN = "ERROR. Can't login"
     var ERROR_INVALID_LOGIN = "ERROR. Invalid login"
-    var ERROR_REGISTER = "ERROR. Can't register"
+    var ERROR_REGISTER = "SERVER ERROR. Auth.register"
 
     Auth.router.route("/")
-        .get(function(req, res){ // login
-            // client can leave name and pass empty to use existing
-            // session
-            var name = H.param(req, "name")
-            var pass = H.param(req, "pass")
-            if (name && pass){
-                // login will create a new random socket token and
-                // attach it to req.session.player, so client can use
-                // them to authenticate socket. (register also does
-                // the same, so every player always has a socket
-                // token)
-                login(name, pass, function(er, player){
-                    if (er){
-                        H.log("ERROR. Auth.get", er)
-                        res.send({info:ERROR_LOGIN})
-                    } else if (player){
-                        req.session.player = player
-                        res.send({ok:true, player:player})
-                    } else {
-                        res.send({info:ERROR_INVALID_LOGIN})
-                    }
+        .get(authLogin)
+        .post(authRegister)
+
+    function authRegister(req, res){ // register
+        var name = req.body.name
+        var pass = req.body.pass
+        var error_msg = Validate.usernamePassword(name, pass)
+        if (error_msg){
+            return res.send({info:error_msg})
+        }
+        async.waterfall([
+            function(done){
+                Player.findOne({
+                    name: name,
+                }, function(er, player){
+                    if (er) done(["Player.findOne", er])
+                    else if (player) done({code:OK, info:"Username already taken"})
+                    else done(null)
                 })
+            },
+            function(done){
+                createPlayer({
+                    name: name,
+                    pass: pass,
+                }, done)
+            }
+        ], function(er, player){
+            if (er && er.code == OK){
+                res.send({info:er.info})
+            } else if (er){
+                H.log("ERROR. authRegister", name, pass, er)
+                res.send({info:ERROR_REGISTER})
+            } else if (player){
+                req.session.player = player
+                res.send({ok:true, player:player})
             } else {
-                if (req.session.player){
-                    if (!req.session.player.token){
-                        // TODO. if this happens generate a new token
-                        // for player. but first figure out why it's
-                        // happening because token should never be
-                        // null
-                        H.log("ERROR. Auth.get: null req.session.player.token", req.session.player._id)
-                    }
-                    res.send({ok:true, player:req.session.player})
-                } else {
-                    res.send({ok:false})
-                }
+                H.log("ERROR. authRegister: null response", name, pass)
+                res.send({info:ERROR_REGISTER})
             }
         })
-        .post(function(req, res){ // register
-            var name = req.body.name
-            var pass = req.body.pass
-            createPlayer({
-                name: name,
-                pass: pass,
-            }, function(er, player){
+    }
+
+    function authLogin(req, res){ // login
+        // client can leave name and pass empty to use existing
+        // session
+        var name = H.param(req, "name")
+        var pass = H.param(req, "pass")
+        if (name && pass){
+            // login will create a new random socket token and
+            // attach it to req.session.player, so client can use
+            // them to authenticate socket. (register also does
+            // the same, so every player always has a socket
+            // token)
+            login(name, pass, function(er, player){
                 if (er){
-                    H.log("ERROR. Auth.post", name, pass, er)
-                    res.send({info:ERROR_REGISTER})
+                    H.log("ERROR. authLogin", er)
+                    res.send({info:ERROR_LOGIN})
                 } else if (player){
                     req.session.player = player
                     res.send({ok:true, player:player})
                 } else {
-                    H.log("ERROR. Auth.post: null response", name, pass)
-                    res.send({info:ERROR_REGISTER})
+                    res.send({info:ERROR_INVALID_LOGIN})
                 }
             })
-        })
+        } else {
+            if (req.session.player){
+                if (!req.session.player.token){
+                    // TODO. if this happens generate a new token
+                    // for player. but first figure out why it's
+                    // happening because token should never be
+                    // null
+                    H.log("ERROR. authLogin: null req.session.player.token", req.session.player._id)
+                }
+                res.send({ok:true, player:req.session.player})
+            } else {
+                res.send({ok:false})
+            }
+        }
+    }
 
     function login(name, pass, done){
         if (!name || !pass) return done(null, null) // wrong password

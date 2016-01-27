@@ -131,7 +131,7 @@ var Menu = (function(){
         _you = you
         var html = "<div id='menu_box'>"
             +           "<a href='/'>HOME</a>"
-            +           "<a id='new_game' href='#'>NEW</a>"
+            +           "<a id='new_game' href='#'>NEW_ARMY</a>"
             +      "</div>"
         $("body").append(html)
         $("#new_game").on("click", new_game)
@@ -142,9 +142,10 @@ var Menu = (function(){
             if (pieces){
                 Console.info("Building new army")
                 window.location.href = "/play"
-            } else {
-                Console.error(er)
             }
+            // else {
+            //     Console.error(er)
+            // }
         })
     }
 
@@ -351,13 +352,20 @@ var Console = (function(){
 
                       // mode 2
                       + "<li>You can move one piece every 15 seconds per 8 x 8 zone. A cross-zone move counts towards both zones.</li>"
-                      // + "<li>You can also move any piece in an 8 x 8 zone if there are no enemy pieces in that zone.</li>"
-
                       + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
-                      + "enemy pieces in your zone, and no king in the destination zone. If there are non-king pieces in "
-                      + "the destination zone, they will be killed, regardless of whose side they are on. Click on your king "
-                      + "to highlight available zones.</li>"
+                      + "enemy pieces in your zone, and no king in the destination zone. If there are enemy non-king pieces in "
+                      + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
+                      + "<li>Capturing an enemy king will convert his remaining pieces to your side.</li>"
                       + "</ol>")
+        Console.print("<h2><u>Developer Notes</u> [Show]</h2>")
+        Console.print("Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, empire building, etc.) "
+                     + "is under development. (I'm still trying to figure out how to make it interesting.) In the mean time, what we'll do is: 5 minutes after you log out, your pieces "
+                     + "will disappear. When you log back in, you'll get a new army that spawns next to a random "
+                     + "player. That way you can always find someone to play with. For the moment think of the game as a giant battle arena. If you want a challenge, try and control the "
+                     + "center of the map, at coordinates [0, 0]. (You might need to make an informal pact with another player.)"
+                     + "<br><br>If you want to know more about the game, things being worked on, planned features, ideas, etc., "
+                     + "head over to the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>")
+
         // Console.print("<h2><u>TIPS</u></h2>")
         // Console.print("<ol>"
         //               + "<li>Join an Alliance. Type <code> /h alliance </code> into the chat box below to find out why.</li>"
@@ -471,7 +479,7 @@ var Sock = (function(){
         };
 
         _sock.onclose = function() {
-            Console.warn(H.shortTimeBrackets() + " Lost connection: retrying in 5")
+            Console.warn(H.shortTimeBrackets() + " Lost connection: retrying in 5 sec.")
             setTimeout(function(){
                 Sock.init(_zone[0], _zone[1])
             }, 5000)

@@ -58,6 +58,10 @@ hr {
     padding-right: 300px;
 }
 
+#console_out_box a {
+    color: yellow;
+}
+
 #console_out_box .console_line_box {
     width: 100%;
     margin-top: 5px;
