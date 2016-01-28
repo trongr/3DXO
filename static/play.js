@@ -359,10 +359,9 @@ var Console = (function(){
                       + "</ol>")
         Console.print("<h2><u>Developer Notes</u> [Show]</h2>")
         Console.print("Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, empire building, etc.) "
-                     + "is under development. (I'm still trying to figure out how to make it interesting.) In the mean time, what we'll do is: 5 minutes after you log out, your pieces "
-                     + "will disappear. When you log back in, you'll get a new army that spawns next to a random "
+                     + "is still under development. In the mean time, your pieces will disappear 5 minutes after you log out. When you log back in, you'll get a new army that spawns next to a random "
                      + "player. That way you can always find someone to play with. For the moment think of the game as a giant battle arena. If you want a challenge, try and control the "
-                     + "center of the map, at coordinates [0, 0]. (You might need to make an informal pact with another player.)"
+                     + "center of the map, at coordinates [0, 0]. (You might want to team up with another player.)"
                      + "<br><br>If you want to know more about the game, things being worked on, planned features, ideas, etc., "
                      + "head over to the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>")
 
@@ -2431,7 +2430,7 @@ var Game = (function(){
             var color = H.RGBFractionToHexString(Piece.getPlayerColor(playerID))
             Console.print("<b class='chat_player_name' style='color:#" + color + "'>" + playerName + "</b> "
                           + "<span class='chat_time'>" + H.shortTime() + "</span>")
-            Console.print("<span class='chat_msg'>" + text + "</span>")
+            Console.print("<span class='chat_msg'>" + xssFilters.inHTMLData(text) + "</span>")
         }
 
         return on
