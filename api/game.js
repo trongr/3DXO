@@ -7,6 +7,7 @@ var Conf = require("../static/conf.json") // shared with client
 var Piece = require("../models/piece.js")
 var Player = require("../models/player.js")
 var Pub = require("../api/pub.js")
+var Auth = require("../api/auth.js")
 var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
 var Clocks = require("../api/clocks.js")
@@ -448,26 +449,6 @@ var Game = module.exports = (function(){
 
     var ERROR_BUILD_ARMY = "Can't build army"
 
-    Game.router.route("/:playerID/buildArmy")
-        .post(function(req, res){
-            try {
-                var playerID = H.param(req, "playerID")
-            } catch (e){
-                return res.send({info:ERROR_BUILD_ARMY})
-            }
-            Game.buildArmy(playerID, function(er, pieces, zone){
-                if (er == OK){
-                    res.send({info:ERROR_BUILD_ARMY})
-                } else if (er){
-                    H.log(er)
-                    res.send({info:ERROR_BUILD_ARMY})
-                } else {
-                    Pub.new_army(pieces, zone)
-                    res.send({ok:true, pieces:pieces})
-                }
-            })
-        })
-
     var LETTER_PIECES = {
         0: "0", // for empty cells
         p: "pawn",
@@ -498,10 +479,22 @@ var Game = module.exports = (function(){
     //     ["0", "0", "0", "0"],
     // ];
 
-    Game.buildArmy = function(playerID, done){
-        var player, zone = null
-        var pieces = []
-        var start = new Date().getTime()
+    Game.router.route("/:playerID/buildArmy")
+        .post(Auth.authenticate, buildArmy)
+
+    function buildArmy(req, res){
+        try {
+            var playerID = H.param(req, "playerID")
+            if (playerID != req.session.player._id){
+                throw "playerID doesn't match session player"
+            }
+            var player, zone = null
+            var pieces = []
+            var start = new Date().getTime()
+        } catch (e){
+            H.log("ERROR. Game.buildArmy: invalid data", playerID, req.session.player._id, e)
+            return res.send({info:ERROR_BUILD_ARMY})
+        }
         async.waterfall([
             function(done){
                 Player.findOneByID(playerID, function(er, _player){
@@ -552,11 +545,13 @@ var Game = module.exports = (function(){
             },
         ], function(er){
             if (er == OK){
-                done(OK)
-            }else if (er){
-                done(["ERROR. Game.buildArmy", playerID, er])
+                res.send({info:ERROR_BUILD_ARMY})
+            } else if (er){
+                H.log("ERROR. Game.buildArmy", playerID, er)
+                res.send({info:ERROR_BUILD_ARMY})
             } else {
-                done(null, pieces, zone)
+                Pub.new_army(pieces, zone)
+                res.send({ok:true, pieces:pieces})
             }
             alertElapsed(start, 2000, "Game.buildArmy")
         })
@@ -655,20 +650,20 @@ var Game = module.exports = (function(){
         )
     }
 
-    Game.sock = function(data){
+    Game.sock = function(player, data){
         var chan = data.chan
         if (["move"].indexOf(chan) < 0){
             return H.log("ERROR. Game.sock: unknown channel", data)
         }
-        Game.on[chan](data)
+        Game.on[chan](player, data)
     }
 
     Game.on = (function(){
         var on = {}
 
-        on.move = function(data){
+        on.move = function(player, data){
             try {
-                var throw_msg = Validate.moveData(data)
+                var throw_msg = Validate.moveData(player, data)
                 if (throw_msg) throw throw_msg
 
                 var playerID = data.playerID

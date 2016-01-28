@@ -279,7 +279,8 @@ var Zone = module.exports = (function(){
                 } else if (chan == "chat"){
                     pubChat(_player, data)
                 } else {
-                    Game.sock(data)
+                    // mach
+                    Game.sock(_player, data)
                 }
             } catch (e){
                 return H.log("ERROR. Zone.data.catch", msg, e.stack)
