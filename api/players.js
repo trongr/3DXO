@@ -16,7 +16,7 @@ var Players = module.exports = (function(){
             try {
                 var playerID = req.params.playerID
             } catch (e){
-                H.log("ERROR. Players.getPlayerByID: invalid data", req.params)
+                H.log("ERROR. Players.getPlayerByID: invalid data", req.params, e.stack)
                 return res.send({info:Conf.code.get_player})
             }
             Player.findOne({_id:playerID}, function(er, player){
@@ -36,7 +36,7 @@ var Players = module.exports = (function(){
                 var name = H.param(req, "name") || req.session.player.name
                 var player, king = null
             } catch (e){
-                H.log("ERROR. Players.get: invalid data", req.query, req.session)
+                H.log("ERROR. Players.get: invalid data", req.query, req.session, e.stack)
                 return res.send({info:Conf.code.get_player})
             }
             async.waterfall([

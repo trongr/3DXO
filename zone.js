@@ -7,6 +7,7 @@ var Game = require("./api/game.js")
 var Players = require("./api/players.js")
 var Player = require("./models/player.js")
 var Pub = require("./api/pub.js")
+var Validate = require("./lib/validate.js")
 
 var Sub = (function(){
     Sub = {}
@@ -48,7 +49,7 @@ var Sub = (function(){
     _subscriber.on("message", function(chan, msg){
         try {
             var data = JSON.parse(msg)
-            if (data.players){
+            if (data.players && data.players.length){
                 // NOTE. removing players from payload cause we don't
                 // want all players knowing about all the other
                 // players we're sending this message to. no good
@@ -63,7 +64,7 @@ var Sub = (function(){
                 H.log("ERROR. Zone.message: no playerID or zone", chan, msg)
             }
         } catch (e){
-            H.log("ERROR. Zone.message.catch", chan, msg, e)
+            H.log("ERROR. Zone.message.catch", chan, msg, e.stack)
         }
     });
 
@@ -82,7 +83,7 @@ var Sub = (function(){
                 }
             }
         } catch (e){
-            H.log("ERROR. zone.callbackZones.catch", zone, msg, e)
+            H.log("ERROR. zone.callbackZones.catch", zone, msg, e.stack)
         }
     }
 
@@ -106,7 +107,7 @@ var Sub = (function(){
                 }
             }
         } catch (e){
-            H.log("ERROR. zone.callbackZone.catch", zone, msg, e)
+            H.log("ERROR. zone.callbackZone.catch", zone, msg, e.stack)
         }
     }
 
@@ -123,7 +124,7 @@ var Sub = (function(){
                 _sessions[sessionID](msg)
             }
         } catch (e){
-            H.log("ERROR. zone.callbackPlayer.catch", playerID, msg, e)
+            H.log("ERROR. zone.callbackPlayer.catch", playerID, msg, e.stack)
         }
     }
 
@@ -131,6 +132,9 @@ var Sub = (function(){
     // but we only call unsub once when they disconnect
     Sub.subdate = function(playerID, sessionID, zone, onMsgCallback){
         try {
+            var throw_msg = Validate.zone(zone)
+            if (throw_msg) throw throw_msg
+
             // update session
             _sessions[sessionID] = onMsgCallback
 
@@ -157,7 +161,7 @@ var Sub = (function(){
             }
             H.log("INFO. Zone.subdate", playerID, sessionID, zone[0], zone[1], H.length(_zones[zone]))
         } catch (e){
-            H.log("ERROR. Zone.subdate.catch", playerID, zone, e)
+            H.log("ERROR. Zone.subdate.catch", playerID, zone, e.stack)
         }
     }
 
@@ -188,7 +192,7 @@ var Sub = (function(){
             // has a connection that hasn't authenticated yet, or sent
             // any other data, like subdate, so there's nothing to
             // remove, in particular _sessions[sessionID should be null
-            H.log("ERROR. ZONE.UNSUB.catch", playerID, sessionID, e)
+            H.log("ERROR. ZONE.UNSUB.catch", playerID, sessionID, e.stack)
         }
     }
 
@@ -233,8 +237,8 @@ var Zone = module.exports = (function(){
         try {
             H.log("INFO. ZONE.CONN", conn.remoteAddress, conn.headers["user-agent"], conn.address.address)
         } catch (e){
-            H.log("ERROR. ZONE.CONN.CATCH")
-            // console.log(new Date(), "ERROR. ZONE.CONN.CATCH", conn) // conn is a circular obj so can't use H.log
+            H.log("ERROR. ZONE.CONN.CATCH", e.stack)
+            // console.log(new Date(), "ERROR. ZONE.CONN.CATCH", conn, e.stack) // conn is a circular obj so can't use H.log
         }
         var _sessionID = conn.id // this is actually the connection id, but eh
         var _playerID, _player,  _zone = null
@@ -248,21 +252,17 @@ var Zone = module.exports = (function(){
             try {
                 var data = JSON.parse(msg)
                 var chan = data.chan
-                _playerID = data.playerID
                 if (chan == "authstart"){
-                    // mach this method isn't doing any real
-                    // authentication right now. we need the rest
-                    // server to give the client a pass token for
-                    // that. just adding a stub here for the structure
-                    authenticate(_playerID, data.token, function(er, player){
+                    authenticate(data.playerID, data.token, function(er, player){
                         if (player){
+                            _playerID = data.playerID
                             _player = player
-                            H.log("INFO. Zone.authenticate.ok", _playerID, _sessionID, data.token)
                             _auth = true
                             Players.updateOnline(_playerID, Conf.status.online)
                             // tell client auth ok so they can start
                             // sending data on other channels
                             conn.write(JSON.stringify({chan:"authend", ok:true}))
+                            H.log("INFO. Zone.authenticate.ok", _playerID, _sessionID, data.token)
                         } else {
                             H.log("INFO. Zone.authenticate.ko", _playerID, _sessionID, data.token, er)
                             conn.close()
@@ -282,7 +282,7 @@ var Zone = module.exports = (function(){
                     Game.sock(data)
                 }
             } catch (e){
-                return H.log("ERROR. Zone.data.catch", msg)
+                return H.log("ERROR. Zone.data.catch", msg, e.stack)
             }
         });
 
@@ -296,18 +296,22 @@ var Zone = module.exports = (function(){
 
     }
 
-    function pubChat(player, data){
+    function pubChat(player, _data){
         try {
-            var players = data.players
-
-            // useful data for client to render chat messages
-            data.playerName = player.name
-            data.playerID = player._id
-
-            if (data.text.length > 140){
-                return Pub.error(data.playerID, "ERROR. Message too long: 140 characters or less it must be")
+            var playerID = player._id
+            var data = { // clean client _data so we don't send injected data to other users
+                zone: _data.zone,
+                text: _data.text,
+                players: _data.players,
+                playerName: player.name, // useful data for client to render chat messages:
+                playerID: playerID
             }
-            if (players && players.length < Conf.max_chatters){ // pub chat by playerID's
+
+            var error_msg = Validate.chatMsg(data)
+            if (error_msg) return Pub.error(playerID, error_msg)
+
+            var players = data.players
+            if (players && players.length){ // pub chat by playerID's
                 H.log("INFO. Zone.pubChatPlayers", data.zone[0], data.zone[1], data.text, players.length)
                 Pub.chat(data)
                 // since we're publishing chat by playerID, spectators
@@ -316,20 +320,13 @@ var Zone = module.exports = (function(){
                 // won't receive these messages. so we need to pub
                 // to them separately
                 pubChatSpectators(data)
-            } else if (players){
-                // this means someone's sending us unauthorized data
-                // outside our client, because our client code has its
-                // own check for players && players.length <
-                // Conf.max_chatters, and won't send players if that
-                // fails, so this should never happen:
-                H.log("ERROR. Zone.pubChat: client sending more than Conf.max_chatters players")
             } else { // pub chat by zone
                 // log players_length for diagnostics
                 H.log("INFO. Zone.pubChatZone", data.zone[0], data.zone[1], data.text, data.players_length)
                 Pub.chat(data)
             }
         } catch (e){
-            H.log("ERROR. Zone.pubChat.catch", data)
+            H.log("ERROR. Zone.pubChat.catch", player, data, e.stack)
         }
     }
 

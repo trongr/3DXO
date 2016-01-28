@@ -11,6 +11,7 @@ var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
 var Clocks = require("../api/clocks.js")
 var DB = require("../db.js")
+var Validate = require("../lib/validate.js")
 
 var S = Conf.zone_size
 var OK = "OK"
@@ -133,7 +134,7 @@ var Move = (function(){
                 done(["ERROR. Game.Move.validatePlayerPiece", player, piece])
             }
         } catch (e){
-            done(["ERROR. Game.Move.validatePlayerPiece.catch", player, piece])
+            done(["ERROR. Game.Move.validatePlayerPiece.catch", player, piece, e.stack])
         }
     }
 
@@ -150,7 +151,7 @@ var Move = (function(){
                 done(["ERROR. Move.validateDistance: too far", piece, to])
             }
         } catch (e){
-            done(["ERROR. Move.validateDistance.catch", piece, to])
+            done(["ERROR. Move.validateDistance.catch", piece, to, e.stack])
         }
     }
 
@@ -217,7 +218,7 @@ var Move = (function(){
                 done(["ERROR. Move.validateDirection: direction not found", piece, to])
             }
         } catch (e){
-            done(["ERROR. Move.validateDirection.catch", piece, to])
+            done(["ERROR. Move.validateDirection.catch", piece, to, e.stack])
         }
     }
 
@@ -667,6 +668,9 @@ var Game = module.exports = (function(){
 
         on.move = function(data){
             try {
+                var throw_msg = Validate.moveData(data)
+                if (throw_msg) throw throw_msg
+
                 var playerID = data.playerID
                 var pieceID = data.pieceID
                 var player, piece = null
@@ -676,8 +680,7 @@ var Game = module.exports = (function(){
                     Math.floor(data.to[1]),
                 ]
             } catch (e){
-                H.log("ERROR. Game.move: invalid input", data)
-                return
+                return H.log("ERROR. Game.move: invalid input", data, e.stack)
             }
             async.waterfall([
                 function(done){
@@ -903,7 +906,7 @@ var Game = module.exports = (function(){
                         H.toZoneCoordinate(king.y, S)
                 ]
             } catch (e){
-                return H.log("ERROR. Game.on.gameover: invalid input", playerID, enemy, king)
+                return H.log("ERROR. Game.on.gameover: invalid input", playerID, enemy, king, e.stack)
             }
             async.waterfall([
                 function(done){
