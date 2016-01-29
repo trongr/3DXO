@@ -87,10 +87,36 @@ var Move = (function(){
                 Move.validateBlock(piece, distance, direction, function(er){
                     done(er)
                 })
-            }
+            },
+            function(done){
+                if (piece.kind == "pawn"){
+                    validatePawnToKingMove(piece, to, done)
+                } else done(null)
+            },
         ], function(er){
             if (er) done(["ERROR. Game.Move.validateOneMove", player, piece, to, er])
             else done(null)
+        })
+    }
+
+    function validatePawnToKingMove(piece, to, done){
+        var playerID = piece.player._id || piece.player
+        var x = piece.x, y = piece.y
+        var X = to[0], Y = to[1]
+        Pieces.findPlayerKingsInZone(playerID, x, y, function(er, kings){
+            if (er){
+                done(er)
+            } else if (kings.length){
+                for (var i = 0; i < kings.length; i++){
+                    var king = kings[i]
+                    var before = Math.abs(king.x - x) + Math.abs(king.y - y)
+                    var after = Math.abs(king.x - X) + Math.abs(king.y - Y)
+                    if (after < before){
+                        return done(["ERROR. Game.validatePawnToKingMove", piece, to])
+                    }
+                }
+                return done(null)
+            } else done(null)
         })
     }
 

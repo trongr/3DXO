@@ -74,7 +74,9 @@ var Pieces = module.exports = (function(){
         }
     }
 
-    Pieces.findPiecesInZone = function(x, y, done){
+    Pieces.findPiecesInZone = function(_x, _y, done){
+        var x = H.toZoneCoordinate(_x, S)
+        var y = H.toZoneCoordinate(_y, S)
         Piece.find({
             x: {$gte: x, $lt: x + S},
             y: {$gte: y, $lt: y + S},
@@ -82,12 +84,14 @@ var Pieces = module.exports = (function(){
             if (_pieces){
                 done(null, _pieces)
             } else {
-                done(["ERROR. Pieces.findPiecesInZone", x, y, er])
+                done(["ERROR. Pieces.findPiecesInZone", _x, _y, er])
             }
         });
     }
 
-    Pieces.findPlayerPiecesInZone = function(playerID, x, y, done){
+    Pieces.findPlayerPiecesInZone = function(playerID, _x, _y, done){
+        var x = H.toZoneCoordinate(_x, S)
+        var y = H.toZoneCoordinate(_y, S)
         Piece.find({
             player: playerID,
             x: {$gte: x, $lt: x + S},
@@ -96,7 +100,24 @@ var Pieces = module.exports = (function(){
             if (_pieces){
                 done(null, _pieces)
             } else {
-                done(["ERROR. Pieces.findPlayerPiecesInZone", playerID, x, y, er])
+                done(["ERROR. Pieces.findPlayerPiecesInZone", playerID, _x, _y, er])
+            }
+        });
+    }
+
+    Pieces.findPlayerKingsInZone = function(playerID, _x, _y, done){
+        var x = H.toZoneCoordinate(_x, S)
+        var y = H.toZoneCoordinate(_y, S)
+        Piece.find({
+            player: playerID,
+            x: {$gte: x, $lt: x + S},
+            y: {$gte: y, $lt: y + S},
+            kind: "king",
+        }).exec(function(er, _pieces){
+            if (_pieces){
+                done(null, _pieces)
+            } else {
+                done(["ERROR. Pieces.findPlayerKingsInZone", playerID, _x, _y, er])
             }
         });
     }

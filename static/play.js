@@ -1278,14 +1278,26 @@ var Obj = (function(){
     }
 
     // lower left corners x y
-    Obj.findObjsInZone = function(x, y){
+    Obj.findObjsInZone = function(_x, _y){
         var S = Conf.zone_size
+        var x = H.toZoneCoordinate(_x, S)
+        var y = H.toZoneCoordinate(_y, S)
         var X = x + S, Y = y + S
         return Obj.objs.filter(function(obj){
             if (!obj.game || !obj.game.piece) return false
             var ex = obj.game.piece.x
             var wy = obj.game.piece.y
             return (x <= ex && ex < X && y <= wy && wy < Y)
+        })
+    }
+
+    Obj.findKingsInZoneBelongingToPlayer = function(playerID, x, y){
+        var objs = Obj.findObjsInZone(x, y)
+        return objs.filter(function(obj){
+            var piece = obj.game.piece
+            return (piece.kind == "king" &&
+                    (piece.player == playerID
+                     || piece.player._id == playerID))
         })
     }
 
@@ -1632,16 +1644,46 @@ var Move = (function(){
     Move.highlightAvailableMoves = function(obj){
         var moves = findAvailableMoves(obj)
         moves.push.apply(moves, findAvailableKills(obj))
-        Highlight.highlightCells(moves)
         _validatedMoves = moves.filter(function(item){ // Cache available moves
             return item.kill == false || item.killMove == true // Only interested in actual moveable positions
         })
+
+        if (obj.game.piece.kind == "pawn"){
+            _validatedMoves = filterPawnToKingMoves(obj, _validatedMoves)
+        }
+
+        Highlight.highlightCells(_validatedMoves)
 
         // highlight available zones so you can move an entire army by
         // clicking on the king
         if (obj.game.piece.kind == "king"){
             highlightZoneMoves(obj.game.piece)
         }
+    }
+
+    function filterPawnToKingMoves(obj, validatedMoves){
+        var piece = obj.game.piece
+        var kings = Obj.findKingsInZoneBelongingToPlayer(piece.player, piece.x, piece.y)
+        if (kings.length){
+            var _validatedMoves = validatedMoves.filter(function(item){
+                return ! isPawnMoveToKings(piece.x, piece.y, item.xyz.x, item.xyz.y, kings)
+            })
+        } else {
+            var _validatedMoves = validatedMoves
+        }
+        return _validatedMoves
+    }
+
+    function isPawnMoveToKings(x, y, X, Y, kings){
+        for (var i = 0; i < kings.length; i++){
+            var king = kings[i].game.piece
+            var before = Math.abs(king.x - x) + Math.abs(king.y - y)
+            var after = Math.abs(king.x - X) + Math.abs(king.y - Y)
+            if (after < before){
+                return true
+            }
+        }
+        return false
     }
 
     function highlightZoneMoves(king){
