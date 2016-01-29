@@ -67,6 +67,19 @@ hr {
     margin-top: 5px;
 }
 
+.console_line_box .console_header {
+    cursor: pointer;
+    cursor: hand;
+}
+
+.console_line_box .console_content {
+    display: none;
+}
+
+.console_line_box .yellow {
+    color: yellow;
+}
+
 #console_in_box {
     position: absolute;
     left: 0;

@@ -325,7 +325,7 @@ var Console = (function(){
         Console.print("<span style='font-size:3em'>Ragnarook</span>")
         Console.print("[ Chess 2.0: Pre-alpha Release ]")
         Console.print("<hr>")
-        Console.print("Ragnarook is a <b style='color:yellow'>Massively Multiplayer Persistent Open World Game</b> "
+        Console.print("Ragnarook is a <b class='yellow'>Massively Multiplayer Persistent Open World Game</b> "
                       + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
                       + "Prepare to punish your enemies in a semi-turn-based fashion!")
         // Console.print("Ragnarook is a <i><b>Massively Multiplayer Online Open World Exploration Creative Building Semi-Real Time Strategy Role-Playing Game</b></i> "
@@ -355,15 +355,16 @@ var Console = (function(){
                       + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in your zone, and no king in the destination zone. If there are enemy non-king pieces in "
                       + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
-                      + "<li>Capturing an enemy king will convert his remaining pieces to your side.</li>"
+                      + "<li>Capturing an enemy king will convert his remaining army to your side.</li>"
                       + "</ol>")
-        Console.print("<h2><u>Developer Notes</u> [Show]</h2>")
-        Console.print("Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, empire building, etc.) "
+        Console.print("<h2 class='console_header' data-console-line='dev_note'><u>Developer Notes</u> [Show]</h2>")
+        Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, empire building, etc.) "
                      + "is still under development. In the mean time, your pieces will disappear 5 minutes after you log out. When you log back in, you'll get a new army that spawns next to a random "
-                     + "player. That way you can always find someone to play with. For the moment think of the game as a giant battle arena. If you want a challenge, try and control the "
-                     + "center of the map, at coordinates [0, 0]. (You might want to team up with another player.)"
+                     + "player. That way you can always find someone to play with. <span class='yellow'>For the moment think of the game as a giant battle arena. If you want a challenge, try and control the "
+                     + "center of the map, at coordinates [0, 0]. (You might want to team up with other players.)</span>"
                      + "<br><br>If you want to know more about the game, things being worked on, planned features, ideas, etc., "
-                     + "head over to the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>")
+                     + "head over to the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>"
+                     + "<br><br>---Trong</div>")
 
         // Console.print("<h2><u>TIPS</u></h2>")
         // Console.print("<ol>"
@@ -384,11 +385,18 @@ var Console = (function(){
 
         // Cache
         _console_in = $("#console_input")
-        _console_out = $("#console_out_box")
+        _console_out = $("#console_out_box").off()
+            .on("click", ".console_header", click_console_header)
 
         alwaysFocus()
 
         _console_in.on("keypress", keypressHandler)
+    }
+
+    function click_console_header(){
+        var console_line = $(this).attr("data-console-line")
+        $(".console_content[data-console-line='" + console_line + "']").toggle()
+        return false
     }
 
     function keypressHandler(event){
