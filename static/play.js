@@ -359,11 +359,10 @@ var Console = (function(){
                       + "</ol>")
         Console.print("<h2 class='console_header' data-console-line='dev_note'><u>Developer Notes</u> [Show]</h2>")
         Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, buildings, etc.) "
-                     + "is still under development. In the mean time, your pieces will disappear 5 minutes after you log out. When you log back in, you'll get a new army that spawns next to a random "
+                     + "is still under development. In the meantime your pieces will disappear 5 minutes after you log out. When you log back in you'll get a new army that spawns next to a random "
                      + "player. That way you can always find someone to play with. <span class='yellow'>For the moment think of the game as a giant battle arena. If you want a challenge, try and control the "
                      + "center of the map, at coordinates [0, 0]. (You might want to team up with other players.)</span>"
-                     + "<br><br>If you want to know more about the game, things being worked on, planned features, ideas, etc., "
-                     + "head over to the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>"
+                     + "<br><br>If you want to learn more about the game, check out the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>"
                      + "<br><br>---Trong</div>")
 
         // Console.print("<h2><u>TIPS</u></h2>")

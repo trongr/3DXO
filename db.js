@@ -5,8 +5,16 @@ var DB = module.exports = (function(){
     var DB = {}
 
     DB.init = function(done){
-        // mach change db name
-        mongoose.connect('mongodb://localhost/chess');
+        mongoose.connect('mongodb://127.0.0.1/chess', {
+            db: { native_parser: true },
+            server: {
+                poolSize: 5,
+                keepAlive: 120
+            },
+            // replset: { rs_name: 'myReplicaSetName' },
+            user: 'chessadminator',
+            pass: process.env.MONGO_PASS
+        });
         var db = mongoose.connection;
         db.on('error', function(er){
             if (done) done(er)
