@@ -335,7 +335,7 @@ var Console = (function(){
         Console.print("<h2><u>CONTROLS</u></h2>")
         Console.print("<ol>"
                       + "<li>Left mouse: move pieces.</li>"
-                      + "<li>Right mouse drag: navigate map.</li>" // todo Make it mouse click navigate
+                      + "<li>Right mouse drag, or Ctrl + left mouse drag: navigate map.</li>" // todo Make it mouse click navigate
                       + "<li>Scroll mouse: zoom.</li>"
                       + "</ol>")
         Console.print("<h2><u>RULES</u></h2>")
@@ -358,7 +358,7 @@ var Console = (function(){
                       + "<li>Capturing an enemy king will convert his remaining army to your side.</li>"
                       + "</ol>")
         Console.print("<h2 class='console_header' data-console-line='dev_note'><u>Developer Notes</u> [Show]</h2>")
-        Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, empire building, etc.) "
+        Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, buildings, etc.) "
                      + "is still under development. In the mean time, your pieces will disappear 5 minutes after you log out. When you log back in, you'll get a new army that spawns next to a random "
                      + "player. That way you can always find someone to play with. <span class='yellow'>For the moment think of the game as a giant battle arena. If you want a challenge, try and control the "
                      + "center of the map, at coordinates [0, 0]. (You might want to team up with other players.)</span>"

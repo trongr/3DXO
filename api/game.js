@@ -859,7 +859,7 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Pieces.removeNonKingsInZone(to[0], to[1], function(er, _pieces){
+                    Pieces.removeEnemyNonKingsInZone(playerID, to[0], to[1], function(er, _pieces){
                         if (_pieces){
                             pubZoneRemoveDstPieces(_pieces)
                             Clocks.removeMany(_pieces)

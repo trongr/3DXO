@@ -155,16 +155,18 @@ var Pieces = module.exports = (function(){
         })
     }
 
-    Pieces.removeNonKingsInZone = function(x, y, done){
+    Pieces.removeEnemyNonKingsInZone = function(playerID, x, y, done){
         var X = H.toZoneCoordinate(x, S)
         var Y = H.toZoneCoordinate(y, S)
         var pieces = []
         async.waterfall([
             function(done){
+                // just find so we can return and publish these
                 Piece.find({
                     x: {$gte: X, $lt: X + S},
                     y: {$gte: Y, $lt: Y + S},
-                    kind: {$ne:"king"}
+                    kind: {$ne:"king"},
+                    player: {$ne:playerID}
                 }).exec(function(er, _pieces){
                     pieces = _pieces
                     done(er)
@@ -175,7 +177,8 @@ var Pieces = module.exports = (function(){
                 Piece.remove({
                     x: {$gte: X, $lt: X + S},
                     y: {$gte: Y, $lt: Y + S},
-                    kind: {$ne:"king"}
+                    kind: {$ne:"king"},
+                    player: {$ne:playerID}
                 }, function(er) {
                     done(er)
                 });
