@@ -419,6 +419,13 @@ var Move = (function(){
             function(dstPieces, done){
                 if (checkPiecesNonKing(dstPieces)) done(null)
                 else done("ERROR. king in dst zone")
+            },
+            function(done){
+                // only allow the king to move pieces in its army
+                pieces = pieces.filter(function(piece){
+                    return piece.army_id.equals(king.army_id)
+                })
+                done(null)
             }
         ], function(er){
             if (er) done(["ERROR. Game.Move.validateZoneMove", player, king, to, er])

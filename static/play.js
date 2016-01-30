@@ -352,7 +352,7 @@ var Console = (function(){
 
                       // mode 2
                       + "<li>You can move one piece every 15 seconds per 8 x 8 zone. A cross-zone move counts towards both zones.</li>"
-                      + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
+                      + "<li>You can move an army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in your zone, and no king in the destination zone. If there are enemy non-king pieces in "
                       + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
                       + "<li>Capturing an enemy king will convert his remaining army to your side.</li>"
