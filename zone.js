@@ -18,7 +18,13 @@ var Sub = (function(){
     // todo can use psubscribe and punsubscribe with pattern:
     // https://github.com/NodeRedis/node_redis
     // http://redis.io/commands/PSUBSCRIBE
-    var _subscriber = redis.createClient();
+    var _subscriber = redis.createClient({
+        host: "127.0.0.1",
+        port: 6379,
+        password: process.env.REDIS_PASS,
+    });
+    _subscriber.auth(process.env.REDIS_PASS) // weird that you need this
+
     _subscriber.subscribe('chat');
     _subscriber.subscribe('error');
     _subscriber.subscribe('new_army');

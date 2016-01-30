@@ -7,7 +7,13 @@ var Conf = require("../static/conf.json") // shared with client
 var Pub = module.exports = (function(){
     var Pub = {}
 
-    var _publisher = redis.createClient();
+    var _publisher = redis.createClient({
+        host: "127.0.0.1",
+        port: 6379,
+        password: process.env.REDIS_PASS,
+    });
+    _publisher.auth(process.env.REDIS_PASS) // weird that you need this
+
     var S = Conf.zone_size
 
     Pub.publish = function(chan, data){
@@ -90,7 +96,12 @@ var Test = (function(){
     // be published messages there?
     Test.getAllRedisKeys = function(args){
         H.log("USAGE. node sock.js getAllRedisKeys")
-        client = redis.createClient();
+        client = redis.createClient({
+            host: "127.0.0.1",
+            port: 6379,
+            password: process.env.REDIS_PASS,
+        });
+        client.auth(process.env.REDIS_PASS) // weird that you need this
         client.keys('*', function (err, keys) {
             if (err) return console.log(err);
             for(var i = 0, len = keys.length; i < len; i++) {

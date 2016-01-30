@@ -1,3 +1,4 @@
+var redis = require("redis")
 var crypto = require('crypto')
 var _ = require("lodash")
 var async = require("async")
@@ -188,9 +189,14 @@ var Test = (function(){
 
     Test.clear_sessions = function(args){
         H.log("INFO. This might not work if sessions are stored in a remote redis. TODO. address and auth")
-        var redis = require("redis").createClient()
-        redis.keys("sess:*", function(err, key) {
-            redis.del(key, function(err) {
+        client = redis.createClient({
+            host: "127.0.0.1",
+            port: 6379,
+            password: process.env.REDIS_PASS,
+        });
+        client.auth(process.env.REDIS_PASS) // weird that you need this
+        client.keys("sess:*", function(err, key) {
+            client.del(key, function(err) {
                 console.log(JSON.stringify(err, 0, 2))
                 process.exit(0)
             });
