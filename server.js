@@ -21,14 +21,15 @@ app.use(session({
     store: new RedisStore({
         host: '127.0.0.1',
         port: 6379,
-        // pass: "ajoidsjfoasdijfaosd" // todo
+        pass: process.env.REDIS_PASS,
         // db: 0, // Does it matter if you use a diff db number?
         ttl: 7 * 24 * 3600, // in seconds
     }),
-    secret: 'keyboard cat', // todo change for prod
+    secret: process.env.SESSION_SECRET,
     saveUninitialized: true,
     resave: false,
 }));
+
 // Error handling in case client (this server) loses connection to
 // remote redis, and a user logs in:
 app.use(function (req, res, next) {
@@ -67,11 +68,10 @@ app.get('/play', function(req, res){
     res.sendFile(path.join(__dirname + '/static/play.html'))
 });
 
-// todo Auth.authenticate for some routes
 app.use('/api/v1/auth', Auth.router); // login and register
 app.use('/api/v1/piece', Pieces.router);
 app.use('/api/v1/player', Players.router);
-app.use('/api/v1/team', Teams.router);
+// app.use('/api/v1/team', Teams.router);
 app.use('/api/v1/game', Game.router);
 
 var port = process.env.PORT || 8080;
