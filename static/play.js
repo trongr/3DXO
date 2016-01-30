@@ -360,7 +360,7 @@ var Console = (function(){
         Console.print("<h2 class='console_header' data-console-line='dev_note'><u>Developer Notes</u> [Show]</h2>")
         Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, buildings, etc.) "
                      + "is still under development. In the meantime your pieces will disappear 5 minutes after you log out. When you log back in you'll get a new army that spawns next to a random "
-                     + "player. That way you can always find someone to play with. <span class='yellow'>For the moment think of the game as a giant battle arena. If you want a challenge, try and control the "
+                     + "player. That way you can always find someone to play with. <span class='yellow'>For now think of the game as a giant battle arena. If you want a challenge, try and control the "
                      + "center of the map, at coordinates [0, 0]. (You might want to team up with other players.)</span>"
                      + "<br><br>If you want to learn more about the game, check out the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>"
                      + "<br><br>---Trong</div>")
@@ -971,15 +971,9 @@ var Piece = (function(){
     }
 
     Piece.make = function(piece){
-        if (piece.player && piece.player._id){
-            var playerID = piece.player._id
-        } else if (piece.player){
-            var playerID = piece.player
-        } else {
-            return Console.error("FATAL ERROR. Piece.make: no playerID: " + JSON.stringify(piece, 0, 2))
-        }
+        var army_id = piece.army_id
         var pos = new THREE.Vector3(piece.x, piece.y, 1)
-        var color = Piece.getPlayerColor(playerID)
+        var color = Piece.getArmyColor(army_id)
         var obj = ClassicSet.make(piece.kind, color, pos)
         obj.game = {piece:piece}
         Scene.add(obj);
@@ -993,8 +987,8 @@ var Piece = (function(){
     }
 
     // returns [r, g, b], values between 0 and 1
-    Piece.getPlayerColor = function(playerID){
-        if (_colors[playerID]) return _colors[playerID]
+    Piece.getArmyColor = function(army_id){
+        if (_colors[army_id]) return _colors[army_id]
 
         // try {
         //     // v1: random with base_color from the 140 named COLORS
@@ -1016,7 +1010,7 @@ var Piece = (function(){
         var color = randomColor()
         color = [color[0] / 255, color[1] / 255, color[2] / 255]
 
-        _colors[playerID] = color
+        _colors[army_id] = color
         return color
     }
 
@@ -2476,8 +2470,7 @@ var Game = (function(){
             var playerName = data.playerName
             var playerID = data.playerID
             var text = data.text
-            var color = H.RGBFractionToHexString(Piece.getPlayerColor(playerID))
-            Console.print("<b class='chat_player_name' style='color:#" + color + "'>" + playerName + "</b> "
+            Console.print("<b class='chat_player_name yellow'>" + playerName + "</b> "
                           + "<span class='chat_time'>" + H.shortTime() + "</span>")
             Console.print("<span class='chat_msg'>" + xssFilters.inHTMLData(text) + "</span>")
         }
