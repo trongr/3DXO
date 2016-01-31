@@ -732,6 +732,10 @@ var Game = module.exports = (function(){
                 function(done){
                     Piece.findOneByID(pieceID, function(er, _piece){
                         piece = _piece
+                        if (piece){
+                            px = piece.x
+                            py = piece.y
+                        }
                         done(er)
                     })
                 },
@@ -741,33 +745,34 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    px = piece.x, py = piece.y
-                    validatePlayerZoneClock(playerID, px, py, function(er, ok, msg){
-                        if (er) done(er)
-                        else if (ok) done(null)
-                        else {
-                            Pub.error(playerID, msg)
+                    Pieces.validatePieceTimeout(piece, function(er){
+                        if (er){
+                            Pub.error(playerID, er)
                             done(OK)
-                        }
+                        } else done(null)
                     })
                 },
-                function(done){
-                    validatePlayerZoneClock(playerID, to[0], to[1], function(er, ok, msg){
-                        if (er) done(er)
-                        else if (ok) done(null)
-                        else {
-                            Pub.error(playerID, msg)
-                            done(OK)
-                        }
-                    })
-                    // REF for diff mechanics later
-                    // Pieces.validatePieceTimeout(piece, function(er){
-                    //     if (er){
-                    //         Pub.error(playerID, er)
-                    //         done(OK)
-                    //     } else done(null)
-                    // })
-                },
+                // REMEMBER TO TURN ON createPlayerZoneClock IF YOU TURN THIS ON:
+                // function(done){
+                //     validatePlayerZoneClock(playerID, px, py, function(er, ok, msg){
+                //         if (er) done(er)
+                //         else if (ok) done(null)
+                //         else {
+                //             Pub.error(playerID, msg)
+                //             done(OK)
+                //         }
+                //     })
+                // },
+                // function(done){
+                //     validatePlayerZoneClock(playerID, to[0], to[1], function(er, ok, msg){
+                //         if (er) done(er)
+                //         else if (ok) done(null)
+                //         else {
+                //             Pub.error(playerID, msg)
+                //             done(OK)
+                //         }
+                //     })
+                // },
                 function(done){
                     // this means the king is making a zone move:
                     if (piece.kind == "king" && (Math.abs(piece.x - to[0]) > 1 || Math.abs(piece.y - to[1]) > 1)){
@@ -776,12 +781,12 @@ var Game = module.exports = (function(){
                         oneMove(playerID, player, piece, to, done)
                     }
                 },
-                function(done){
-                    createPlayerZoneClock(playerID, piece._id, px, py, done)
-                },
-                function(done){
-                    createPlayerZoneClock(playerID, piece._id, to[0], to[1], done)
-                }
+                // function(done){
+                //     createPlayerZoneClock(playerID, piece._id, px, py, done)
+                // },
+                // function(done){
+                //     createPlayerZoneClock(playerID, piece._id, to[0], to[1], done)
+                // }
             ], function(er){
                 if (er == OK){
                     // ignore

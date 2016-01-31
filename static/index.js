@@ -41,11 +41,11 @@ var K = (function(){
         CAM_DIST_MIN: 50,
 
         // CAM_DIST_MAX: 80,
-        CAM_DIST_MAX: 100,
-        // CAM_DIST_MAX: 150,
+        // CAM_DIST_MAX: 100,
+        CAM_DIST_MAX: 150,
         // CAM_DIST_MAX: 1000,
 
-        CAM_DIST_INIT: 70,
+        CAM_DIST_INIT: 100,
         // CAM_DIST_INIT: 150,
         // CAM_DIST_INIT: 700,
 
@@ -160,7 +160,7 @@ var Menu = (function(){
             API.Game.buildArmy(Player.getPlayerID(), function(er, pieces){
                 if (pieces){
                     Console.info("Building new army")
-                    window.location.href = "/play"
+                    window.location.href = "/"
                 }
                 $this.prop('disabled', false);
             })
@@ -464,11 +464,11 @@ var Console = (function(){
                       + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
 
                       // // mode 1
-                      // + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
-                      // + " 30 seconds to recharge before it can move again.</li>"
+                      + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
+                      + " 30 seconds to recharge before it can move again.</li>"
 
                       // mode 2
-                      + "<li>You can move one piece every 10 seconds per 8 x 8 zone. A cross-zone move counts towards both zones.</li>"
+                      // + "<li>You can move one piece every 10 seconds per 8 x 8 zone. A cross-zone move counts towards both zones.</li>"
                       + "<li>You can move an army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in your zone, and no king in the destination zone. If there are enemy non-king pieces in "
                       + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
