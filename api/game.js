@@ -319,6 +319,7 @@ var Move = (function(){
                 px: piece.x,
                 py: piece.y,
                 moved: new Date(), // for piece timeout
+                modified: new Date(),
             }
         }, {
             new: true,
@@ -356,6 +357,7 @@ var Move = (function(){
                         px: piece.x,
                         py: piece.y,
                         moved: new Date(), // for piece timeout
+                        modified: new Date(),
                     }
                 }, {
                     new: true,
@@ -378,6 +380,7 @@ var Move = (function(){
             $set: {
                 // not setting x and y because not moving piece on king killing move
                 moved: new Date(), // for piece timeout
+                modified: new Date(),
             }
         }, {
             new: true,
@@ -497,8 +500,8 @@ var Game = module.exports = (function(){
         ["0", "0", "0", "0", "0", "0", "0", "0"],
         ["0", "p", "p", "p", "p", "p", "p", "0"],
         ["0", "p", "0", "0", "0", "0", "p", "0"],
-        ["0", "p", "n", "k", "r", "n", "p", "0"],
-        ["0", "p", "0", "r", "q", "0", "p", "0"],
+        ["0", "p", "n", "r", "r", "n", "p", "0"],
+        ["0", "p", "0", "k", "q", "0", "p", "0"],
         ["0", "p", "b", "0", "0", "b", "p", "0"],
         ["0", "p", "p", "p", "p", "p", "p", "0"],
         ["0", "0", "0", "0", "0", "0", "0", "0"],

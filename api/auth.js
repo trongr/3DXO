@@ -20,9 +20,9 @@ var Auth = module.exports = (function(){
         else return res.send({info:"ERROR. Player not logged in"})
     }
 
-    var ERROR_LOGIN = "ERROR. Can't login"
-    var ERROR_INVALID_LOGIN = "ERROR. Invalid login"
-    var ERROR_REGISTER = "SERVER ERROR. Auth.register"
+    var ERROR_REGISTER = "REGISTER ERROR. Something's wrong with the game. Please let us know"
+    var ERROR_LOGIN = "LOGIN ERROR. Something's wrong with the game. Please let us know"
+    var ERROR_INVALID_LOGIN = "Wrong username or password"
 
     Auth.router.route("/")
         .get(authLogin)
@@ -55,13 +55,13 @@ var Auth = module.exports = (function(){
             if (er && er.code == OK){
                 res.send({info:er.info})
             } else if (er){
-                H.log("ERROR. authRegister", name, pass, er)
+                H.log("ERROR. Auth.authRegister", name, pass, er)
                 res.send({info:ERROR_REGISTER})
             } else if (player){
                 req.session.player = player
-                res.send({ok:true, player:player})
+                res.send({player:player})
             } else {
-                H.log("ERROR. authRegister: null response", name, pass)
+                H.log("ERROR. Auth.authRegister: null response", name, pass)
                 res.send({info:ERROR_REGISTER})
             }
         })
@@ -80,11 +80,11 @@ var Auth = module.exports = (function(){
             // token)
             login(name, pass, function(er, player){
                 if (er){
-                    H.log("ERROR. authLogin", er)
+                    H.log("ERROR. Auth.authLogin", er)
                     res.send({info:ERROR_LOGIN})
                 } else if (player){
                     req.session.player = player
-                    res.send({ok:true, player:player})
+                    res.send({player:player})
                 } else {
                     res.send({info:ERROR_INVALID_LOGIN})
                 }
@@ -96,11 +96,11 @@ var Auth = module.exports = (function(){
                     // for player. but first figure out why it's
                     // happening because token should never be
                     // null
-                    H.log("ERROR. authLogin: null req.session.player.token", req.session.player._id)
+                    H.log("ERROR. Auth.authLogin: null token", req.session.player._id)
                 }
-                res.send({ok:true, player:req.session.player})
+                res.send({player:req.session.player})
             } else {
-                res.send({ok:false, info:"unauthenticated guest"})
+                res.send({info:"unauthenticated guest"})
             }
         }
     }

@@ -179,7 +179,7 @@ var Sub = (function(){
             if (!playerID){
                 return H.log("DEBUG. ZONE.UNSUB: null playerID: outputs should be null:", playerID, _sessions[sessionID])
             }
-            if (_players[playerID].sessionID == sessionID){
+            if (_players[playerID] && _players[playerID].sessionID == sessionID){
                 var zone = _players[playerID].zone
                 delete _zones[zone][playerID]
                 delete _players[playerID]

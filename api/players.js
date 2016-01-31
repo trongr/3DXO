@@ -11,6 +11,26 @@ var Players = module.exports = (function(){
         router: express.Router()
     }
 
+    Players.router.route("/")
+        .get(function(req, res){ // get player by name
+            try {
+                // client can provide name to query other players, otw defaults to themself
+                var name = H.param(req, "name") || req.session.player.name
+                var player, king = null
+            } catch (e){
+                H.log("ERROR. Players.get: invalid data", req.query, req.session, e.stack)
+                return res.send({info:Conf.code.get_player})
+            }
+            Player.findOne({name:name}, function(er, player){
+                if (player){
+                    res.send({ok:true, player:player})
+                } else {
+                    H.log("ERROR. Players.get", name, er)
+                    res.send({info:Conf.code.get_player})
+                }
+            })
+        })
+
     Players.router.route("/:playerID")
         .get(function(req, res){
             try {
@@ -29,41 +49,27 @@ var Players = module.exports = (function(){
             })
         })
 
-    Players.router.route("/")
-        .get(function(req, res){ // get player by name
+    Players.router.route("/:playerID/king")
+        .get(function(req, res){
             try {
-                // client can provide name to query other players, otw defaults to themself
-                var name = H.param(req, "name") || req.session.player.name
-                var player, king = null
+                var playerID = H.param(req, "playerID")
             } catch (e){
-                H.log("ERROR. Players.get: invalid data", req.query, req.session, e.stack)
-                return res.send({info:Conf.code.get_player})
+                H.log("ERROR. Players.getPlayerKing: invalid data", req.query, req.session, e.stack)
+                return res.send({info:"ERROR. Players.getPlayerKing: invalid data"})
             }
-            async.waterfall([
-                function(done){
-                    Player.findOne({name:name}, function(er, _player){
-                        player = _player
-                        if (er) done(er)
-                        else if (player) done(null)
-                        else done({info:"ERROR. Players.get:player not found"})
-                    })
-                },
-                function(done){
-                    Piece.findOne({
-                        player: player._id,
-                        kind: "king"
-                    }, function(er, _king){
-                        king = _king
-                        if (er) done(er)
-                        else done(null)
-                    })
+            Piece.findOne({
+                player: playerID,
+                kind: "king"
+            }, null, {
+                sort: {
+                    modified: -1, // get last moved king
                 }
-            ], function(er){
-                if (player){
-                    res.send({ok:true, player:player, king:king})
+            }, function(er, king){
+                if (king){
+                    res.send({king:king})
                 } else {
-                    H.log("ERROR. Players.get", name)
-                    res.send({info:Conf.code.get_player})
+                    H.log("ERROR. Players.getPlayerKing", playerID)
+                    res.send({info:"ERROR. Players.getPlayerKing: not found"})
                 }
             })
         })

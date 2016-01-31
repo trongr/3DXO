@@ -127,17 +127,32 @@ var Menu = (function(){
 
     Menu.init = function(){
         var html = "<div id='menu_box'>"
-            +           "<a id='show_register' href='#'>REGISTER</a>"
-            +           "<a id='show_login' href='#'>LOGIN</a>"
-            +           "<a id='new_game' href='#'>NEW_ARMY</a>"
+            +           "<a id='toggle_register' href='#'>REGISTER</a>"
+            +           "<a id='toggle_login' href='#'>LOGIN</a>"
+            +           "<a id='new_army' href='#'>NEW_ARMY</a>"
+            +           "<div id='register_box'>"
+            +               "<input id='register_username' type='text' placeholder='username'><br>"
+            +               "<input id='register_password' type='password' placeholder='passphrase'><br>"
+            +               "<input id='register_password_retype' type='password' placeholder='retype passphrase'><br>"
+            +               "<input id='register_button' type='button' value='register'>"
+            +           "</div>"
+            +           "<div id='login_box'>"
+            +               "<input id='login_username' type='text' placeholder='username'><br>"
+            +               "<input id='login_password' type='password' placeholder='passphrase'><br>"
+            +               "<input id='login_button' type='button' value='login'>"
+            +           "</div>"
             +      "</div>"
         $("body").append(html)
-        $("#new_game").on("click", new_game)
+        $("#toggle_register").on("click", toggle_register)
+        $("#toggle_login").on("click", toggle_login)
+        $("#new_army").on("click", new_army)
+        $("#register_button").on("click", register_button)
+        $("#login_button").on("click", login_button)
     }
 
-    function new_game(){
+    function new_army(){
         if (Player.isAuthenticated()){
-            API.Game.buildArmy(_you._id, function(er, pieces){
+            API.Game.buildArmy(Player.getPlayerID(), function(er, pieces){
                 if (pieces){
                     Console.info("Building new army")
                     window.location.href = "/play"
@@ -146,6 +161,80 @@ var Menu = (function(){
         } else {
             Console.error("Please log in to play")
         }
+    }
+
+    function toggle_register(){
+        $("#register_box").toggle()
+        if ($("#register_box").is(":visible")){
+            $("#login_box").hide()
+            Console.toggleAlwaysFocus(false)
+            $("#register_username").focus()
+        } else {
+            Console.toggleAlwaysFocus(true)
+        }
+    }
+
+    function toggle_login(){
+        $("#login_box").toggle()
+        if ($("#login_box").is(":visible")){
+            $("#register_box").hide()
+            Console.toggleAlwaysFocus(false)
+            $("#login_username").focus()
+        } else {
+            Console.toggleAlwaysFocus(true)
+        }
+    }
+
+    function register_button(){
+        var username = $("#register_username").val()
+        var password = $("#register_password").val()
+        var password_retype = $("#register_password_retype").val()
+        var player = null
+        if (!username || !password){
+            return Console.error("Please enter both username and passphrase")
+        }
+        if (password != password_retype){
+            return Console.error("Passphrases don't match")
+        }
+        async.waterfall([
+            function(done){
+                API.Auth.post({
+                    name: username,
+                    pass: password,
+                }, function(er, _player){
+                    player = _player
+                    done(er)
+                })
+            },
+            function(done){
+                Console.info("Register successful")
+                API.Game.buildArmy(player._id, function(er){
+                    done(er)
+                })
+            }
+        ], function(er){
+            if (er) return Console.error(er)
+            else location.href = "/";
+        })
+    }
+
+    function login_button(){
+        var username = $("#login_username").val()
+        var password = $("#login_password").val()
+        if (!username || !password){
+            return Console.error("Please enter both username and passphrase")
+        }
+        API.Auth.get({
+            name: username,
+            pass: password,
+        }, function(er, player){
+            if (player){
+                Console.info("Login successful")
+                location.href = "/";
+            } else {
+                Console.error(er)
+            }
+        })
     }
 
     return Menu
@@ -297,6 +386,9 @@ var Console = (function(){
     var Console = {}
 
     var _console_in, _console_out = null
+    // whether to always focus cursor in console. disable e.g. when in
+    // register/login menu
+    var _alwaysFocus = true
 
     Console.init = function(){
         initHTML()
@@ -360,8 +452,8 @@ var Console = (function(){
         Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, buildings, etc.) "
                      + "is still under development. In the meantime your pieces will disappear 5 minutes after you log out. When you log back in you'll get a new army that spawns next to a random "
                      + "player. That way you can always find someone to play with. <span class='yellow'>For now think of the game as a giant battle arena. If you want a challenge, try and control the "
-                     + "center of the map, at coordinates [0, 0]. (You might want to team up with other players.)</span>"
-                     + "<br><br>If you want to learn more about the game, check out the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>"
+                     + "center of the map, at coordinates [0, 0]. (You might need to team up with other players.)</span>"
+                     + "<br><br>To learn more about the game, check out the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>"
                      + "<br><br>---Trong</div>")
 
         // Console.print("<h2><u>TIPS</u></h2>")
@@ -425,8 +517,13 @@ var Console = (function(){
     function alwaysFocus(){
         _console_in.focus()
         $(document).on("mouseup", function(){
-            _console_in.focus()
+            if (_alwaysFocus) _console_in.focus()
         })
+    }
+
+    Console.toggleAlwaysFocus = function(on_off){
+        _alwaysFocus = on_off
+        if (_alwaysFocus) _console_in.focus()
     }
 
     function console_line_box(text){
@@ -452,7 +549,7 @@ var Sock = (function(){
 
     Sock.init = function(x, y){
         if (Player.isAuthenticated()){
-            _playerID = Player.getPlayer()._id
+            _playerID = Player.getPlayerID()
         } else {
             _playerID = null
         }
@@ -502,7 +599,7 @@ var Sock = (function(){
         if (data.ok){
             initSocket(x, y)
         } else {
-            Console.warn("You are watching as guest. Please log in to chat and play.")
+            Console.warn("You are watching as guest. Please log in to play and chat.")
         }
     }
 
@@ -803,19 +900,21 @@ var Player = (function(){
         return _player != null
     }
 
-    // TODO. don't really need to get player here. that's already done
-    // by Player.init. just need the king. make a separate end point
-    // to get the player's last moved king
-    Player.getPlayerKing = function(done){
-        API.Player.get({}, function(er, re){
-            if (re && re.player){
-                done(null, re.player, re.king)
+    Player.getPlayerKing = function(playerID, done){
+        API.Player.getPlayerKing(playerID, function(er, king){
+            if (king){
+                done(null, king)
             } else done(er)
         })
     }
 
     Player.getPlayer = function(){
         return _player
+    }
+
+    Player.getPlayerID = function(){
+        if (_player) return _player._id
+        else return null
     }
 
     Player.getSocketToken = function(){
@@ -2339,13 +2438,15 @@ var Game = (function(){
                     done(er)
                 })
             },
-            // mach
-            // function(done){
-            //     Player.getPlayerKing(function(er, _player, _king){
-            //         king = _king
-            //         done(er)
-            //     })
-            // },
+            function(done){
+                if (Player.isAuthenticated()){
+                    Player.getPlayerKing(Player.getPlayerID(), function(er, _king){
+                        if (er) H.log(er)
+                        else king = _king
+                        done(null)
+                    })
+                } else done(null)
+            },
             function(done){
                 if (king){
                     x = king.x

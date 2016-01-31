@@ -30,6 +30,34 @@ hr {
     margin: 5px;
 }
 
+#register_box {
+    color: white;
+    margin: 5px;
+    display: none;
+}
+
+#login_box {
+    color: white;
+    margin: 5px;
+    display: none;
+}
+
+#menu_box input {
+    padding: 5px;
+    margin: 2px 0 2px 0;
+    border: none;
+    background: rgba(0, 34, 115, 0.3);
+    color: #ffffff;
+}
+
+#menu_box input[type=button] {
+    border: none;
+    padding: 5px 10px 5px 10px;
+    background: rgba(0, 34, 115, 0.3);
+    color: #ffffff;
+    font-weight: bold;
+}
+
 /* end menu css */
 /* end menu css */
 /* end menu css */

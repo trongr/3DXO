@@ -51,7 +51,9 @@ var API = (function(){
             var url = API_PREFIX + "auth"
             API.req("get", url, data, function(er, re){
                 if (er) done(er)
-                else done(null, re.player)
+                else if (re && re.player) done(null, re.player)
+                else if (re && re.info) done(re.info)
+                else done("ERROR. API.Auth.get")
             })
         }
 
@@ -60,6 +62,7 @@ var API = (function(){
             API.req("post", url, data, function(er, re){
                 if (er) done(er)
                 else if (re && re.player) done(null, re.player)
+                else if (re && re.info) done(re.info)
                 else done("ERROR. API.Auth.post")
             })
         }
@@ -70,7 +73,7 @@ var API = (function(){
     API.Player = (function(){
         var Player = {}
 
-        // re = {ok:true, player:player, king:king}, king can be null
+        // re = {ok:true, player:player}
         Player.get = function(data, done){
             var url = API_PREFIX + "player"
             API.req("get", url, data, function(er, re){
@@ -86,6 +89,16 @@ var API = (function(){
                 if (er) done(er)
                 else if (re && re.ok) done(null, re)
                 else done("ERROR. API.Player.getPlayerByID")
+            })
+        }
+
+        // re = {ok:true, king:king}, king can be null
+        Player.getPlayerKing = function(playerID, done){
+            var url = API_PREFIX + "player/" + playerID + "/king"
+            API.req("get", url, {}, function(er, re){
+                if (er) done(er)
+                else if (re && re.king) done(null, re.king)
+                else done("ERROR. API.Player.getPlayerKing: " + JSON.stringify(re, 0, 2))
             })
         }
 
