@@ -1,5 +1,5 @@
 {
-    "recharge": 15000,
+    "recharge": 10000,
     "zone_size": 8,
     "active_zone_half_width": 5,
     "max_chatters": 100,
@@ -11,6 +11,14 @@
         "offline": 2
     },
     "range": {
+        "pawn": 2,
+        "rook": 8,
+        "bishop": 8,
+        "queen": 8,
+        "king": 1,
+        "knight": 1
+    },
+    "killrange": {
         "pawn": 1,
         "rook": 8,
         "bishop": 8,

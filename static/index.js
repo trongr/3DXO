@@ -468,7 +468,7 @@ var Console = (function(){
                       // + " 30 seconds to recharge before it can move again.</li>"
 
                       // mode 2
-                      + "<li>You can move one piece every 15 seconds per 8 x 8 zone. A cross-zone move counts towards both zones.</li>"
+                      + "<li>You can move one piece every 10 seconds per 8 x 8 zone. A cross-zone move counts towards both zones.</li>"
                       + "<li>You can move an army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in your zone, and no king in the destination zone. If there are enemy non-king pieces in "
                       + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
@@ -1868,7 +1868,7 @@ var Move = (function(){
     }
 
     function findAvailableKills(obj){
-        var range = Move.getRange(obj.game.piece.kind)
+        var range = Move.getKillRange(obj.game.piece.kind)
         var killRules = Move.rules.kills[obj.game.piece.kind]
         var moves = []
         for (var i = 0; i < killRules.length; i++){
@@ -1976,6 +1976,10 @@ var Move = (function(){
 
     Move.getRange = function(objKind){
         return Conf.range[objKind]
+    }
+
+    Move.getKillRange = function(objKind){
+        return Conf.killrange[objKind]
     }
 
     return Move

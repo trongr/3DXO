@@ -71,14 +71,14 @@ var Move = (function(){
         var distance, direction
         async.waterfall([
             function(done){
-                Move.validateDistance(piece, to, function(er, _distance){
-                    distance = _distance
+                Move.validateDirection(piece, to, function(er, _direction){
+                    direction = _direction
                     done(er)
                 })
             },
             function(done){
-                Move.validateDirection(piece, to, function(er, _direction){
-                    direction = _direction
+                Move.validateDistance(piece, to, direction.isPawnKill, function(er, _distance){
+                    distance = _distance
                     done(er)
                 })
             },
@@ -165,13 +165,22 @@ var Move = (function(){
         }
     }
 
-    Move.validateDistance = function(piece, to, done){
+    Move.validateDistance = function(piece, to, isPawnKill, done){
         try {
             var dx = to[0] - piece.x
             var dy = to[1] - piece.y
             var distance = Math.max(Math.abs(dx), Math.abs(dy))
             if (piece.kind == "knight"){
                 done(null, Conf.range.knight)  // knight "distance" == 1
+            } else if (isPawnKill){
+                // pawn kill has diff range than pawn move. this isn't
+                // the most elegant solution: probably cleanest to
+                // have a diff method to check each piece type
+                if (distance <= Conf.killrange["pawn"]){
+                    done(null, distance)
+                } else {
+                    done(["ERROR. Move.validateDistance: pawn kill too far", piece, to])
+                }
             } else if (distance <= Conf.range[piece.kind]){
                 done(null, distance)
             } else {
