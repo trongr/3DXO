@@ -623,10 +623,11 @@ var Sock = (function(){
 
     function authend(data, x, y){
         if (data.ok){
-            initSocket(x, y)
+            Console.info("Welcome " + Player.getPlayer().name + "!")
         } else {
-            Console.warn("You are watching as guest. Please log in to play and chat.")
+            Console.warn("Welcome Guest! Please log in to play and chat.")
         }
+        initSocket(x, y)
     }
 
     Sock.send = function(chan, data){
@@ -822,11 +823,9 @@ var Highlight = (function(){
     }
 
     Highlight.hideAllHighlights = function(){
-        for (var highlightType in _highlights) {
-            if (_highlights.hasOwnProperty(highlightType)){
-                Highlight.hideHighlights(highlightType)
-            }
-        }
+        Object.keys(_highlights).forEach(function(highlightType){
+            Highlight.hideHighlights(highlightType)
+        })
     }
 
     return Highlight
@@ -1603,13 +1602,13 @@ var Map = (function(){
             }
         }
 
-        for (var zone in _knownZones) { // find old (inactive) zones that aren't in the new zones centered at x, y
-            if (_knownZones.hasOwnProperty(zone)){
-                if (!newZones[zone]){ // inactive zone: destroy
-                    destroyZone(_knownZones[zone])
-                }
+        // find old (inactive) zones that aren't in the new zones
+        // centered at x, y
+        Object.keys(_knownZones).forEach(function(zone){
+            if (!newZones[zone]){ // inactive zone: destroy
+                destroyZone(_knownZones[zone])
             }
-        }
+        })
     }
 
     function destroyZone(zone){
@@ -2336,25 +2335,23 @@ var Nametag = (function(){
     function updateNametags(){
         var players = Players.getPlayers()
         log("INFO. Nametag.updateNametags", H.length(players))
-        for (var playerID in players){
-            if (players.hasOwnProperty(playerID)){
-                updateNametag(players[playerID])
-            }
-        }
+        if (!players) return
+        Object.keys(players).forEach(function(playerID){
+            updateNametag(players[playerID])
+        })
     }
 
     function updateNametag(player){
         var playerID = player._id
         var tags = _tags[playerID]
-        for (var tagXY in tags){
-            if (tags.hasOwnProperty(tagXY)){
-                var xy = tagXY.split(",")
-                var x = parseInt(xy[0])
-                var y = parseInt(xy[1])
-                Nametag.remove(playerID, x, y)
-                Nametag.make(playerID, x, y)
-            }
-        }
+        if (!tags) return
+        Object.keys(tags).forEach(function(tagXY){
+            var xy = tagXY.split(",")
+            var x = parseInt(xy[0])
+            var y = parseInt(xy[1])
+            Nametag.remove(playerID, x, y)
+            Nametag.make(playerID, x, y)
+        })
     }
 
     Nametag.make = function(player, x, y){

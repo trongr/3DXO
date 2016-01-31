@@ -29,19 +29,19 @@ var H = module.exports = (function(){
 
     H.swapObjKeyValues = function(obj){
         var new_obj = {};
-        for (var prop in obj) {
-            if(obj.hasOwnProperty(prop)) {
-                new_obj[obj[prop]] = prop;
-            }
-        }
+        if (!obj) return new_obj
+        Object.keys(obj).forEach(function(prop){
+            new_obj[obj[prop]] = prop;
+        })
         return new_obj;
     }
 
     H.length = function(obj) {
-        var size = 0, key;
-        for (key in obj) {
-            if (obj.hasOwnProperty(key)) size++;
-        }
+        var size = 0;
+        if (!obj) return 0
+        Object.keys(obj).forEach(function(key){
+            size++
+        })
         return size;
     };
 

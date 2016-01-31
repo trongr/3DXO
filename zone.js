@@ -105,14 +105,19 @@ var Sub = (function(){
             // else H.log("INFO. zone.callbackZone", zone[0], zone[1], H.length(players))
             // else H.log("INFO. zone.callbackZone", zone[0], zone[1], players)
 
+            // NOTE TO SELF. DO NOT USE for (var x in obj){} EVER AGAIN!!!
+            // NOTE TO SELF. DO NOT USE for (var x in obj){} EVER AGAIN!!!
+            // NOTE TO SELF. DO NOT USE for (var x in obj){} EVER AGAIN!!!
+            //
+            // for some strange mysterious reason that will sometimes
+            // miss some keys.
+
             // loop through players in zone
-            for (var player in players) {
-                if (players.hasOwnProperty(player)){
-                    var playerID = players[player]
-                    if (ignore[playerID]) return
-                    callbackPlayer(playerID, msg)
-                }
-            }
+            Object.keys(players).forEach(function(player){
+                var playerID = players[player]
+                if (ignore[playerID]) return
+                callbackPlayer(playerID, msg)
+            })
         } catch (e){
             H.log("ERROR. zone.callbackZone.catch", zone, msg, e.stack)
         }
