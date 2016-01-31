@@ -127,9 +127,9 @@ var Menu = (function(){
 
     Menu.init = function(){
         var html = "<div id='menu_box'>"
-            +           "<a id='toggle_register' href='#'>REGISTER</a>"
-            +           "<a id='toggle_login' href='#'>LOGIN</a>"
-            +           "<a id='new_army' href='#'>NEW_ARMY</a>"
+            +           "<button id='toggle_register' href='#'>REGISTER</button>"
+            +           "<button id='toggle_login' href='#'>LOGIN</button>"
+            +           "<button id='new_army' href='#'>NEW_ARMY</button>"
             +           "<div id='register_box'>"
             +               "<input id='register_username' type='text' placeholder='username'><br>"
             +               "<input id='register_password' type='password' placeholder='passphrase'><br>"
@@ -151,15 +151,22 @@ var Menu = (function(){
     }
 
     function new_army(){
+        var $this = $(this)
+        $this.prop('disabled', true);
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
         if (Player.isAuthenticated()){
             API.Game.buildArmy(Player.getPlayerID(), function(er, pieces){
                 if (pieces){
                     Console.info("Building new army")
                     window.location.href = "/play"
                 }
+                $this.prop('disabled', false);
             })
         } else {
             Console.error("Please log in to play")
+            $this.prop('disabled', false);
         }
     }
 
@@ -186,16 +193,23 @@ var Menu = (function(){
     }
 
     function register_button(){
+        var $this = $(this)
+        $this.prop('disabled', true);
         var username = $("#register_username").val()
         var password = $("#register_password").val()
         var password_retype = $("#register_password_retype").val()
         var player = null
         if (!username || !password){
+            $this.prop('disabled', false);
             return Console.error("Please enter both username and passphrase")
         }
         if (password != password_retype){
+            $this.prop('disabled', false);
             return Console.error("Passphrases don't match")
         }
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
         async.waterfall([
             function(done){
                 API.Auth.post({
@@ -213,17 +227,28 @@ var Menu = (function(){
                 })
             }
         ], function(er){
-            if (er) return Console.error(er)
-            else location.href = "/";
+            if (er){
+                Console.error(er)
+            } else {
+                Console.info("Registration successful")
+                location.href = "/";
+            }
+            $this.prop('disabled', false);
         })
     }
 
     function login_button(){
+        var $this = $(this)
+        $this.prop('disabled', true);
         var username = $("#login_username").val()
         var password = $("#login_password").val()
         if (!username || !password){
+            $this.prop('disabled', false);
             return Console.error("Please enter both username and passphrase")
         }
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
         API.Auth.get({
             name: username,
             pass: password,
@@ -234,6 +259,7 @@ var Menu = (function(){
             } else {
                 Console.error(er)
             }
+            $this.prop('disabled', false);
         })
     }
 
