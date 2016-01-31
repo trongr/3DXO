@@ -14,12 +14,12 @@ var API = (function(){
             },
             cache: false, // otw 304 routes to error callback...
             success: function(re, status, xhr){
-                if (re.ok) done(null, re)
-                else if (re.info) done(re.info)
+                if (re) done(null, re)
                 else done("ERROR. Unexpected API")
             },
             error: function (xhr, status, er){ // ...here
-                done(er)
+                if (er) done(er)
+                else done(["ERROR. API request", er])
             },
             // complete: function (xhr, status){}
         });
@@ -50,16 +50,17 @@ var API = (function(){
         Auth.get = function(data, done){
             var url = API_PREFIX + "auth"
             API.req("get", url, data, function(er, re){
-                if (re && re.player) done(null, re.player)
-                else done("API.Auth.get: " + er)
+                if (er) done(er)
+                else done(null, re.player)
             })
         }
 
         Auth.post = function(data, done){
             var url = API_PREFIX + "auth"
             API.req("post", url, data, function(er, re){
-                if (re && re.player) done(null, re.player)
-                else done("API.Auth.post: " + er)
+                if (er) done(er)
+                else if (re && re.player) done(null, re.player)
+                else done("ERROR. API.Auth.post")
             })
         }
 
@@ -73,16 +74,18 @@ var API = (function(){
         Player.get = function(data, done){
             var url = API_PREFIX + "player"
             API.req("get", url, data, function(er, re){
-                if (re && re.ok) done(null, re)
-                else done("API.Player.get: " + er)
+                if (er) done(er)
+                else if (re && re.ok) done(null, re)
+                else done("ERROR. API.Player.get")
             })
         }
 
         Player.getPlayerByID = function(id, done){
             var url = API_PREFIX + "player/" + id
             API.req("get", url, {}, function(er, re){
-                if (re && re.ok) done(null, re)
-                else done("API.Player.getPlayerByID: " + er)
+                if (er) done(er)
+                else if (re && re.ok) done(null, re)
+                else done("ERROR. API.Player.getPlayerByID")
             })
         }
 
@@ -97,9 +100,10 @@ var API = (function(){
         Pieces.get = function(data, done){
             var url = API_PREFIX + "piece/" + data.x + "/" + data.y
             API.req("get", url, {}, function(er, re){
-                if (re && re.pieces){
+                if (er) done(er)
+                else if (re && re.pieces){
                     done(null, re.pieces)
-                } else done("API.Pieces.get: " + er)
+                } else done("ERROR. API.Pieces.get")
             })
         }
 
@@ -112,8 +116,9 @@ var API = (function(){
         Game.buildArmy = function(playerID, done){
             var url = API_PREFIX + "game/" + playerID + "/buildArmy"
             API.req("post", url, {}, function(er, re){
-                if (re && re.ok) done(null, re.pieces)
-                else done("Build army: " + er)
+                if (er) done(er)
+                else if (re && re.ok) done(null, re.pieces)
+                else done("ERROR. API.Game.buildArmy")
             })
         }
 

@@ -100,7 +100,7 @@ var Auth = module.exports = (function(){
                 }
                 res.send({ok:true, player:req.session.player})
             } else {
-                res.send({ok:false})
+                res.send({ok:false, info:"unauthenticated guest"})
             }
         }
     }
@@ -188,7 +188,6 @@ var Test = (function(){
     }
 
     Test.clear_sessions = function(args){
-        H.log("INFO. This might not work if sessions are stored in a remote redis. TODO. address and auth")
         client = redis.createClient({
             host: "127.0.0.1",
             port: 6379,

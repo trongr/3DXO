@@ -1,3 +1,4 @@
+var shortid = require("shortid")
 var _ = require("lodash")
 var sockjs  = require('sockjs');
 var redis   = require('redis');
@@ -172,7 +173,7 @@ var Sub = (function(){
     }
 
     // Remove player from pubsub
-    Sub.unsub = function(playerID, sessionID){
+    Sub.unsub = function(player, playerID, sessionID){
         H.log("INFO. ZONE.UNSUB", playerID, sessionID)
         try {
             if (!playerID){
@@ -183,7 +184,7 @@ var Sub = (function(){
                 delete _zones[zone][playerID]
                 delete _players[playerID]
                 delete _sessions[sessionID]
-                Players.updateOnline(playerID, Conf.status.offline)
+                if (player) Players.updateOnline(playerID, Conf.status.offline)
                 H.log("INFO. Zone.removePlayer", playerID, sessionID)
             } else {
                 // this is a duplicate session that's been replaced by
@@ -208,6 +209,9 @@ var Sub = (function(){
 var Zone = module.exports = (function(){
     var Zone = {}
 
+    var UNAUTHENTICATED_SOCKET_CHAT = "You have to log in to chat"
+    var UNAUTHENTICATED_SOCKET_MOVE = "You are not logged in"
+
     var _server = null
 
     Zone.init = function(server){
@@ -222,21 +226,6 @@ var Zone = module.exports = (function(){
         });
     }
 
-    function authenticate(playerID, token, done){
-        H.log("INFO. Zone.authenticate", playerID, token)
-        Player.findOne({
-            _id: playerID
-        }, "+token", function(er, player){
-            if (player){
-                if (player.token == token) done(null, player)
-                else done(["ERROR. Zone.authenticate: wrong token", playerID, token, player.token])
-            } else done(["ERROR. Zone.authenticate", playerID, token, er])
-        })
-    }
-
-    // todo. authenticate client. right now there's no way to know if
-    // a client is who they say they are
-    //
     // One connection from client to server. Multiple channels to
     // publish and subscribe to.
     function onConnection(conn){
@@ -247,8 +236,10 @@ var Zone = module.exports = (function(){
             // console.log(new Date(), "ERROR. ZONE.CONN.CATCH", conn, e.stack) // conn is a circular obj so can't use H.log
         }
         var _sessionID = conn.id // this is actually the connection id, but eh
+        // _player is initialized from authenticate(), so if it's null
+        // it means the client is not authenticated and watching as
+        // guest. in that case _playerID is a random ID
         var _playerID, _player,  _zone = null
-        var _auth = false // set to true if connection authenticated
 
         // tell client to send playerID and token to authenticate
         conn.write(JSON.stringify({chan:"authstart"}))
@@ -260,18 +251,20 @@ var Zone = module.exports = (function(){
                 var chan = data.chan
                 if (chan == "authstart"){
                     authenticate(data.playerID, data.token, function(er, player){
+                        // tell client authend so they can start
+                        // sending data on other channels
                         if (player){
                             _playerID = data.playerID
                             _player = player
-                            _auth = true
                             Players.updateOnline(_playerID, Conf.status.online)
-                            // tell client auth ok so they can start
-                            // sending data on other channels
                             conn.write(JSON.stringify({chan:"authend", ok:true}))
-                            H.log("INFO. Zone.authenticate.ok", _playerID, _sessionID, data.token)
+                            H.log("INFO. Zone.authenticate.ok", _playerID, data.token, _sessionID)
                         } else {
-                            H.log("INFO. Zone.authenticate.ko", _playerID, _sessionID, data.token, er)
-                            conn.close()
+                            _playerID = shortid.generate() + "_guest"
+                            _player = null
+                            conn.write(JSON.stringify({chan:"authend", ok:false}))
+                            if (data.playerID) H.log("INFO. Zone.authenticate.ko", _playerID, data.token, _sessionID, er) // someone trying to log in with non null playerID and wrong token
+                            else H.log("INFO. Zone.authenticate.ko", _playerID, data.token, _sessionID) // guest socket
                         }
                     })
                     return // don't proceed to the other channels
@@ -279,14 +272,16 @@ var Zone = module.exports = (function(){
 
                 _zone = data.zone
                 H.log("INFO. Zone.data", _playerID, _sessionID, _zone[0], _zone[1], chan)
-
                 if (chan == "zone"){
                     Sub.subdate(_playerID, _sessionID, _zone, onMsgCallback)
                 } else if (chan == "chat"){
-                    pubChat(_player, data)
+                    if (_player) pubChat(_player, data)
+                    else Pub.error(_playerID, UNAUTHENTICATED_SOCKET_CHAT)
+                } else if (chan == "move"){
+                    if (_player) Game.sock(_player, data)
+                    else Pub.error(_playerID, UNAUTHENTICATED_SOCKET_MOVE)
                 } else {
-                    // mach
-                    Game.sock(_player, data)
+                    H.log("ERROR. Zone.data: unknown chan", _playerID, chan)
                 }
             } catch (e){
                 return H.log("ERROR. Zone.data.catch", msg, e.stack)
@@ -294,13 +289,25 @@ var Zone = module.exports = (function(){
         });
 
         conn.on("close", function(){
-            Sub.unsub(_playerID, _sessionID)
+            Sub.unsub(_player, _playerID, _sessionID)
         })
 
         function onMsgCallback(msg){
             conn.write(msg);
         }
 
+    }
+
+    function authenticate(playerID, token, done){
+        H.log("INFO. Zone.authenticate", playerID, token)
+        Player.findOne({
+            _id: playerID
+        }, "+token", function(er, player){
+            if (player){
+                if (player.token == token) done(null, player)
+                else done(["ERROR. Zone.authenticate: wrong token", playerID, token, player.token])
+            } else done(["ERROR. Zone.authenticate", playerID, token, er])
+        })
     }
 
     function pubChat(player, _data){

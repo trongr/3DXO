@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Ragnarook</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <link rel="stylesheet" href="/static/css/msg.css">
+		<script src="/static/js/jquery-2.1.4.min.js"></script>
+        <!-- <script src="//cdn.jsdelivr.net/sockjs/1.0.0/sockjs.min.js"></script> -->
+        <!-- <script src="/static/js/sockjs.min.js"></script> -->
+		<script src="/static/js/async.js"></script>
+		<script src="/static/js/msg.js"></script>
+        <script src="/static/js/h.js"></script>
+		<script src="/static/js/api.js"></script>
+        <script src="/static/index.js"></script>
+	</head>
+	<body>
+
+        <div id="header">
+            <input id="username" type="text" placeholder="username">
+            <input id="password" type="password" placeholder="passphrase">
+            <input id="login" type="button" value="login">
+            <input id="register" type="button" value="register">
+        </div>
+
+        <div id="content"></div>
+
+        <div id="footer"></div>
+
+    </body>
+</html>

@@ -1,31 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>Ragnarook</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-        <link rel="stylesheet" href="/static/css/msg.css">
-		<script src="/static/js/jquery-2.1.4.min.js"></script>
-        <!-- <script src="//cdn.jsdelivr.net/sockjs/1.0.0/sockjs.min.js"></script> -->
-        <!-- <script src="/static/js/sockjs.min.js"></script> -->
-		<script src="/static/js/async.js"></script>
-		<script src="/static/js/msg.js"></script>
-        <script src="/static/js/h.js"></script>
-		<script src="/static/js/api.js"></script>
-        <script src="/static/index.js"></script>
-	</head>
-	<body>
+<head>
+<title>Ragnarook</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<!-- <link rel="stylesheet" href="/static/css/font-awesome.min.css"> -->
+<!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css"> -->
+<link rel="stylesheet" href="/static/css/index.css">
+<script src="/static/js/jquery-2.1.4.min.js"></script>
+<script src="/static/js/xss-filters.js"></script>
+<script src="/static/js/sockjs.min.js"></script>
+<!-- <script src="//cdn.jsdelivr.net/sockjs/1.0.0/sockjs.min.js"></script> -->
+<!-- <script src="/static/js/three.min.js"></script> -->
+<script src="/static/js/three.js"></script>
+<script type="x-shader/x-vertex" id="vertex_shader">
+    varying vec2 vUv;
+    void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+    }
+</script>
+<script type="x-shader/x-fragment" id="fragment_shader">
+    uniform vec3 color;
+    uniform sampler2D texture;
+    varying vec2 vUv;
+    void main() {
+        vec4 tColor = texture2D( texture, vUv );
+        gl_FragColor = vec4( mix( color, tColor.rgb, tColor.a ), 1.0 );
+    }
+</script>
+<script src="/static/js/TrackballControls.js"></script>
+<script src="/static/js/Detector.js"></script>
+<script src="/static/js/RequestAnimationFrame.js"></script>
+<!-- Gooch Shader written by arefin mohiuddin at
+http://ar3f.in/goochShading.html -->
+<script src="/static/js/GoochShader.js"></script>
+<script src="/static/js/NormalShader.js"></script>
+<script src="/static/js/BinaryLoader.js"></script>
+<!-- <script src="/static/js/MTLLoader.js"></script> -->
+<!-- <script src="/static/js/OBJMTLLoader.js"></script> -->
+<!-- <script src="/static/js/OBJLoader.js"></script> -->
+<!-- <script src="/static/js/Please.js"></script> -->
+<script src="/static/js/async.js"></script>
+<script src="/static/js/h.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/index.js"></script>
+</head>
+<body>
 
-        <div id="header">
-            <input id="username" type="text" placeholder="username">
-            <input id="password" type="password" placeholder="passphrase">
-            <input id="login" type="button" value="login">
-            <input id="register" type="button" value="register">
-        </div>
-
-        <div id="content"></div>
-
-        <div id="footer"></div>
-
-    </body>
+</body>
 </html>

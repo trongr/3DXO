@@ -102,7 +102,7 @@ var Players = module.exports = (function(){
         }, {
             new: true
         }, function(er, player){
-            if (er) var error = ["ERROR. Players.updateOnline", playerID, inc, er]
+            if (er) var error = ["ERROR. Players.updateOnline", playerID, status, er]
             if (done) done(error, player)
             else if (er) H.log(er)
         })

@@ -45,6 +45,7 @@ app.use(function (req, res, next) {
 
 // app.use(morgan('dev'));
 app.use(morgan('combined', {
+    // toggle to see request logs
     skip: function(req, res) { return res.statusCode < 400 }
 }));
 app.use(bodyParser.json());
@@ -62,10 +63,6 @@ app.use("/static", express.static('static'));
 
 app.get('/', function(req, res){
     res.sendFile(path.join(__dirname + '/static/index.html'))
-});
-
-app.get('/play', function(req, res){
-    res.sendFile(path.join(__dirname + '/static/play.html'))
 });
 
 app.use('/api/v1/auth', Auth.router); // login and register
