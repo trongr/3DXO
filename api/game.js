@@ -763,13 +763,16 @@ var Game = module.exports = (function(){
                             }
                         })
                     } else {
-                        Pieces.validatePieceTimeout(piece, function(er){
-                            if (er){
-                                Pub.error(playerID, er)
-                                done(OK)
-                            } else done(null)
-                        })
+                        done(null)
                     }
+                },
+                function(done){
+                    Pieces.validatePieceTimeout(piece, function(er){
+                        if (er){
+                            Pub.error(playerID, er)
+                            done(OK)
+                        } else done(null)
+                    })
                 },
                 function(done){
                     // this means the king is making a zone move:
