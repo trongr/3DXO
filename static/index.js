@@ -178,6 +178,7 @@ var Menu = (function(){
             $("#register_username").focus()
         } else {
             Console.toggleAlwaysFocus(true)
+            _console_in.focus()
         }
     }
 
@@ -189,6 +190,7 @@ var Menu = (function(){
             $("#login_username").focus()
         } else {
             Console.toggleAlwaysFocus(true)
+            _console_in.focus()
         }
     }
 
@@ -464,11 +466,13 @@ var Console = (function(){
                       + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
 
                       // // mode 1
-                      + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
-                      + " 30 seconds to recharge before it can move again.</li>"
+                      // + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
+                      // + " 30 seconds to recharge before it can move again.</li>"
 
                       // mode 2
-                      // + "<li>You can move one piece every 10 seconds per 8 x 8 zone. A cross-zone move counts towards both zones.</li>"
+                      + "<li>You can move one piece every 10 seconds per 8 x 8 zone. A cross-zone move counts towards both zones.</li>"
+                      + "<li>You can additionally move any number of pieces in a zone, provided there are no enemy pieces in that zone. "
+                      + "In this case a cross-zone move requires both zones to have no enemy pieces.</li>"
                       + "<li>You can move an army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemy pieces in your zone, and no king in the destination zone. If there are enemy non-king pieces in "
                       + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
@@ -479,9 +483,8 @@ var Console = (function(){
                      + "is still under development. In the meantime your pieces will disappear 5 minutes after you log out. When you log back in you'll get a new army that spawns next to a random "
                      + "player. That way you can always find someone to play with. <span class='yellow'>For now think of the game as a giant battle arena. If you want a challenge, try and control the "
                      + "center of the map, at coordinates [0, 0]. (You might need to team up with other players.)</span>"
-                     + "<br><br>To learn more about the game, check out the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>"
+                     + "<br><br>To learn more about the game, e.g. the reasoning behind the rules, check out the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>"
                      + "<br><br>---Trong</div>")
-
         // Console.print("<h2><u>TIPS</u></h2>")
         // Console.print("<ol>"
         //               + "<li>Join an Alliance. Type <code> /h alliance </code> into the chat box below to find out why.</li>"
@@ -500,13 +503,18 @@ var Console = (function(){
         $("body").append(html)
 
         // Cache
-        _console_in = $("#console_input")
+        _console_in = $("#console_input").off()
+            .on("focus", console_in_focus)
         _console_out = $("#console_out_box").off()
             .on("click", ".console_header", click_console_header)
 
         alwaysFocus()
 
         _console_in.on("keypress", keypressHandler)
+    }
+
+    function console_in_focus(){
+        Console.toggleAlwaysFocus(true)
     }
 
     function click_console_header(){
@@ -549,7 +557,6 @@ var Console = (function(){
 
     Console.toggleAlwaysFocus = function(on_off){
         _alwaysFocus = on_off
-        if (_alwaysFocus) _console_in.focus()
     }
 
     function console_line_box(text){

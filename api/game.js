@@ -744,35 +744,25 @@ var Game = module.exports = (function(){
                         done(er)
                     })
                 },
+                // function(done){
+                //     Pieces.validatePieceTimeout(piece, function(er){
+                //         if (er){
+                //             Pub.error(playerID, er)
+                //             done(OK)
+                //         } else done(null)
+                //     })
+                // },
+                // mach
                 function(done){
-                    Pieces.validatePieceTimeout(piece, function(er){
-                        if (er){
-                            Pub.error(playerID, er)
+                    validatePlayerZoneClocksFromTo(playerID, px, py, to[0], to[1], function(er, ok, msg){
+                        if (er) done(er)
+                        else if (ok) done(null)
+                        else {
+                            Pub.error(playerID, msg)
                             done(OK)
-                        } else done(null)
+                        }
                     })
                 },
-                // REMEMBER TO TURN ON createPlayerZoneClock IF YOU TURN THIS ON:
-                // function(done){
-                //     validatePlayerZoneClock(playerID, px, py, function(er, ok, msg){
-                //         if (er) done(er)
-                //         else if (ok) done(null)
-                //         else {
-                //             Pub.error(playerID, msg)
-                //             done(OK)
-                //         }
-                //     })
-                // },
-                // function(done){
-                //     validatePlayerZoneClock(playerID, to[0], to[1], function(er, ok, msg){
-                //         if (er) done(er)
-                //         else if (ok) done(null)
-                //         else {
-                //             Pub.error(playerID, msg)
-                //             done(OK)
-                //         }
-                //     })
-                // },
                 function(done){
                     // this means the king is making a zone move:
                     if (piece.kind == "king" && (Math.abs(piece.x - to[0]) > 1 || Math.abs(piece.y - to[1]) > 1)){
@@ -781,12 +771,9 @@ var Game = module.exports = (function(){
                         oneMove(playerID, player, piece, to, done)
                     }
                 },
-                // function(done){
-                //     createPlayerZoneClock(playerID, piece._id, px, py, done)
-                // },
-                // function(done){
-                //     createPlayerZoneClock(playerID, piece._id, to[0], to[1], done)
-                // }
+                function(done){
+                    createPlayerZoneClocksFromTo(playerID, piece._id, px, py, to[0], to[1], done)
+                },
             ], function(er){
                 if (er == OK){
                     // ignore
@@ -796,11 +783,29 @@ var Game = module.exports = (function(){
             })
         }
 
-        function createPlayerZoneClock(playerID, pieceID, x, y, done){
-            var X = H.toZoneCoordinate(x, S)
-            var Y = H.toZoneCoordinate(y, S)
-            Clocks.upsert(playerID, pieceID, X, Y, new Date(), function(er, _clock){
-                done(er)
+        // convenient method to check from and to zone
+        // clocks. TODO. can save a look up by checking if fromX fromY
+        // and toX toY are the same zone
+        function validatePlayerZoneClocksFromTo(playerID, fromX, fromY, toX, toY, done){
+            async.waterfall([
+                function(done){
+                    validatePlayerZoneClock(playerID, fromX,fromY, function(er, ok, msg){
+                        if (er) done(er)
+                        else if (ok) done(null) // no clock
+                        else done(OK, ok, msg) // clock still on
+                    })
+                },
+                function(done){
+                    validatePlayerZoneClock(playerID, toX, toY, function(er, ok, msg){
+                        if (er) done(er)
+                        else if (ok) done(null) // no clock
+                        else done(OK, ok, msg) // clock still on
+                    })
+                },
+            ], function(er, ok, msg){
+                if (er == OK) done(null, ok, msg) // clock still live
+                else if (er) done(er) // er
+                else done(null, true) // no clock
             })
         }
 
@@ -820,6 +825,27 @@ var Game = module.exports = (function(){
                 } else {
                     done(null, true)
                 }
+            })
+        }
+
+        function createPlayerZoneClocksFromTo(playerID, pieceID, fromX, fromY, toX, toY, done){
+            async.waterfall([
+                function(done){
+                    createPlayerZoneClock(playerID, pieceID, fromX, fromY, done)
+                },
+                function(done){
+                    createPlayerZoneClock(playerID, pieceID, toX, toY, done)
+                }
+            ], function(er){
+                done(er)
+            })
+        }
+
+        function createPlayerZoneClock(playerID, pieceID, x, y, done){
+            var X = H.toZoneCoordinate(x, S)
+            var Y = H.toZoneCoordinate(y, S)
+            Clocks.upsert(playerID, pieceID, X, Y, new Date(), function(er, _clock){
+                done(er)
             })
         }
 
