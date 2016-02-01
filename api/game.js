@@ -720,6 +720,7 @@ var Game = module.exports = (function(){
                     Math.floor(data.to[0]),
                     Math.floor(data.to[1]),
                 ]
+                var hasEnemies = null
             } catch (e){
                 return H.log("ERROR. Game.move: invalid input", data, e.stack)
             }
@@ -746,11 +747,12 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Pieces.zonesHaveEnemyPieces(playerID, px, py, to[0], to[1], function(er, hasEnemies){
-                        done(er, hasEnemies)
+                    Pieces.zonesHaveEnemyPieces(playerID, px, py, to[0], to[1], function(er, _hasEnemies){
+                        hasEnemies = _hasEnemies
+                        done(er)
                     })
                 },
-                function(hasEnemies, done){
+                function(done){
                     if (hasEnemies){
                         validatePlayerZoneClocksFromTo(playerID, px, py, to[0], to[1], function(er, ok, msg){
                             if (er) done(er)
@@ -780,7 +782,9 @@ var Game = module.exports = (function(){
                     }
                 },
                 function(done){
-                    createPlayerZoneClocksFromTo(playerID, piece._id, px, py, to[0], to[1], done)
+                    if (hasEnemies){
+                        createPlayerZoneClocksFromTo(playerID, piece._id, px, py, to[0], to[1], done)
+                    } else done(null)
                 },
             ], function(er){
                 if (er == OK){
