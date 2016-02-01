@@ -9,6 +9,8 @@ var Sanitize = require("../lib/sanitize.js")
 
 var S = Conf.zone_size
 
+var OK = "OK"
+
 var Pieces = module.exports = (function(){
     var Pieces = {
         router: express.Router()
@@ -87,6 +89,39 @@ var Pieces = module.exports = (function(){
                 done(["ERROR. Pieces.findPiecesInZone", _x, _y, er])
             }
         });
+    }
+
+    Pieces.zoneHasEnemyPieces = function(playerID, x, y, done){
+        Pieces.findPiecesInZone(x, y, function(er, pieces){
+            if (er) return done(["ERROR. Pieces.zoneHasEnemyPieces", playerID, x, y, er])
+            var enemies = pieces.filter(function(piece){
+                return ! piece.player.equals(playerID)
+            })
+            done(null, enemies.length > 0)
+        })
+    }
+
+    Pieces.zonesHaveEnemyPieces = function(playerID, fromX, fromY, toX, toY, done){
+        async.waterfall([
+            function(done){
+                Pieces.zoneHasEnemyPieces(playerID, fromX, fromY, function(er, hasEnemies){
+                    if (er) done(er)
+                    else if (hasEnemies) done(OK, hasEnemies)
+                    else done(null)
+                })
+            },
+            function(done){
+                Pieces.zoneHasEnemyPieces(playerID, toX, toY, function(er, hasEnemies){
+                    if (er) done(er)
+                    else if (hasEnemies) done(OK, hasEnemies)
+                    else done(null)
+                })
+            }
+        ], function(er){
+            if (er == OK) done(null, true) // has enemies
+            else if (er) done(er)
+            else done(null, false) // no enemies
+        })
     }
 
     Pieces.findPlayerPiecesInZone = function(playerID, _x, _y, done){

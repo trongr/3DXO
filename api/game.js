@@ -708,6 +708,7 @@ var Game = module.exports = (function(){
 
         on.move = function(player, data){
             try {
+                var start = new Date().getTime()
                 var throw_msg = Validate.moveData(player, data)
                 if (throw_msg) throw throw_msg
 
@@ -744,28 +745,35 @@ var Game = module.exports = (function(){
                         done(er)
                     })
                 },
-                // function(done){
-                //     Pieces.validatePieceTimeout(piece, function(er){
-                //         if (er){
-                //             Pub.error(playerID, er)
-                //             done(OK)
-                //         } else done(null)
-                //     })
-                // },
-                // mach
                 function(done){
-                    validatePlayerZoneClocksFromTo(playerID, px, py, to[0], to[1], function(er, ok, msg){
-                        if (er) done(er)
-                        else if (ok) done(null)
-                        else {
-                            Pub.error(playerID, msg)
-                            done(OK)
-                        }
+                    Pieces.zonesHaveEnemyPieces(playerID, px, py, to[0], to[1], function(er, hasEnemies){
+                        done(er, hasEnemies)
                     })
+                },
+                function(hasEnemies, done){
+                    if (hasEnemies){
+                        validatePlayerZoneClocksFromTo(playerID, px, py, to[0], to[1], function(er, ok, msg){
+                            if (er) done(er)
+                            else if (ok) done(null)
+                            else {
+                                Pub.error(playerID, msg)
+                                done(OK)
+                            }
+                        })
+                    } else {
+                        Pieces.validatePieceTimeout(piece, function(er){
+                            if (er){
+                                Pub.error(playerID, er)
+                                done(OK)
+                            } else done(null)
+                        })
+                    }
                 },
                 function(done){
                     // this means the king is making a zone move:
-                    if (piece.kind == "king" && (Math.abs(piece.x - to[0]) > 1 || Math.abs(piece.y - to[1]) > 1)){
+                    if (piece.kind == "king" &&
+                        (Math.abs(piece.x - to[0]) > 1 ||
+                         Math.abs(piece.y - to[1]) > 1)){
                         zoneMove(playerID, player, piece, to, done)
                     } else { // regular single piece move
                         oneMove(playerID, player, piece, to, done)
@@ -780,6 +788,7 @@ var Game = module.exports = (function(){
                 } else if (er){
                     H.log("ERROR. Game.move", playerID, pieceID, to, er)
                 }
+                alertElapsed(start, 1000, "Game.move")
             })
         }
 
