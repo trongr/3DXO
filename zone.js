@@ -214,7 +214,7 @@ var Sub = (function(){
 var Zone = module.exports = (function(){
     var Zone = {}
 
-    var UNAUTHENTICATED_SOCKET_CHAT = "You have to log in to chat"
+    var UNAUTHENTICATED_SOCKET_CHAT = "Please log in to play and chat"
     var UNAUTHENTICATED_SOCKET_MOVE = "You are not logged in"
 
     var _server = null

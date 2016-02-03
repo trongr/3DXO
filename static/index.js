@@ -129,7 +129,7 @@ var Menu = (function(){
         var html = "<div id='menu_box'>"
             +           "<button id='toggle_register' href='#'>REGISTER</button>"
             +           "<button id='toggle_login' href='#'>LOGIN</button>"
-            +           "<button id='new_army' href='#'>NEW_ARMY</button>"
+            +           "<button id='new_game' href='#'>NEW_GAME</button>"
             +           "<div id='register_box'>"
             +               "<input id='register_username' type='text' placeholder='username'><br>"
             +               "<input id='register_password' type='password' placeholder='passphrase'><br>"
@@ -145,12 +145,12 @@ var Menu = (function(){
         $("body").append(html)
         $("#toggle_register").on("click", toggle_register)
         $("#toggle_login").on("click", toggle_login)
-        $("#new_army").on("click", new_army)
+        $("#new_game").on("click", new_game)
         $("#register_button").on("click", register_button)
         $("#login_button").on("click", login_button)
     }
 
-    function new_army(){
+    function new_game(){
         var $this = $(this)
         $this.prop('disabled', true);
         // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
@@ -165,7 +165,7 @@ var Menu = (function(){
                 $this.prop('disabled', false);
             })
         } else {
-            Console.error("Please log in to play")
+            Console.warn("Please log in to play")
             $this.prop('disabled', false);
         }
     }
@@ -178,7 +178,7 @@ var Menu = (function(){
             $("#register_username").focus()
         } else {
             Console.toggleAlwaysFocus(true)
-            _console_in.focus()
+            Console.focus()
         }
     }
 
@@ -190,7 +190,7 @@ var Menu = (function(){
             $("#login_username").focus()
         } else {
             Console.toggleAlwaysFocus(true)
-            _console_in.focus()
+            Console.focus()
         }
     }
 
@@ -203,11 +203,11 @@ var Menu = (function(){
         var player = null
         if (!username || !password){
             $this.prop('disabled', false);
-            return Console.error("Please enter both username and passphrase")
+            return Console.warn("Please enter both username and passphrase")
         }
         if (password != password_retype){
             $this.prop('disabled', false);
-            return Console.error("Passphrases don't match")
+            return Console.warn("Passphrases don't match")
         }
         // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
         // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
@@ -230,7 +230,7 @@ var Menu = (function(){
             }
         ], function(er){
             if (er){
-                Console.error(er)
+                Console.warn(er)
             } else {
                 Console.info("Registration successful")
                 location.href = "/";
@@ -246,7 +246,7 @@ var Menu = (function(){
         var password = $("#login_password").val()
         if (!username || !password){
             $this.prop('disabled', false);
-            return Console.error("Please enter both username and passphrase")
+            return Console.warn("Please enter both username and passphrase")
         }
         // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
         // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
@@ -259,7 +259,7 @@ var Menu = (function(){
                 Console.info("Login successful")
                 location.href = "/";
             } else {
-                Console.error(er)
+                Console.warn(er)
             }
             $this.prop('disabled', false);
         })
@@ -429,7 +429,7 @@ var Console = (function(){
     }
 
     Console.info = function(text){
-        Console.print("<span class='console_info'>" + text + "</span>")
+        Console.print("<span class='console_info'>" + H.shortTimeBrackets() + " " + text + "</span>")
     }
 
     Console.warn = function(text){
@@ -442,7 +442,7 @@ var Console = (function(){
 
     function helloConsole(){
         Console.print("<span style='font-size:3em'>Ragnarook</span>")
-        Console.print("[ Chess 2.0: Pre-alpha Release ]")
+        Console.print("[ Chess 2.0: Alpha Release ]")
         Console.print("<hr>")
         Console.print("Ragnarook is a <b class='yellow'>Massively Multiplayer Persistent Open World Game</b> "
                       + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
@@ -473,18 +473,19 @@ var Console = (function(){
                       + "<li>You can move one piece every 10 seconds per 8 x 8 zone. A cross-zone move puts a clock on both zones.</li>"
                       + "<li>You can additionally move any number of pieces in a zone, provided there are no enemies in that zone. "
                       + "Similarly, unlimited cross-zone moves require both zones to have no enemies.</li>"
-                      + "<li>You can move an army from an 8 x 8 zone to a neighbouring zone if there are no "
-                      + "enemy pieces in your zone, and no king in the destination zone. If there are enemy non-king pieces in "
+                      + "<li>You can move an army from one zone to a neighbouring zone if there are no "
+                      + "enemies in your zone, and no king in the destination zone. If there are non-king enemies in "
                       + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
                       + "<li>Capturing an enemy king will convert his remaining army to your side.</li>"
                       + "</ol>")
         Console.print("<h2 class='console_header' data-console-line='dev_note'><u>Developer Notes</u> [Show]</h2>")
         Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, buildings, etc.) "
-                     + "is still under development. In the meantime your pieces will disappear 5 minutes after you log out. When you log back in you'll get a new army that spawns next to a random "
-                     + "player. That way you can always find someone to play with. <span class='yellow'>For now think of the game as a giant battle arena. If you want a challenge, try and control the "
-                     + "center of the map, at coordinates [0, 0]. (You might need to team up with other players.)</span>"
-                     + "<br><br>To learn more about the game, e.g. the reasoning behind the rules, check out the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>"
-                     + "<br><br>---Trong</div>")
+                      + "is still under development. In the meantime your pieces will disappear 5 minutes after you log out, giving other players 5 minutes to capture your kings "
+                      + "and gain your armies. You can respawn a new army at any time by clicking on the NEW_GAME button. "
+                      + "<br><br><span class='yellow'>If you want a challenge, try and control the "
+                      + "center of the map, at coordinates [0, 0]. (You might need to team up with other players.)</span>"
+                      + "<br><br>To learn more about the game, e.g. the reasoning behind the rules, check out the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>"
+                      + "<br><br>---Trong</div>")
         // Console.print("<h2><u>TIPS</u></h2>")
         // Console.print("<ol>"
         //               + "<li>Join an Alliance. Type <code> /h alliance </code> into the chat box below to find out why.</li>"
@@ -536,7 +537,8 @@ var Console = (function(){
     }
 
     function processConsoleInput(){
-        var text = _console_in.val(); _console_in.val("")
+        var text = _console_in.val()
+        _console_in.val("")
         if (!text) return
         Sock.chat(text)
     }
@@ -549,14 +551,18 @@ var Console = (function(){
     // Always keeps the chat box focused during gameplay so players
     // can type quickly
     function alwaysFocus(){
-        _console_in.focus()
+        Console.focus()
         $(document).on("mouseup", function(){
-            if (_alwaysFocus) _console_in.focus()
+            if (_alwaysFocus) Console.focus()
         })
     }
 
     Console.toggleAlwaysFocus = function(on_off){
         _alwaysFocus = on_off
+    }
+
+    Console.focus = function(){
+        _console_in.focus()
     }
 
     function console_line_box(text){
@@ -588,7 +594,7 @@ var Sock = (function(){
         }
         _sock = new SockJS('http://localhost:8080/game');
         _sock.onopen = function(){
-            if (_isRetry) Console.info(H.shortTimeBrackets() + " Connected")
+            if (_isRetry) Console.info("Connected")
             _isRetry = true
         };
 
@@ -616,7 +622,7 @@ var Sock = (function(){
         };
 
         _sock.onclose = function() {
-            Console.warn("Lost connection: retrying in 5 sec.")
+            Console.error("ERROR. Lost connection: retrying in 5 sec.")
             setTimeout(function(){
                 Sock.init(_zone[0], _zone[1])
             }, 5000)
@@ -632,7 +638,7 @@ var Sock = (function(){
         if (data.ok){
             Console.info("Welcome " + Player.getPlayer().name + "!")
         } else {
-            Console.warn("Welcome Guest! Please log in to play and chat.")
+            Console.info("Welcome Guest! Log in to play and chat.")
         }
         initSocket(x, y)
     }
@@ -2505,7 +2511,7 @@ var Game = (function(){
                 done(null)
             }
         ], function(er){
-            if (er) Console.error("If you're reading this it means something's gone wrong with the game. Please come back later.")
+            if (er) Console.error("ERROR. If you're reading this it means something's gone wrong with the game. Please come back later.")
         })
     }
 
@@ -2545,7 +2551,7 @@ var Game = (function(){
 
         // Generic error handler
         on.error = function(data){
-            Console.error(data.info || data.error) // TODO. Should stick with .info
+            Console.warn(data.info || data.error) // TODO. Should stick with .info
             log("ERROR. Game.on.error", data)
         }
 
@@ -2559,7 +2565,7 @@ var Game = (function(){
                 var deadPiece = Game.removeObjByPieceID(data.piece._id)
                 Charge.resetObjClock(deadPiece)
             } catch (e){
-                Console.warn("ERROR. Can't remove piece: " + e
+                Console.error("ERROR. Can't remove piece: " + e
                              + " This can sometimes happen when the browser is out of sync with the "
                              + "server. Please refresh the game by pressing F5 or Ctrl + R or Cmd + R.")
             }
@@ -2588,7 +2594,7 @@ var Game = (function(){
             if (you_win){
                 Console.info("YOU WIN!")
             } else {
-                Console.error("GAME OVER")
+                Console.warn("GAME OVER")
             }
         }
 
