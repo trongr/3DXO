@@ -592,7 +592,7 @@ var Sock = (function(){
         } else {
             _playerID = null
         }
-        _sock = new SockJS('http://localhost:8080/game');
+        _sock = new SockJS('/game');
         _sock.onopen = function(){
             if (_isRetry) Console.info("Connected")
             _isRetry = true
