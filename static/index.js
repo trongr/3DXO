@@ -40,9 +40,8 @@ var K = (function(){
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
         CAM_DIST_MIN: 50,
 
-        // CAM_DIST_MAX: 80,
-        // CAM_DIST_MAX: 100,
-        CAM_DIST_MAX: 150,
+        CAM_DIST_MAX: 120,
+        // CAM_DIST_MAX: 150,
         // CAM_DIST_MAX: 1000,
 
         CAM_DIST_INIT: 100,
@@ -451,14 +450,14 @@ var Console = (function(){
         //               + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
         //               + "Prepare to punish your enemies in a semi-turn-based fashion!")
         Console.print("<hr>")
-        Console.print("<h2><u>CONTROLS</u></h2>")
-        Console.print("<ol>"
+        Console.print("<h2 class='console_header' data-console-line='controls'><u>I. CONTROLS</u> [Show]</h2>")
+        Console.print("<ol class='console_content' data-console-line='controls'>"
                       + "<li>Left mouse: move pieces.</li>"
                       + "<li>Right mouse drag, or Ctrl + left mouse drag: navigate map.</li>" // todo Make it mouse click navigate
                       + "<li>Scroll mouse: zoom.</li>"
                       + "</ol>")
-        Console.print("<h2><u>RULES</u></h2>")
-        Console.print("<ol>"
+        Console.print("<h2 class='console_header' data-console-line='rules'><u>II. RULES</u> [Show]</h2>")
+        Console.print("<ol class='console_content' data-console-line='rules'>"
                       // + "<li></li>"
                       // alternatively different zones have different rules, e.g. some zones lets you move
                       // any number of pieces, some 4 at a time, some 2, some just 1, per army.
@@ -470,7 +469,7 @@ var Console = (function(){
                       // + " 30 seconds to recharge before it can move again.</li>"
 
                       // mode 2
-                      + "<li>You can move one piece every 10 seconds per 8 x 8 zone. A cross-zone move puts a clock on both zones.</li>"
+                      + "<li>You can move one piece every 20 seconds per 8 x 8 zone. A cross-zone move puts a clock on both zones.</li>"
                       + "<li>You can additionally move any number of pieces in a zone, provided there are no enemies in that zone. "
                       + "Similarly, unlimited cross-zone moves require both zones to have no enemies.</li>"
                       + "<li>You can move an army from one zone to a neighbouring zone if there are no "
@@ -478,7 +477,7 @@ var Console = (function(){
                       + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
                       + "<li>Capturing an enemy king will convert his remaining army to your side.</li>"
                       + "</ol>")
-        Console.print("<h2 class='console_header' data-console-line='dev_note'><u>Developer Notes</u> [Show]</h2>")
+        Console.print("<h2 class='console_header' data-console-line='dev_note'><u>III. Developer Notes</u> [Show]</h2>")
         Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, buildings, etc.) "
                       + "is still under development. In the meantime your pieces will disappear 5 minutes after you log out, giving other players 5 minutes to capture your kings "
                       + "and gain your armies. You can respawn a new army at any time by clicking on the NEW_GAME button. "
