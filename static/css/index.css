@@ -114,6 +114,10 @@ hr {
     color: yellow;
 }
 
+.console_line_box .green {
+    color: #A1FF9C;;
+}
+
 #console_in_box {
     position: absolute;
     left: 0;

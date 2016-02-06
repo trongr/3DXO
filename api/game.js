@@ -836,7 +836,7 @@ var Game = module.exports = (function(){
                     if (elapsed >= Conf.recharge){
                         done(null, true)
                     } else {
-                        done(null, false, "Next turn in " + parseInt((Conf.recharge - elapsed) / 1000) + " sec.  See Rule 2.")
+                        done(null, false, "Next turn in " + parseInt((Conf.recharge - elapsed) / 1000) + " sec.  See Rule 1.")
                     }
                 } else {
                     done(null, true)
