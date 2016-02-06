@@ -756,22 +756,22 @@ var Game = module.exports = (function(){
                         } else done(null)
                     })
                 },
-                // function(done){
-                //     validatePlayerZoneClocksFromTo(playerID, px, py, to[0], to[1], function(er, ok, msg){
-                //         if (er) done(er)
-                //         else if (ok) done(null)
-                //         else {
-                //             Pub.error(playerID, msg)
-                //             done(OK)
-                //         }
-                //     })
-                // },
-                // function(done){
-                //     Pieces.zonesHaveEnemyPieces(playerID, px, py, to[0], to[1], function(er, _hasEnemies){
-                //         hasEnemies = _hasEnemies
-                //         done(er)
-                //     })
-                // },
+                function(done){
+                    validatePlayerZoneClocksFromTo(playerID, px, py, to[0], to[1], function(er, ok, msg){
+                        if (er) done(er)
+                        else if (ok) done(null)
+                        else {
+                            Pub.error(playerID, msg)
+                            done(OK)
+                        }
+                    })
+                },
+                function(done){
+                    Pieces.zonesHaveEnemyPieces(playerID, px, py, to[0], to[1], function(er, _hasEnemies){
+                        hasEnemies = _hasEnemies
+                        done(er)
+                    })
+                },
                 function(done){
                     // this means the king is making a zone move:
                     if (piece.kind == "king" &&
