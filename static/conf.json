@@ -1,5 +1,5 @@
 {
-    "recharge": 15000,
+    "recharge": 30000,
     "zone_size": 8,
     "active_zone_half_width": 5,
     "max_chatters": 100,

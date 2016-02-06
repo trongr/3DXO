@@ -49,13 +49,14 @@ var Pieces = module.exports = (function(){
     }
 
     // Converts player's losing army to enemy's side
-    Pieces.defect = function(playerID, enemyID, army_id, done){
+    Pieces.defect = function(playerID, enemyID, defector_army_id, defectee_army_id, done){
         Piece.update({
             player: playerID,
-            army_id: army_id,
+            army_id: defector_army_id,
         }, {
             $set: {
                 player: enemyID,
+                army_id: defectee_army_id
             }
         }, {
             multi: true,

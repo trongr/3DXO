@@ -278,12 +278,14 @@ var Move = (function(){
                 });
             },
             function(done){
-                if (dstPiece && dstPiece.kind == "king"){
-                    capturedKing = dstPiece
-                    kingKillerMove(piece, function(er, _piece){
-                        done(er, _piece)
-                    })
-                } else if (dstPiece && dstPiece){
+                if (dstPiece){
+                    if (dstPiece.kind == "king"){
+                        capturedKing = dstPiece
+                        // kept for reference:
+                        // kingKillerMove(piece, function(er, _piece){
+                        //     done(er, _piece)
+                        // })
+                    }
                     killMove(dstPiece, piece, to, function(er, _piece){
                         done(er, _piece)
                     })
@@ -720,7 +722,7 @@ var Game = module.exports = (function(){
                     Math.floor(data.to[0]),
                     Math.floor(data.to[1]),
                 ]
-                var hasEnemies = null
+                var hasEnemies = false
             } catch (e){
                 return H.log("ERROR. Game.move: invalid input", data, e.stack)
             }
@@ -754,22 +756,22 @@ var Game = module.exports = (function(){
                         } else done(null)
                     })
                 },
-                function(done){
-                    validatePlayerZoneClocksFromTo(playerID, px, py, to[0], to[1], function(er, ok, msg){
-                        if (er) done(er)
-                        else if (ok) done(null)
-                        else {
-                            Pub.error(playerID, msg)
-                            done(OK)
-                        }
-                    })
-                },
-                function(done){
-                    Pieces.zonesHaveEnemyPieces(playerID, px, py, to[0], to[1], function(er, _hasEnemies){
-                        hasEnemies = _hasEnemies
-                        done(er)
-                    })
-                },
+                // function(done){
+                //     validatePlayerZoneClocksFromTo(playerID, px, py, to[0], to[1], function(er, ok, msg){
+                //         if (er) done(er)
+                //         else if (ok) done(null)
+                //         else {
+                //             Pub.error(playerID, msg)
+                //             done(OK)
+                //         }
+                //     })
+                // },
+                // function(done){
+                //     Pieces.zonesHaveEnemyPieces(playerID, px, py, to[0], to[1], function(er, _hasEnemies){
+                //         hasEnemies = _hasEnemies
+                //         done(er)
+                //     })
+                // },
                 function(done){
                     // this means the king is making a zone move:
                     if (piece.kind == "king" &&
@@ -864,7 +866,6 @@ var Game = module.exports = (function(){
         // regular single piece move, as opposed to moving an entire army from one zone to another
         function oneMove(playerID, player, piece, to, hasEnemies, done){
             var nPiece = null
-            var capturedKing = null
             var from = [piece.x, piece.y] // save this to pub remove from later this method
             async.waterfall([
                 function(done){
@@ -873,10 +874,12 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    // _capturedKing not null means this is a KING_KILLER move, and game over for capturedKing.player
-                    Move.oneMove(piece, to, function(er, _piece, _capturedKing){
+                    // capturedKing not null means this is a KING_KILLER move, and game over for capturedKing.player
+                    Move.oneMove(piece, to, function(er, _piece, capturedKing){
                         nPiece = _piece
-                        capturedKing = _capturedKing
+                        if (capturedKing){
+                            Game.on.gameover(capturedKing.player, playerID, nPiece, capturedKing)
+                        }
                         done(er)
                     })
                 },
@@ -886,16 +889,6 @@ var Game = module.exports = (function(){
                     done(er)
                 } else if (er){
                     done(["ERROR. Game.oneMove", player, piece, to, er])
-                } else if (capturedKing){
-                    Game.on.gameover(capturedKing.player, playerID, capturedKing)
-                    Pub.move(nPiece, {
-                        showClock: showClock,
-                        hasEnemies: hasEnemies,
-                    }, [
-                        H.toZoneCoordinate(nPiece.x, S),
-                        H.toZoneCoordinate(nPiece.y, S)
-                    ])
-                    done(null)
                 } else {
                     Pub.remove(nPiece, [
                         H.toZoneCoordinate(from[0], S),
@@ -988,10 +981,11 @@ var Game = module.exports = (function(){
         // world).
         //
         // game over for player, enemy wins
-        on.gameover = function(playerID, enemyID, king){
+        on.gameover = function(playerID, enemyID, kingKiller, king){
             try {
                 var player, enemy = null
-                var army_id = king.army_id
+                var defector_army_id = king.army_id
+                var defectee_army_id = kingKiller.army_id
                 var zone = [
                         H.toZoneCoordinate(king.x, S),
                         H.toZoneCoordinate(king.y, S)
@@ -1013,9 +1007,9 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Pieces.defect(playerID, enemyID, army_id, function(er){
+                    Pieces.defect(playerID, enemyID, defector_army_id, defectee_army_id, function(er){
                         done(er)
-                        Pub.defect(army_id, playerID, enemyID, zone)
+                        Pub.defect(defector_army_id, defectee_army_id, playerID, enemyID, zone)
                     })
                 },
                 function(done){

@@ -70,11 +70,12 @@ var Pub = module.exports = (function(){
     }
 
     // Defector defecting to defectee
-    Pub.defect = function(army_id, defectorID, defecteeID, zone){
+    Pub.defect = function(defector_army_id, defectee_army_id, defectorID, defecteeID, zone){
         Pub.publish("defect", {
             defectorID: defectorID,
             defecteeID: defecteeID,
-            army_id: army_id,
+            defector_army_id: defector_army_id,
+            defectee_army_id: defectee_army_id,
             zone: zone,
         })
     }

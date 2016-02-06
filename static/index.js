@@ -40,11 +40,11 @@ var K = (function(){
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
         CAM_DIST_MIN: 50,
 
-        CAM_DIST_MAX: 120,
+        CAM_DIST_MAX: 100,
         // CAM_DIST_MAX: 150,
         // CAM_DIST_MAX: 1000,
 
-        CAM_DIST_INIT: 100,
+        CAM_DIST_INIT: 80,
         // CAM_DIST_INIT: 150,
         // CAM_DIST_INIT: 700,
 
@@ -371,11 +371,12 @@ var Charge = (function(){
     }
 
     function makeRechargeClock(x, y, z, percent, hasEnemies){
-        if (hasEnemies){
-            var mat = CLOCK_MAT_YELLOW
-        } else {
-            var mat = CLOCK_MAT_GREEN
-        }
+        // if (hasEnemies){
+        //     var mat = CLOCK_MAT_YELLOW
+        // } else {
+        //     var mat = CLOCK_MAT_GREEN
+        // }
+        var mat = CLOCK_MAT_YELLOW
         var clock_geo = new THREE.RingGeometry(CLOCK_INNER_RADIUS, CLOCK_OUTER_RADIUS, 32, 8, Math.PI / 2, 2 * Math.PI * (percent - 1));
         var ring = new THREE.Mesh(clock_geo, mat);
         Obj.move(ring, new THREE.Vector3(x, y, z), K.CLOCK_OFFSET)
@@ -470,8 +471,8 @@ var Console = (function(){
         Console.print("<h2 class='console_header' data-console-line='controls'>I. Controls [show]</h2>")
         Console.print("<ol class='console_content' data-console-line='controls'>"
                       + "<li>Left mouse click: move pieces.</li>"
-                      + "<li>Left mouse drag: navigate map.</li>"
-                      + "<li>Scroll mouse: zoom.</li>"
+                      + "<li>Right mouse drag: navigate map.</li>"
+                      + "<li>Middle mouse scroll: zoom.</li>"
                       + "</ol>")
         Console.print("<h2 class='console_header' data-console-line='rules'>II. Rules [show]</h2>")
         Console.print("<ol class='console_content' data-console-line='rules'>"
@@ -482,27 +483,29 @@ var Console = (function(){
                       // + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
 
                       // // mode 1
-                      // + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
-                      // + " 30 seconds to recharge before it can move again.</li>"
+                      + "<li><b class='yellow'>You can move any number of pieces at any time.</b> Once moved, each piece needs "
+                      + " 30 seconds to recharge before it can move again.</li>"
 
                       // mode 2
-                      + "<li><b>Limited Moves.</b> You can move one piece every 15 seconds per 8 x 8 zone. A cross-zone move puts a clock on both zones. "
-                      + "These moves are marked by a <b class='yellow'>yellow clock.</b></li>"
-                      + "<li><b>Unlimited Moves.</b> You can additionally move any number of pieces in a zone, provided there are no enemies in that zone. "
-                      + "Similarly, unlimited cross-zone moves require both zones to have no enemies. "
-                      + "These moves are marked by a <b class='green'>green clock.</b></li>"
-                      + "<li><b>Zone Moves.</b> You can move an army from one zone to a neighbouring zone if there are no "
+                      // + "<li><b>Limited Moves.</b> You can move one piece every 15 seconds per 8 x 8 zone. A cross-zone move puts a clock on both zones. "
+                      // + "These moves are marked by <b class='yellow'>yellow clocks.</b></li>"
+                      // + "<li><b>Unlimited Moves.</b> You can additionally move any number of pieces in a zone, provided there are no enemies in that zone. "
+                      // + "Similarly, unlimited cross-zone moves require both zones to have no enemies. "
+                      // + "These moves are marked by <b class='green'>green clocks.</b></li>"
+
+                      + "<li><b class='yellow'>You can move your army from one zone to a neighbouring zone</b> if there are no "
                       + "enemies in your zone, and no king in the destination zone. If there are non-king enemies in "
-                      + "the destination zone, they will be killed. <b class='green'>Click on your king to highlight available zones.</b></li>"
-                      + "<li><b>Winning.</b> Capturing an enemy king will convert his remaining army to your side.</li>"
+                      + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
+                      + "<li><b class='yellow'>Capturing an enemy king will convert his remaining army to your side.</b></li>"
                       + "</ol>")
         Console.print("<h2 class='console_header' data-console-line='dev_note'>III. Developer Notes [show]</h2>")
         Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, buildings, etc.) "
-                      + "is still under development. In the meantime your pieces will disappear 5 minutes after you log out, giving other players 5 minutes to capture your kings "
-                      + "and gain your armies. You can respawn a new army at any time by clicking on the NEW_GAME button. "
-                      + "<br><br><b class='yellow'>If you want a challenge, try and control the "
-                      + "center of the map, at coordinates [0, 0]. (You might need to team up with other players.)</b>"
-                      + "<br><br>To learn more about the game, e.g. the reasoning behind the rules, check out the <a href='http://chessv2.tumblr.com/' target='_blank'><b>Ragnablog.</b></a>"
+                      + "is still under development. In the meantime your pieces will disappear 5 minutes after you log out, giving other players 5 minutes to capture your king "
+                      + "and gain your pieces. <b class='yellow'>You can respawn a new army at any time by clicking on the NEW_GAME button.</b> "
+                      + "<br><br><b class='yellow'>It's highly recommended that you team up with other players around you,</b> as your opponents will "
+                      + "most likely do the same, and they'll overwhelm you if you're alone by yourself."
+                      + "<br><br>Please use Google Chrome for best performance."
+                      + "<br><br>To learn more about the game, check out the <a href='http://chessv2.tumblr.com/' target='_blank'><b>Ragnablog.</b></a>"
                       + "<br><br>---Trong</div>")
         // Console.print("<h2>TIPS</h2>")
         // Console.print("<ol>"
@@ -2619,9 +2622,10 @@ var Game = (function(){
         on.defect = function(data){
             var defectorID = data.defectorID
             var defecteeID = data.defecteeID
-            var army_id = data.army_id
-            var defectors = Game.removePiecesByArmyID(army_id)
-            Game.defect(defectors, defecteeID)
+            var defector_army_id = data.defector_army_id
+            var defectee_army_id = data.defectee_army_id
+            var defectors = Game.removePiecesByArmyID(defector_army_id)
+            Game.defect(defectors, defecteeID, defectee_army_id)
             Game.loadPieces(defectors)
             Scene.render()
         }
@@ -2639,13 +2643,14 @@ var Game = (function(){
     }())
 
     // change pieces' playerID to defecteeID
-    Game.defect = function(pieces, defecteeID){
+    Game.defect = function(pieces, defecteeID, defectee_army_id){
         pieces.forEach(function(piece, i){
             // nametag using previous player's ID before replacing with new playerID
             if (piece.kind == "king"){
                 Nametag.remove(piece.player, piece.x, piece.y)
             }
             piece.player = defecteeID
+            piece.army_id = defectee_army_id
         })
     }
 
@@ -2711,8 +2716,8 @@ var Game = (function(){
         }
     }
 
-    Game.removePiecesByArmyID = function(army_id){
-        var objs = Obj.findObjsByArmyID(army_id)
+    Game.removePiecesByArmyID = function(defector_army_id){
+        var objs = Obj.findObjsByArmyID(defector_army_id)
         var pieces = objs.map(function(obj){
             Game.removeObj(obj)
             return obj.game.piece
