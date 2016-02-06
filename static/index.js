@@ -332,11 +332,13 @@ var Charge = (function(){
             removeClockMesh(pieceID)
             time = time - delta
             var clock = makeRechargeClock(piece.x, piece.y, 1, time / total, hasEnemies)
-            var origin_clock = makeRechargeClock(piece.px, piece.py, 1, time / total, hasEnemies)
             _clocks[pieceID].clock = clock
-            _clocks[pieceID].origin_clock = origin_clock
             Scene.add(clock)
-            Scene.add(origin_clock)
+
+            // var origin_clock = makeRechargeClock(piece.px, piece.py, 1, time / total, hasEnemies)
+            // _clocks[pieceID].origin_clock = origin_clock
+            // Scene.add(origin_clock)
+
             if (time < 1){
                 resetPieceClock(pieceID)
             }
