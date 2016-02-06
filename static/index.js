@@ -301,8 +301,13 @@ var Charge = (function(){
     var CLOCK_OUTER_RADIUS = 0.5
     var CLOCK_WIDTH = 0.1
     var CLOCK_INNER_RADIUS = CLOCK_OUTER_RADIUS - CLOCK_WIDTH
-    var CLOCK_MAT = new THREE.MeshLambertMaterial({
+    var CLOCK_MAT_YELLOW = new THREE.MeshLambertMaterial({
         color:0xFFFA66,
+        side:THREE.DoubleSide, // Need DoubleSide otw ring won't render
+        transparent:true, opacity:0.8
+    });
+    var CLOCK_MAT_GREEN = new THREE.MeshLambertMaterial({
+        color:0xA1FF9C,
         side:THREE.DoubleSide, // Need DoubleSide otw ring won't render
         transparent:true, opacity:0.8
     });
@@ -316,7 +321,7 @@ var Charge = (function(){
         transparent:true, opacity:0.8
     });
 
-    Charge.start = function(piece){
+    Charge.start = function(piece, hasEnemies){
         var pieceID = piece._id
         var total = Conf.recharge
         var delta = 100 // change this for smoother or rougher ticks
@@ -326,13 +331,12 @@ var Charge = (function(){
         _clocks[pieceID].interval = setInterval(function(){
             removeClockMesh(pieceID)
             time = time - delta
-            var clock = makeRechargeClock(piece.x, piece.y, 1, time / total)
-            var origin_clock = makeRechargeClock(piece.px, piece.py, 1, time / total)
+            var clock = makeRechargeClock(piece.x, piece.y, 1, time / total, hasEnemies)
+            var origin_clock = makeRechargeClock(piece.px, piece.py, 1, time / total, hasEnemies)
             _clocks[pieceID].clock = clock
             _clocks[pieceID].origin_clock = origin_clock
             Scene.add(clock)
             Scene.add(origin_clock)
-            // mach
             if (time < 1){
                 resetPieceClock(pieceID)
             }
@@ -366,9 +370,14 @@ var Charge = (function(){
         if (origin_clock) origin_clock.geometry.dispose();
     }
 
-    function makeRechargeClock(x, y, z, percent){
+    function makeRechargeClock(x, y, z, percent, hasEnemies){
+        if (hasEnemies){
+            var mat = CLOCK_MAT_YELLOW
+        } else {
+            var mat = CLOCK_MAT_GREEN
+        }
         var clock_geo = new THREE.RingGeometry(CLOCK_INNER_RADIUS, CLOCK_OUTER_RADIUS, 32, 8, Math.PI / 2, 2 * Math.PI * (percent - 1));
-        var ring = new THREE.Mesh(clock_geo, CLOCK_MAT);
+        var ring = new THREE.Mesh(clock_geo, mat);
         Obj.move(ring, new THREE.Vector3(x, y, z), K.CLOCK_OFFSET)
         return ring
     }
@@ -491,9 +500,9 @@ var Console = (function(){
         Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, buildings, etc.) "
                       + "is still under development. In the meantime your pieces will disappear 5 minutes after you log out, giving other players 5 minutes to capture your kings "
                       + "and gain your armies. You can respawn a new army at any time by clicking on the NEW_GAME button. "
-                      + "<br><br><span class='yellow'>If you want a challenge, try and control the "
-                      + "center of the map, at coordinates [0, 0]. (You might need to team up with other players.)</span>"
-                      + "<br><br>To learn more about the game, e.g. the reasoning behind the rules, check out the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a>"
+                      + "<br><br><b class='yellow'>If you want a challenge, try and control the "
+                      + "center of the map, at coordinates [0, 0]. (You might need to team up with other players.)</b>"
+                      + "<br><br>To learn more about the game, e.g. the reasoning behind the rules, check out the <a href='http://chessv2.tumblr.com/' target='_blank'><b>Ragnablog.</b></a>"
                       + "<br><br>---Trong</div>")
         // Console.print("<h2>TIPS</h2>")
         // Console.print("<ol>"
@@ -2588,7 +2597,7 @@ var Game = (function(){
             // create new piece at dst
             var obj = Piece.make(data.piece)
             Game.addObj(obj)
-            if (data.showClock) Charge.start(data.piece)
+            if (data.opts.showClock) Charge.start(data.piece, data.opts.hasEnemies)
 
             SFX.move(data.piece.kind)
         }

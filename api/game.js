@@ -747,31 +747,27 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Pieces.zonesHaveEnemyPieces(playerID, px, py, to[0], to[1], function(er, _hasEnemies){
-                        hasEnemies = _hasEnemies
-                        done(er)
-                    })
-                },
-                function(done){
-                    if (hasEnemies){
-                        validatePlayerZoneClocksFromTo(playerID, px, py, to[0], to[1], function(er, ok, msg){
-                            if (er) done(er)
-                            else if (ok) done(null)
-                            else {
-                                Pub.error(playerID, msg)
-                                done(OK)
-                            }
-                        })
-                    } else {
-                        done(null)
-                    }
-                },
-                function(done){
                     Pieces.validatePieceTimeout(piece, function(er){
                         if (er){
                             Pub.error(playerID, er)
                             done(OK)
                         } else done(null)
+                    })
+                },
+                function(done){
+                    validatePlayerZoneClocksFromTo(playerID, px, py, to[0], to[1], function(er, ok, msg){
+                        if (er) done(er)
+                        else if (ok) done(null)
+                        else {
+                            Pub.error(playerID, msg)
+                            done(OK)
+                        }
+                    })
+                },
+                function(done){
+                    Pieces.zonesHaveEnemyPieces(playerID, px, py, to[0], to[1], function(er, _hasEnemies){
+                        hasEnemies = _hasEnemies
+                        done(er)
                     })
                 },
                 function(done){
@@ -781,7 +777,7 @@ var Game = module.exports = (function(){
                          Math.abs(piece.y - to[1]) > 1)){
                         zoneMove(playerID, player, piece, to, done)
                     } else { // regular single piece move
-                        oneMove(playerID, player, piece, to, done)
+                        oneMove(playerID, player, piece, to, hasEnemies, done)
                     }
                 },
                 function(done){
@@ -866,7 +862,7 @@ var Game = module.exports = (function(){
         }
 
         // regular single piece move, as opposed to moving an entire army from one zone to another
-        function oneMove(playerID, player, piece, to, done){
+        function oneMove(playerID, player, piece, to, hasEnemies, done){
             var nPiece = null
             var capturedKing = null
             var from = [piece.x, piece.y] // save this to pub remove from later this method
@@ -892,7 +888,10 @@ var Game = module.exports = (function(){
                     done(["ERROR. Game.oneMove", player, piece, to, er])
                 } else if (capturedKing){
                     Game.on.gameover(capturedKing.player, playerID, capturedKing)
-                    Pub.move(nPiece, showClock, [
+                    Pub.move(nPiece, {
+                        showClock: showClock,
+                        hasEnemies: hasEnemies,
+                    }, [
                         H.toZoneCoordinate(nPiece.x, S),
                         H.toZoneCoordinate(nPiece.y, S)
                     ])
@@ -902,7 +901,10 @@ var Game = module.exports = (function(){
                         H.toZoneCoordinate(from[0], S),
                         H.toZoneCoordinate(from[1], S)
                     ])
-                    Pub.move(nPiece, showClock, [
+                    Pub.move(nPiece, {
+                        showClock: showClock,
+                        hasEnemies: hasEnemies,
+                    }, [
                         H.toZoneCoordinate(nPiece.x, S),
                         H.toZoneCoordinate(nPiece.y, S)
                     ])
@@ -956,7 +958,9 @@ var Game = module.exports = (function(){
                     H.toZoneCoordinate(piece.px, S),
                     H.toZoneCoordinate(piece.py, S)
                 ])
-                Pub.move(piece, showClock, [
+                Pub.move(piece, {
+                    showClock: showClock,
+                }, [
                     H.toZoneCoordinate(piece.x, S),
                     H.toZoneCoordinate(piece.y, S)
                 ])
