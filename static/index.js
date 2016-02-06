@@ -452,8 +452,8 @@ var Console = (function(){
         Console.print("<hr>")
         Console.print("<h2 class='console_header' data-console-line='controls'><u>I. CONTROLS</u> [Show]</h2>")
         Console.print("<ol class='console_content' data-console-line='controls'>"
-                      + "<li>Left mouse: move pieces.</li>"
-                      + "<li>Right mouse drag, or Ctrl + left mouse drag: navigate map.</li>" // todo Make it mouse click navigate
+                      + "<li>Left mouse click: move pieces.</li>"
+                      + "<li>Left mouse drag: navigate map.</li>"
                       + "<li>Scroll mouse: zoom.</li>"
                       + "</ol>")
         Console.print("<h2 class='console_header' data-console-line='rules'><u>II. RULES</u> [Show]</h2>")
@@ -469,7 +469,7 @@ var Console = (function(){
                       // + " 30 seconds to recharge before it can move again.</li>"
 
                       // mode 2
-                      + "<li>You can move one piece every 20 seconds per 8 x 8 zone. A cross-zone move puts a clock on both zones.</li>"
+                      + "<li>You can move one piece every 15 seconds per 8 x 8 zone. A cross-zone move puts a clock on both zones.</li>"
                       + "<li>You can additionally move any number of pieces in a zone, provided there are no enemies in that zone. "
                       + "Similarly, unlimited cross-zone moves require both zones to have no enemies.</li>"
                       + "<li>You can move an army from one zone to a neighbouring zone if there are no "
