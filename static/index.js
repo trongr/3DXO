@@ -50,7 +50,7 @@ var K = (function(){
 
         MODEL_OFFSET: {x:0, y:0, z:-0.4},
         CLOCK_OFFSET: {x:0, y:0, z:-0.4},
-        ZONE_CLOCK_OFFSET: {x:3.5, y:3.5, z:-0.4},
+        ZONE_CLOCK_OFFSET: {x:3.5, y:3.5, z:-0.3},
         ROLLOVER_OFFSET: {x:0, y:0, z:-0.49},
         HIGHLIGHT_OFFSET: {x:0, y:0, z:-0.49},
         HIGHLIGHT_ZONE_OFFSET: {x:-0.5, y:-0.5, z:-0.49},
@@ -335,9 +335,9 @@ var Charge = (function(){
             _clocks[pieceID].clock = clock
             Scene.add(clock)
 
-            var origin_clock = makeRechargeClock(piece.px, piece.py, 1, time / total, hasEnemies)
-            _clocks[pieceID].origin_clock = origin_clock
-            Scene.add(origin_clock)
+            // var origin_clock = makeRechargeClock(piece.px, piece.py, 1, time / total, hasEnemies)
+            // _clocks[pieceID].origin_clock = origin_clock
+            // Scene.add(origin_clock)
 
             if (time < 1){
                 resetPieceClock(pieceID)
@@ -373,12 +373,12 @@ var Charge = (function(){
     }
 
     function makeRechargeClock(x, y, z, percent, hasEnemies){
-        // var mat = CLOCK_MAT_YELLOW
-        if (hasEnemies){
-            var mat = CLOCK_MAT_YELLOW
-        } else {
-            var mat = CLOCK_MAT_GREEN
-        }
+        var mat = CLOCK_MAT_YELLOW
+        // if (hasEnemies){
+        //     var mat = CLOCK_MAT_YELLOW
+        // } else {
+        //     var mat = CLOCK_MAT_GREEN
+        // }
         var clock_geo = new THREE.RingGeometry(CLOCK_INNER_RADIUS, CLOCK_OUTER_RADIUS, 32, 8, Math.PI / 2, 2 * Math.PI * (percent - 1));
         var ring = new THREE.Mesh(clock_geo, mat);
         Obj.move(ring, new THREE.Vector3(x, y, z), K.CLOCK_OFFSET)
@@ -485,27 +485,31 @@ var Console = (function(){
                       // + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
 
                       // // mode 1
-                      // + "<li><b class='yellow'>You can move any number of pieces at any time.</b> Once moved, each piece needs "
-                      // + " 30 seconds to recharge before it can move again.</li>"
-
-                      // mode 2
-                      + "<li><b class='yellow'>You can move one piece every 15 seconds per 8 x 8 zone.</b> A cross-zone move puts a clock on both zones. "
-                      + "These moves are marked by <b class='yellow'>yellow clocks.</b></li>"
-                      + "<li><b class='yellow'>You can additionally move any number of pieces in a zone,</b> provided there are no enemies in that zone. "
-                      + "Similarly, unlimited cross-zone moves require both zones to have no enemies. "
-                      + "These moves are marked by <b class='green'>green clocks.</b></li>"
-
+                      + "<li><b class='yellow'>You can move any number of pieces at any time.</b> Once moved, each piece needs "
+                      + " 30 seconds to recharge before it can move again.</li>"
                       + "<li><b class='yellow'>You can move your army from one zone to a neighbouring zone</b> if there are no "
                       + "enemies in your zone, and no king in the destination zone. If there are non-king enemies in "
                       + "the destination zone, they will be killed. <b class='green'>Click on your king to highlight available zones.</b></li>"
                       + "<li><b class='yellow'>Capturing an enemy king will convert his remaining army to your side.</b></li>"
                       + "</ol>")
-        Console.print("<h2 class='console_header' data-console-line='dev_note'>III. Developer Notes [show]</h2>")
-        Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay (pieces sticking around when you log out, alliances, buildings, etc.) "
+
+                      // // mode 2
+                      // + "<li><b class='yellow'><u>Limited Moves.</u> You can move one piece every 15 seconds per 8 x 8 zone.</b> A cross-zone move puts a clock on both zones. "
+                      // + "These moves are marked by <b class='yellow'>yellow clocks.</b></li>"
+                      // + "<li><b class='yellow'><u>Unlimited Moves.</u> You can additionally move any number of pieces in a zone,</b> provided there are no enemies in that zone. "
+                      // + "Similarly, unlimited cross-zone moves require both zones to have no enemies. "
+                      // + "These moves are marked by <b class='green'>green clocks.</b></li>"
+                      // + "<li><b class='yellow'><u>Zone Moves.</u> You can move your army from one zone to a neighbouring zone</b> if there are no "
+                      // + "enemies in your zone, and no king in the destination zone. If there are non-king enemies in "
+                      // + "the destination zone, they will be killed. <b class='green'>Click on your king to highlight available zones.</b></li>"
+                      // + "<li><b class='yellow'><u>Winning Moves.</u> Capturing an enemy king will convert his remaining army to your side.</b></li>"
+                      // + "</ol>")
+        Console.print("<h2 class='console_header' data-console-line='dev_note'>III. Notes [show]</h2>")
+        Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay "
                       + "is still under development. In the meantime your pieces will disappear 5 minutes after you log out, giving other players 5 minutes to capture your king "
                       + "and gain your pieces. <b class='yellow'>You can respawn a new army at any time by clicking on the NEW_GAME button.</b> "
                       + "<br><br><b class='yellow'>It's highly recommended that you team up with other players around you,</b> as your opponents will "
-                      + "most likely do the same, and they'll overwhelm you if you're alone by yourself."
+                      + "most likely do the same, and they'll overwhelm you on your own."
                       + "<br><br>Please use Google Chrome for best performance."
                       + "<br><br>To learn more about the game, check out the <a href='http://chessv2.tumblr.com/' target='_blank'><b>Ragnablog.</b></a>"
                       + "<br><br>---Trong</div>")
