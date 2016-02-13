@@ -549,22 +549,23 @@ var Game = module.exports = (function(){
                     done(er)
                 })
             },
-            function(done){
-                // NOTE. count player's kings instead of using
-                // player.armies count in case it's wrong and they
-                // can't build new armies. this method also updates
-                // player.armies when it's wrong
-                Pieces.countPlayerArmies(player, function(er, count){
-                    if (er){
-                        done(er)
-                    } else if (count == 0){
-                        done(null)
-                    } else {
-                        Pub.error(playerID, "You can only build a new army if you have none left. Armies remaining: " + count)
-                        done(OK)
-                    }
-                })
-            },
+            // mach remove
+            // function(done){
+            //     // NOTE. count player's kings instead of using
+            //     // player.armies count in case it's wrong and they
+            //     // can't build new armies. this method also updates
+            //     // player.armies when it's wrong
+            //     Pieces.countPlayerArmies(player, function(er, count){
+            //         if (er){
+            //             done(er)
+            //         } else if (count == 0){
+            //             done(null)
+            //         } else {
+            //             Pub.error(playerID, "You can only build a new army if you have none left. Armies remaining: " + count)
+            //             done(OK)
+            //         }
+            //     })
+            // },
             function(done){
                 Game.findEmptyZone(function(er, _zone){
                     zone = _zone

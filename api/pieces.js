@@ -158,6 +158,7 @@ var Pieces = module.exports = (function(){
         });
     }
 
+    // mach not used anymore
     Pieces.countPlayerArmies = function(player, done){
         var playerID = player._id
         Piece.count({

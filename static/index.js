@@ -507,10 +507,10 @@ var Console = (function(){
         Console.print("<h2 class='console_header' data-console-line='dev_note'>III. Notes [show]</h2>")
         Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay "
                       + "is still under development. In the meantime your pieces will disappear 5 minutes after you log out, giving other players 5 minutes to capture your king "
-                      + "and gain your pieces. <b class='yellow'>You can respawn a new army at any time by clicking on the NEW_GAME button.</b> "
+                      + "and gain your pieces. <b class='yellow'>You can respawn a new army at any time by clicking on the <u>NEW_GAME</u> button.</b> "
                       + "<br><br><b class='yellow'>It's highly recommended that you team up with other players around you,</b> as your opponents will "
                       + "most likely do the same, and they'll overwhelm you on your own."
-                      + "<br><br>Please use Google Chrome for best performance."
+                      + "<br><br>Please use <b class='yellow'>Google Chrome</b> for best performance."
                       + "<br><br>To learn more about the game, check out the <a href='http://chessv2.tumblr.com/' target='_blank'><b>Ragnablog.</b></a>"
                       + "<br><br>---Trong</div>")
         // Console.print("<h2>TIPS</h2>")
