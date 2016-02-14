@@ -876,8 +876,12 @@ var Players = (function(){
     var Players = {}
 
     var PLAYERS_UPDATE_INTERVAL = 30000
+
+    // each player obj also contains a player.kings array. there can
+    // be multiple kings if player clicks NEW_GAME, but only the
+    // latest one is alive
     var _players = {
-        // playerID: player OBJ,
+        // playerID: player,
     }
 
     Players.init = function(){
@@ -931,6 +935,7 @@ var Players = (function(){
         async.each(Object.keys(playerIDs), function(playerID, done){
             API.Player.getPlayerByID(playerID, function(er, re){
                 if (re && re.player){
+                    re.player.kings = re.kings
                     players[playerID] = re.player
                 } else {
                     log("ERROR. Players.findPlayersInRange")
@@ -941,6 +946,20 @@ var Players = (function(){
             log("INFO. Players.findPlayersInRange", [new Date().getTime() - start, Obj.objs.length])
             done(null, players) // this method never returns any error
         })
+    }
+
+    Players.getPlayerKingAlive = function(player, x, y){
+        try {
+            var alive = true
+            player.kings.forEach(function(king){
+                if (king.x == x && king.y == y){
+                    alive = king.alive
+                }
+            })
+            return alive
+        } catch (e){
+            return true
+        }
     }
 
     return Players
@@ -1144,7 +1163,6 @@ var Piece = (function(){
         var color = Piece.getArmyColor(army_id)
         var obj = ClassicSet.make(piece.kind, color, pos)
         obj.game = {piece:piece}
-        Scene.add(obj);
         Obj.move(obj, pos, K.MODEL_OFFSET)
 
         if (piece.kind == "king"){
@@ -2402,7 +2420,12 @@ var Nametag = (function(){
         var playerID = player._id || player
         try {
             var playerOBJ = Players.getPlayer(playerID)
-            var text = (playerOBJ.online == Conf.status.online ? "ONLINE. " : "OFFLINE. ") + playerOBJ.name
+            var alive = Players.getPlayerKingAlive(playerOBJ, x, y)
+            if (alive){
+                var text = (playerOBJ.online == Conf.status.online ? "ONLINE. " : "OFFLINE. ") + playerOBJ.name
+            } else {
+                var text = "I surrender!"
+            }
         } catch (e){
             var text = "Loading . . . "
         }

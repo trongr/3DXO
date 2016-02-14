@@ -17,8 +17,8 @@ var Queue = require("../lib/queue.js")
 var S = Conf.zone_size
 var OK = "OK"
 // mach change
-// var REMOVE_ARMY_TIMEOUT = 5 * 60 * 1000 // ms
-var REMOVE_ARMY_TIMEOUT = 30 * 1000 // ms
+var REMOVE_ARMY_TIMEOUT = 5 * 60 * 1000 // ms
+// var REMOVE_ARMY_TIMEOUT = 30 * 1000 // ms
 var NEW_ARMY_RATE_LIMIT = 60 * 1000 // ms
 var NEW_ARMY_RATE_LIMIT_MSG = "Please wait "
     + parseInt(NEW_ARMY_RATE_LIMIT / 1000)
@@ -574,7 +574,7 @@ var Game = module.exports = (function(){
                 }
             },
             function(done){
-                Pieces.findPlayerKing(playerID, function(er, king){
+                Piece.findPlayerKing(playerID, function(er, king){
                     if (king) delay_remove_army(player, king.army_id, false)
                     done(er)
                 })

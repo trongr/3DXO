@@ -142,23 +142,6 @@ var Pieces = module.exports = (function(){
         });
     }
 
-    Pieces.findPlayerKing = function(playerID, done){
-        Piece.findOne({
-            player: playerID,
-            kind: "king"
-        }, null, {
-            // NOTE. old pattern cause we used to have multiple kings
-            // per player:
-            sort: {
-                modified: -1, // get last moved king
-            }
-        }, function(er, king){
-            if (er) done(["ERROR. Pieces.findPlayerKing", playerID, er])
-            else if (king) done(null, king)
-            else done(null, null)
-        })
-    }
-
     Pieces.findPlayerKingsInZone = function(playerID, _x, _y, done){
         var x = H.toZoneCoordinate(_x, S)
         var y = H.toZoneCoordinate(_y, S)

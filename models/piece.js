@@ -56,4 +56,31 @@ schema.statics.findOneByID = function(pieceID, done){
     })
 };
 
+schema.statics.findPlayerKing = function(playerID, done){
+    this.findOne({
+        player: playerID,
+        kind: "king"
+    }, null, {
+        // NOTE. old pattern cause we used to have multiple kings
+        // per player:
+        sort: {
+            modified: -1, // get last moved king
+        }
+    }, function(er, king){
+        if (er) done(["ERROR. Piece.findPlayerKing", playerID, er])
+        else if (king) done(null, king)
+        else done(null, null)
+    })
+}
+
+schema.statics.findPlayerKings = function(playerID, done){
+    this.find({
+        player: playerID,
+        kind: "king"
+    }, null, {}, function(er, kings){
+        if (kings) done(null, kings)
+        else done(["ERROR. Piece.findPlayerKings", playerID, er])
+    })
+}
+
 module.exports = mongoose.model('Piece', schema);
