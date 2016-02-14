@@ -56,7 +56,8 @@ var Pieces = module.exports = (function(){
         }, {
             $set: {
                 player: enemyID,
-                army_id: defectee_army_id
+                army_id: defectee_army_id,
+                alive: true,
             }
         }, {
             multi: true,
@@ -268,6 +269,22 @@ var Pieces = module.exports = (function(){
         ], function(er){
             if (er) done(["ERROR. Pieces.removePlayerArmyByID", playerID, army_id, er])
             else done(null, pieces)
+        })
+    }
+
+    Pieces.set_player_army_alive = function(playerID, army_id, alive, done){
+        Piece.update({
+            player: playerID,
+            army_id: army_id,
+        }, {
+            $set: {
+                alive: alive,
+            }
+        }, {
+            multi: true,
+        }, function(er, num){
+            if (er) done(["ERROR. Pieces.disable_player_army", playerID, army_id, alive, er])
+            else done(null)
         })
     }
 

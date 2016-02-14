@@ -76,6 +76,7 @@ var Players = module.exports = (function(){
             })
         })
 
+    // NOTE. deprecated
     // inc can be +/- 1
     Players.incArmies = function(playerID, inc, done){
         Player.findOneAndUpdate({
@@ -112,7 +113,24 @@ var Players = module.exports = (function(){
         }, function(er, player){
             if (er) var error = ["ERROR. Players.updateOnline", playerID, status, er]
             if (done) done(error, player)
-            else if (er) H.log(er)
+            else if (error) H.log(error)
+        })
+    }
+
+    Players.update_last_new_army = function(playerID, date, done){
+        H.log("INFO. Players.update_last_new_army", playerID, date)
+        Player.findOneAndUpdate({
+            _id: playerID
+        }, {
+            $set: {
+                last_new_army: date,
+            },
+        }, {
+            new: true
+        }, function(er, player){
+            if (er) done(["ERROR. Players.update_last_new_army", playerID, date, er])
+            else if (player) done(null, player)
+            else done(["ERROR. Players.update_last_new_army: null player", playerID, date])
         })
     }
 

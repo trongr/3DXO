@@ -18,7 +18,11 @@ var S = Conf.zone_size
 var OK = "OK"
 // mach change
 // var REMOVE_ARMY_TIMEOUT = 5 * 60 * 1000 // ms
-var REMOVE_ARMY_TIMEOUT = 10 * 1000 // ms
+var REMOVE_ARMY_TIMEOUT = 30 * 1000 // ms
+var NEW_ARMY_RATE_LIMIT = 60 * 1000 // ms
+var NEW_ARMY_RATE_LIMIT_MSG = "Please wait "
+    + parseInt(NEW_ARMY_RATE_LIMIT / 1000)
+    + " sec. in between starting a new game.";
 
 function alertElapsed(start, max_dur, msg){
     var elapsed = new Date().getTime() - start
@@ -158,7 +162,9 @@ var Move = (function(){
 
     Move.validatePlayerPiece = function(player, piece, done){
         try {
-            if (player._id.equals(piece.player)){
+            if (!piece.alive){
+                done(OK, "You can't control your previous army once starting a new game")
+            } else if (player._id.equals(piece.player)){
                 done(null)
             } else {
                 done(["ERROR. Game.Move.validatePlayerPiece", player, piece])
@@ -553,28 +559,48 @@ var Game = module.exports = (function(){
                 })
             },
             function(done){
+                try {
+                    var elapsed = new Date().getTime() - player.last_new_army.getTime()
+                    if (elapsed > NEW_ARMY_RATE_LIMIT){
+                        done(null)
+                    } else {
+                        Pub.error(playerID, NEW_ARMY_RATE_LIMIT_MSG + " Time remaining: "
+                                  + parseInt((NEW_ARMY_RATE_LIMIT - elapsed) / 1000) + " seconds.")
+                        done(OK)
+                    }
+                } catch (e){ // no player.last_new_army. this shouldn't happen once everyone has their
+                    H.log("ERROR. Game.buildArmy.NEW_ARMY_RATE_LIMIT.catch", player, e.stack)
+                    done(null)
+                }
+            },
+            function(done){
                 Pieces.findPlayerKing(playerID, function(er, king){
-                    if (king) delay_remove_army(player, king.army_id)
+                    if (king) delay_remove_army(player, king.army_id, false)
                     done(er)
                 })
             },
-            // mach remove
             function(done){
-                // NOTE. count player's kings instead of using
-                // player.armies count in case it's wrong and they
-                // can't build new armies. this method also updates
-                // player.armies when it's wrong
-                Pieces.countPlayerArmies(player, function(er, count){
-                    if (er){
-                        done(er)
-                    } else if (count == 0){
-                        done(null)
-                    } else {
-                        Pub.error(playerID, "You can only build a new army if you have none left. Armies remaining: " + count)
-                        done(OK)
-                    }
+                Players.update_last_new_army(player._id, new Date(), function(er){
+                    done(er)
                 })
             },
+            // // TODO remove
+            // function(done){
+            //     // NOTE. count player's kings instead of using
+            //     // player.armies count in case it's wrong and they
+            //     // can't build new armies. this method also updates
+            //     // player.armies when it's wrong
+            //     Pieces.countPlayerArmies(player, function(er, count){
+            //         if (er){
+            //             done(er)
+            //         } else if (count == 0){
+            //             done(null)
+            //         } else {
+            //             Pub.error(playerID, "You can only build a new army if you have none left. Armies remaining: " + count)
+            //             done(OK)
+            //         }
+            //     })
+            // },
             function(done){
                 Game.findEmptyZone(function(er, _zone){
                     zone = _zone
@@ -595,7 +621,7 @@ var Game = module.exports = (function(){
                     done(er)
                 })
             },
-            // mach remove
+            // TODO. remove
             // function(done){
             //     Players.incArmies(playerID, 1, function(er, _player){
             //         done(er)
@@ -615,9 +641,12 @@ var Game = module.exports = (function(){
         })
     }
 
-    // mach
-    function delay_remove_army(player, army_id){
-        H.log("INFO. Game.delay_remove_army", player._id, army_id)
+    // if is_player_army_alive === false, we set piece.alive false so
+    // they can't move them. set to true if e.g. player loses
+    // connection, so they can regain control when they reconnect
+    function delay_remove_army(player, army_id, is_player_army_alive){
+        var playerID = player._id
+        H.log("INFO. Game.delay_remove_army", playerID, army_id, is_player_army_alive)
         Queue.job({
             task: "remove_army",
             title: "Game.delay_remove_army",
@@ -627,6 +656,11 @@ var Game = module.exports = (function(){
         }, function(er){ // this is only the callback to job enqueue
             if (er) H.log("ERROR. Game.delay_remove_army.Queue.job", player, army_id, er)
         })
+        if (!is_player_army_alive){
+            Pieces.set_player_army_alive(playerID, army_id, false, function(er){
+                if (er) H.log(er)
+            })
+        }
     }
 
     function generateArmy(player, zone){
@@ -769,8 +803,11 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Move.validatePlayerPiece(player, piece, function(er){
-                        done(er)
+                    Move.validatePlayerPiece(player, piece, function(er, msg){
+                        if (er == OK){
+                            Pub.error(playerID, msg)
+                            done(OK)
+                        } else done(er)
                     })
                 },
                 function(done){
@@ -1028,18 +1065,19 @@ var Game = module.exports = (function(){
                         Pub.defect(defector_army_id, defectee_army_id, playerID, enemyID, zone)
                     })
                 },
-                function(done){
-                    Players.incArmies(playerID, -1, function(er, _player){
-                        player = _player
-                        done(er)
-                    })
-                },
-                function(done){
-                    Players.incArmies(enemyID, +1, function(er, _enemy){
-                        enemy = _enemy
-                        done(er)
-                    })
-                },
+                // TODO. remove
+                // function(done){
+                //     Players.incArmies(playerID, -1, function(er, _player){
+                //         player = _player
+                //         done(er)
+                //     })
+                // },
+                // function(done){
+                //     Players.incArmies(enemyID, +1, function(er, _enemy){
+                //         enemy = _enemy
+                //         done(er)
+                //     })
+                // },
             ], function(er){
                 if (er){
                     H.log("ERROR. Game.on.gameover", playerID, enemyID, king, er)

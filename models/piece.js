@@ -34,7 +34,8 @@ var schema = mongoose.Schema({
     moved: { // when this piece last moved
         type: Date,
         default: null
-    }
+    },
+    alive: { type:Boolean, default:true }
 });
 
 // todo time this for performance

@@ -11,16 +11,18 @@ var schema = mongoose.Schema({
     //     type: mongoose.Schema.Types.ObjectId,
     //     ref: 'Team'
     // },
-    armies: {type: Number, default: 0},
     created: {type: Date, default: Date.now},
     modified: {type: Date, default: Date.now},
+    online: {type: Number}, // online or offline. see conf.json/status
+    last_new_army: {type: Date}, // used to rate limit players starting new game
+
+    armies: {type: Number}, // NOTE. not used anymore
     // NOTE. not using this field anymore, but kept for reference:
     // _id: false stops mongoose from creating default _id:
     // enemies: [{
     //     _id: false, // stop mongoose from creating default _id
     //     name: {type: String},
     // }]
-    online: {type: Number}, // online or offline. see conf.json/status
 });
 
 schema.pre("save", function(next) {
