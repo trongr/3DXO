@@ -1,6 +1,7 @@
 var mongoose = require('mongoose');
 var bcrypt = require("bcrypt")
 var SALT_WORK_FACTOR = 10;
+var DB = require("../db.js")
 
 var schema = mongoose.Schema({
     name: {type: String, required: true, index: {unique:true}},

@@ -141,6 +141,23 @@ var Pieces = module.exports = (function(){
         });
     }
 
+    Pieces.findPlayerKing = function(playerID, done){
+        Piece.findOne({
+            player: playerID,
+            kind: "king"
+        }, null, {
+            // NOTE. old pattern cause we used to have multiple kings
+            // per player:
+            sort: {
+                modified: -1, // get last moved king
+            }
+        }, function(er, king){
+            if (er) done(["ERROR. Pieces.findPlayerKing", playerID, er])
+            else if (king) done(null, king)
+            else done(null, null)
+        })
+    }
+
     Pieces.findPlayerKingsInZone = function(playerID, _x, _y, done){
         var x = H.toZoneCoordinate(_x, S)
         var y = H.toZoneCoordinate(_y, S)
@@ -158,7 +175,7 @@ var Pieces = module.exports = (function(){
         });
     }
 
-    // mach not used anymore
+    // NOTE. not used anymore
     Pieces.countPlayerArmies = function(player, done){
         var playerID = player._id
         Piece.count({
@@ -221,7 +238,35 @@ var Pieces = module.exports = (function(){
                 });
             }
         ], function(er){
-            if (er) done(["ERROR. Pieces.removeNonKingsInZone", x, y, er])
+            if (er) done(["ERROR. Pieces.removeEnemyNonKingsInZone", playerID, x, y, er])
+            else done(null, pieces)
+        })
+    }
+
+    Pieces.removePlayerArmyByID = function(playerID, army_id, done){
+        var pieces = []
+        async.waterfall([
+            function(done){
+                // just find so we can return and publish these
+                Piece.find({
+                    player: playerID,
+                    army_id: army_id
+                }).exec(function(er, _pieces){
+                    pieces = _pieces
+                    done(er)
+                });
+            },
+            function(done){
+                // might not be most efficient to do another dup search here, but eh:
+                Piece.remove({
+                    player: playerID,
+                    army_id: army_id
+                }, function(er) {
+                    done(er)
+                });
+            }
+        ], function(er){
+            if (er) done(["ERROR. Pieces.removePlayerArmyByID", playerID, army_id, er])
             else done(null, pieces)
         })
     }

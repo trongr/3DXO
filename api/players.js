@@ -49,6 +49,8 @@ var Players = module.exports = (function(){
             })
         })
 
+    // mach use Pieces.findPlayerKing
+    // Pieces.js should have its own route to replace this:
     Players.router.route("/:playerID/king")
         .get(function(req, res){
             try {

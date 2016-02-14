@@ -1,5 +1,6 @@
 var mongoose = require('mongoose');
 var Validate = require("../lib/validate.js")
+var DB = require("../db.js")
 
 var schema = mongoose.Schema({
     // x and y are zone coordinates (lower left corner)

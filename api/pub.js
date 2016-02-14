@@ -46,6 +46,15 @@ var Pub = module.exports = (function(){
         })
     }
 
+    Pub.removeMany = function(pieces){
+        pieces.forEach(function(piece){
+            Pub.remove(piece, [
+                H.toZoneCoordinate(piece.x, S),
+                H.toZoneCoordinate(piece.y, S)
+            ])
+        })
+    }
+
     Pub.move = function(piece, opts, zone){
         Pub.publish("move", {
             piece: piece,

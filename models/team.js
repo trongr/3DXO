@@ -1,4 +1,5 @@
 var mongoose = require('mongoose');
+var DB = require("../db.js")
 
 var schema = mongoose.Schema({
     name: String,

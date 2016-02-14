@@ -1,5 +1,6 @@
 var mongoose = require('mongoose');
 var Validate = require("../lib/validate.js")
+var DB = require("../db.js")
 
 var schema = mongoose.Schema({
     kind: {type: String, required: true}, // pawn, knight, rook, bishop, queen, king

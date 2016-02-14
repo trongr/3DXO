@@ -11,11 +11,14 @@ var Auth = require("../api/auth.js")
 var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
 var Clocks = require("../api/clocks.js")
-var DB = require("../db.js")
 var Validate = require("../lib/validate.js")
+var Queue = require("../lib/queue.js")
 
 var S = Conf.zone_size
 var OK = "OK"
+// mach change
+// var REMOVE_ARMY_TIMEOUT = 5 * 60 * 1000 // ms
+var REMOVE_ARMY_TIMEOUT = 10 * 1000 // ms
 
 function alertElapsed(start, max_dur, msg){
     var elapsed = new Date().getTime() - start
@@ -549,23 +552,29 @@ var Game = module.exports = (function(){
                     done(er)
                 })
             },
+            function(done){
+                Pieces.findPlayerKing(playerID, function(er, king){
+                    if (king) delay_remove_army(player, king.army_id)
+                    done(er)
+                })
+            },
             // mach remove
-            // function(done){
-            //     // NOTE. count player's kings instead of using
-            //     // player.armies count in case it's wrong and they
-            //     // can't build new armies. this method also updates
-            //     // player.armies when it's wrong
-            //     Pieces.countPlayerArmies(player, function(er, count){
-            //         if (er){
-            //             done(er)
-            //         } else if (count == 0){
-            //             done(null)
-            //         } else {
-            //             Pub.error(playerID, "You can only build a new army if you have none left. Armies remaining: " + count)
-            //             done(OK)
-            //         }
-            //     })
-            // },
+            function(done){
+                // NOTE. count player's kings instead of using
+                // player.armies count in case it's wrong and they
+                // can't build new armies. this method also updates
+                // player.armies when it's wrong
+                Pieces.countPlayerArmies(player, function(er, count){
+                    if (er){
+                        done(er)
+                    } else if (count == 0){
+                        done(null)
+                    } else {
+                        Pub.error(playerID, "You can only build a new army if you have none left. Armies remaining: " + count)
+                        done(OK)
+                    }
+                })
+            },
             function(done){
                 Game.findEmptyZone(function(er, _zone){
                     zone = _zone
@@ -586,11 +595,12 @@ var Game = module.exports = (function(){
                     done(er)
                 })
             },
-            function(done){
-                Players.incArmies(playerID, 1, function(er, _player){
-                    done(er)
-                })
-            },
+            // mach remove
+            // function(done){
+            //     Players.incArmies(playerID, 1, function(er, _player){
+            //         done(er)
+            //     })
+            // },
         ], function(er){
             if (er == OK){
                 res.send({info:ERROR_BUILD_ARMY})
@@ -602,6 +612,20 @@ var Game = module.exports = (function(){
                 res.send({ok:true, pieces:pieces})
             }
             alertElapsed(start, 2000, "Game.buildArmy")
+        })
+    }
+
+    // mach
+    function delay_remove_army(player, army_id){
+        H.log("INFO. Game.delay_remove_army", player._id, army_id)
+        Queue.job({
+            task: "remove_army",
+            title: "Game.delay_remove_army",
+            delay: REMOVE_ARMY_TIMEOUT,
+            player: player,
+            army_id: army_id
+        }, function(er){ // this is only the callback to job enqueue
+            if (er) H.log("ERROR. Game.delay_remove_army.Queue.job", player, army_id, er)
         })
     }
 
@@ -923,7 +947,7 @@ var Game = module.exports = (function(){
                 function(done){
                     Pieces.removeEnemyNonKingsInZone(playerID, to[0], to[1], function(er, _pieces){
                         if (_pieces){
-                            pubZoneRemoveDstPieces(_pieces)
+                            Pub.removeMany(_pieces)
                             Clocks.removeMany(_pieces)
                         }
                         done(er)
@@ -966,15 +990,6 @@ var Game = module.exports = (function(){
                 var y = H.toZoneCoordinate(piece.y, S)
                 Pub.zoneMoveClock(x, y, [x, y])
             }
-        }
-
-        function pubZoneRemoveDstPieces(pieces){
-            pieces.forEach(function(piece){
-                Pub.remove(piece, [
-                    H.toZoneCoordinate(piece.x, S),
-                    H.toZoneCoordinate(piece.y, S)
-                ])
-            })
         }
 
         // todo. A fraction (half?) of pieces convert to enemy,
