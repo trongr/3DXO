@@ -4,6 +4,7 @@ var async = require("async")
 var express = require('express');
 var H = require("../static/js/h.js")
 var Conf = require("../static/conf.json") // shared with client
+var Job = require("../models/job.js")
 var Piece = require("../models/piece.js")
 var Player = require("../models/player.js")
 var Pub = require("../api/pub.js")
@@ -574,7 +575,7 @@ var Game = module.exports = (function(){
                 }
             },
             function(done){
-                Game.delay_remove_army(playerID, false, function(er, remove_army_job_id){
+                Game.delay_remove_army(playerID, false, function(er, jobID){
                     done(er)
                 })
             },
@@ -640,10 +641,21 @@ var Game = module.exports = (function(){
         })
     }
 
+    // returns jobID so caller (e.g. zone.js) can cancel
+    // the right job when player reconnects. we don't want to cancel
+    // any jobID when they reconnect, because it could
+    // have been one initiated by NEW_GAME, and if we cancel that
+    // player would have two armies. (this ain't very elegant
+    // lol. good thing we'll get rid of remove_army and go full
+    // persistence)
+    //
+    // if is_player_army_alive === false, we set piece.alive false so
+    // they can't move them. set to true if e.g. player loses
+    // connection, so they can regain control when they reconnect
     Game.delay_remove_army = function(playerID, is_player_army_alive, done){
         var king = null
         var army_id = null
-        var remove_army_job_id = null
+        var jobID = null
         H.log("INFO. Game.delay_remove_army", playerID, is_player_army_alive)
         async.waterfall([
             function(done){
@@ -655,10 +667,6 @@ var Game = module.exports = (function(){
                 })
             },
             function(done){
-                // if is_player_army_alive === false, we set piece.alive false so
-                // they can't move them. set to true if e.g. player loses
-                // connection, so they can regain control when they reconnect
-                remove_army_job_id = new Date().getTime()
                 army_id = king.army_id
                 Queue.job({
                     task: "remove_army",
@@ -666,8 +674,8 @@ var Game = module.exports = (function(){
                     delay: REMOVE_ARMY_TIMEOUT,
                     playerID: playerID,
                     army_id: army_id,
-                    remove_army_job_id: remove_army_job_id
-                }, function(er){ // this is only the callback to job enqueue
+                }, function(er, _jobID){ // this is only the callback to job enqueue
+                    jobID = _jobID
                     done(er)
                 })
             },
@@ -679,26 +687,22 @@ var Game = module.exports = (function(){
                 } else done(null)
             }
         ], function(er){
-            // caller should check remove_army_job_id. if null then no
+            // caller should check jobID. if null then no
             // remove_army job was fired
             if (er == OK) done(null, null)
             else if (er) done(["ERROR. Game.delay_remove_army", playerID, is_player_army_alive, er])
-            else done(null, remove_army_job_id)
+            else done(null, jobID)
         })
     }
 
-    Game.cancel_delay_remove_army = function(playerID, remove_army_job_id, done){
-        Player.update({
-            _id: playerID,
-            remove_army_job_id: remove_army_job_id
-        }, {
-            $set: {
-                remove_army_job_id: null
-            }
-        }, {}, function(er, num){
-            if (er) done(["ERROR. Game.cancel_delay_remove_army", playerID, remove_army_job_id, er])
+    // mach
+    Game.cancel_delay_remove_army = function(jobID, done){
+        Job.remove({
+            _id: jobID
+        }, function(er) {
+            if (er) done(["ERROR. Game.cancel_delay_remove_army", jobID, er])
             else done(null)
-        })
+        });
     }
 
     function generateArmy(player, zone){

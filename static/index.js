@@ -488,7 +488,7 @@ var Console = (function(){
                       + "<li><b class='yellow'>You can move any number of pieces at any time.</b> Once moved, each piece needs "
                       + " 30 seconds to recharge before it can move again.</li>"
                       + "<li><b class='yellow'>You can move your army from one zone to a neighbouring zone</b> if there are no "
-                      + "enemies in your zone, and no king in the destination zone. If there are non-king enemies in "
+                      + "enemies in your zone, and no king or queen in the destination zone. If there are non-royal enemies in "
                       + "the destination zone, they will be killed. <b class='green'>Click on your king to highlight available zones.</b></li>"
                       + "<li><b class='yellow'>Capturing an enemy king will convert his remaining army to your side.</b></li>"
                       + "</ol>")
@@ -500,7 +500,7 @@ var Console = (function(){
                       // + "Similarly, unlimited cross-zone moves require both zones to have no enemies. "
                       // + "These moves are marked by <b class='green'>green clocks.</b></li>"
                       // + "<li><b class='yellow'><u>Zone Moves.</u> You can move your army from one zone to a neighbouring zone</b> if there are no "
-                      // + "enemies in your zone, and no king in the destination zone. If there are non-king enemies in "
+                      // + "enemies in your zone, and no king or queen in the destination zone. If there are non-royal enemies in "
                       // + "the destination zone, they will be killed. <b class='green'>Click on your king to highlight available zones.</b></li>"
                       // + "<li><b class='yellow'><u>Winning Moves.</u> Capturing an enemy king will convert his remaining army to your side.</b></li>"
                       // + "</ol>")

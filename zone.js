@@ -191,6 +191,7 @@ var Sub = (function(){
                 delete _sessions[sessionID]
                 if (player){ // authenticated player
                     Players.updateOnline(playerID, Conf.status.offline)
+                    // mach
                 } // else guest: nothing else to clean up
                 H.log("INFO. Zone.removePlayer", playerID, sessionID)
             } else {
