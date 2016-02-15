@@ -167,6 +167,7 @@ hr {
 
 .chat_time {
     color: #BFBFBF;
+    font-weight: bold;
 }
 
 .chat_msg {

@@ -433,9 +433,11 @@ var Console = (function(){
     var Console = {}
 
     var _console_in, _console_out = null
-    // whether to always focus cursor in console. disable e.g. when in
-    // register/login menu
-    var _alwaysFocus = true
+    var _console_out_bottom_fix = true // whether to automatically
+                                       // scroll to bottom with new msgs
+    var _alwaysFocus = true // whether to always focus cursor in
+                            // console. disable e.g. when in
+                            // register/login menu
 
     Console.init = function(){
         initHTML()
@@ -444,7 +446,9 @@ var Console = (function(){
 
     Console.print = function(text){
         _console_out.append(console_line_box(text))
-        fixConsoleCSS()
+        if (_console_out_bottom_fix){
+            fixConsoleCSS()
+        }
     }
 
     Console.info = function(text){
@@ -470,13 +474,13 @@ var Console = (function(){
         //               + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
         //               + "Prepare to punish your enemies in a semi-turn-based fashion!")
         Console.print("<hr>")
-        Console.print("<h2 class='console_header' data-console-line='controls'>I. Controls [show]</h2>")
+        Console.print("<h2 class='console_header' data-console-line='controls'>I. Controls</h2>")
         Console.print("<ol class='console_content' data-console-line='controls'>"
                       + "<li>Left mouse click: move pieces.</li>"
                       + "<li>Right mouse drag: navigate map.</li>"
                       + "<li>Middle mouse scroll: zoom.</li>"
                       + "</ol>")
-        Console.print("<h2 class='console_header' data-console-line='rules'>II. Rules [show]</h2>")
+        Console.print("<h2 class='console_header' data-console-line='rules'>II. Rules</h2>")
         Console.print("<ol class='console_content' data-console-line='rules'>"
                       // + "<li></li>"
                       // alternatively different zones have different rules, e.g. some zones lets you move
@@ -504,15 +508,25 @@ var Console = (function(){
                       // + "the destination zone, they will be killed. <b class='green'>Click on your king to highlight available zones.</b></li>"
                       // + "<li><b class='yellow'><u>Winning Moves.</u> Capturing an enemy king will convert his remaining army to your side.</b></li>"
                       // + "</ol>")
-        Console.print("<h2 class='console_header' data-console-line='dev_note'>III. Notes [show]</h2>")
+        Console.print("<h2 class='console_header' data-console-line='dev_note'>III. Gameplay Notes</h2>")
         Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay "
                       + "is still under development. In the meantime your pieces will disappear 10 minutes after you log out, giving other players 10 minutes to capture your king "
                       + "and gain your pieces. <b class='yellow'>You can respawn a new army at any time by clicking on the <u>NEW_GAME</u> button.</b> "
                       + "<br><br><b class='yellow'>It's highly recommended that you team up with other players around you,</b> as your opponents will "
                       + "most likely do the same, and they'll overwhelm you on your own."
                       + "<br><br>Please use <b class='yellow'>Google Chrome</b> for best performance."
-                      + "<br><br>To learn more about the game, check out the <a href='http://chessv2.tumblr.com/' target='_blank'><b>Ragnablog.</b></a>"
-                      + "<br><br>---Trong</div>")
+                      + "</div>")
+        Console.print("<h2 class='console_header' data-console-line='links'>IV. Links</h2>")
+        Console.print("<div class='console_content' data-console-line='links'>To read more about the game, check out the <a href='http://chessv2.tumblr.com/' target='_blank'><b>Ragnablog.</b></a> "
+                      + "<br><br>See <a href='https://en.wikipedia.org/wiki/Kung-Fu_Chess' target='_blank'><b>Kung-Fu Chess [Wikipedia]</b></a> "
+                      + "for a similar game for two or four players. Recently a team from Japan has also made a physical two-player board: "
+                      + "<a href='https://www.reddit.com/r/gaming/comments/3lyryx/chess_too_boring_for_ya_not_anymore/' target='_blank'><b>Dengekisen [reddit].</b></a> "
+                      + "As far as I know Ragnarook is the only MMO Chess variant."
+                      + "</div>")
+        Console.print("<h2 class='console_header' data-console-line='about'>V. About</h2>")
+        Console.print("<div class='console_content' data-console-line='about'>Hello! My name is Trong. I'm a web developer from Toronto, Canada, and Ragnarook is my first game. Enjoy!</div>")
+        Console.print("<hr>")
+        Console.info("Loading Game Assets")
         // Console.print("<h2>TIPS</h2>")
         // Console.print("<ol>"
         //               + "<li>Join an Alliance. Type <code> /h alliance </code> into the chat box below to find out why.</li>"
@@ -535,10 +549,20 @@ var Console = (function(){
             .on("focus", console_in_focus)
         _console_out = $("#console_out_box").off()
             .on("click", ".console_header", click_console_header)
+            .on("scroll", scroll_console_out)
 
         alwaysFocus()
 
         _console_in.on("keypress", keypressHandler)
+    }
+
+    function scroll_console_out(e){
+        var elem = $(e.currentTarget);
+        if (elem[0].scrollHeight - elem.scrollTop() - elem.innerHeight() < 5){
+            _console_out_bottom_fix = true
+        } else {
+            _console_out_bottom_fix = false
+        }
     }
 
     function console_in_focus(){
@@ -567,6 +591,7 @@ var Console = (function(){
         var text = _console_in.val()
         _console_in.val("")
         if (!text) return
+        fixConsoleCSS()
         Sock.chat(text)
     }
 
@@ -662,6 +687,7 @@ var Sock = (function(){
     }
 
     function authend(data, x, y){
+        Console.info("Done") // "Done" loading game assets
         if (data.ok){
             Console.info("Welcome " + Player.getPlayer().name + "!")
         } else {
@@ -2562,6 +2588,7 @@ var Game = (function(){
             }
         ], function(er){
             if (er) Console.error("ERROR. If you're reading this it means something's gone wrong with the game. Please come back later.")
+
         })
     }
 

@@ -24,7 +24,7 @@ var Worker = module.exports = (function(){
                 if (er){
                     var error = ["ERROR. Worker.remove_army.Job.findOneByID", data, er]
                 } else if (job && job.cancelled){
-                    var error = ["INFO. Worker.remove_army.Job.findOneByID: cancelled", data]
+                    var error = "INFO. Worker.remove_army.Job.findOneByID: cancelled: " + jobID
                 } else if (job){
                     var error = null
                 } else {
