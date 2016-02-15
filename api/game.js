@@ -577,7 +577,7 @@ var Game = module.exports = (function(){
                 }
             },
             function(done){
-                Game.delay_remove_army(playerID, false, function(er, jobID){
+                Game.delay_remove_army(playerID, false, function(er){
                     done(er)
                 })
             },
@@ -643,22 +643,13 @@ var Game = module.exports = (function(){
         })
     }
 
-    // returns jobID so caller (e.g. zone.js) can cancel
-    // the right job when player reconnects. we don't want to cancel
-    // any jobID when they reconnect, because it could
-    // have been one initiated by NEW_GAME, and if we cancel that
-    // player would have two armies. (this ain't very elegant
-    // lol. good thing we'll get rid of remove_army and go full
-    // persistence)
-    //
-    // if is_player_army_alive === false, we set piece.alive false so
+    // if army_alive === false, we set piece.alive false so
     // they can't move them. set to true if e.g. player loses
     // connection, so they can regain control when they reconnect
-    Game.delay_remove_army = function(playerID, is_player_army_alive, done){
+    Game.delay_remove_army = function(playerID, army_alive, done){
         var king = null
         var army_id = null
-        var jobID = null
-        H.log("INFO. Game.delay_remove_army", playerID, is_player_army_alive)
+        H.log("INFO. Game.delay_remove_army", playerID, army_alive)
         async.waterfall([
             function(done){
                 Piece.findPlayerKing(playerID, function(er, _king){
@@ -674,42 +665,47 @@ var Game = module.exports = (function(){
                     task: "remove_army",
                     title: "Game.delay_remove_army",
                     delay: REMOVE_ARMY_TIMEOUT,
-                    ttl: REMOVE_ARMY_JOB_TTL
+                    ttl: REMOVE_ARMY_JOB_TTL,
                     playerID: playerID,
                     army_id: army_id,
-                }, function(er, _jobID){ // this is only the callback to job enqueue
-                    jobID = _jobID
+                    army_alive: army_alive
+                }, function(er){ // this is only the callback to job enqueue
                     done(er)
                 })
             },
             function(done){
-                if (!is_player_army_alive){ // save a db update and only do it if false
-                    Pieces.set_player_army_alive(playerID, army_id, is_player_army_alive, function(er){
+                if (!army_alive){ // save a db update and only do it if false
+                    Pieces.set_player_army_alive(playerID, army_id, army_alive, function(er){
                         done(er)
                     })
                 } else done(null)
             }
         ], function(er){
-            // caller should check jobID. if null then no
-            // remove_army job was fired
-            if (er == OK) done(null, null)
-            else if (er) done(["ERROR. Game.delay_remove_army", playerID, is_player_army_alive, er])
-            else done(null, jobID)
+            if (er == OK) done(null)
+            else if (er) done(["ERROR. Game.delay_remove_army", playerID, army_alive, er])
+            else done(null)
         })
     }
 
-    // mach
-    Game.cancel_delay_remove_army = function(jobID, done){
+    Game.cancel_delay_remove_army = function(playerID, done){
+        H.log("INFO. Game.cancel_delay_remove_army", playerID)
         Job.update({
-            _id: jobID
+            "task": "remove_army",
+            "data.playerID": playerID,
+            "data.army_alive": true // only let player cancel
+                                    // remove_army jobs, i.e. reclaim
+                                    // their army if it's still alive
         }, {
             $set: {
                 cancelled: true,
                 modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
             },
+        }, {
+            multi: true
         }, function(er, num){
-            if (er) done(["ERROR. Game.cancel_delay_remove_army", jobID, er])
-            else done(null)
+            if (er) var error = ["ERROR. Game.cancel_delay_remove_army", playerID, er]
+            if (done) done(error)
+            else if (error) H.log(error)
         })
     }
 

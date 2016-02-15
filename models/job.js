@@ -2,6 +2,7 @@ var mongoose = require('mongoose');
 var DB = require("../db.js")
 
 var schema = mongoose.Schema({
+    task: {type: String},
     created: {
         type: Date, default: Date.now,
         expires: 7 * 24 * 60 * 60, // in seconds

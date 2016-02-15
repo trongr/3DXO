@@ -191,7 +191,9 @@ var Sub = (function(){
                 delete _sessions[sessionID]
                 if (player){ // authenticated player
                     Players.updateOnline(playerID, Conf.status.offline)
-                    // mach
+                    Game.delay_remove_army(playerID, true, function(er){
+                        if (er) H.log(er)
+                    })
                 } // else guest: nothing else to clean up
                 H.log("INFO. Zone.removePlayer", playerID, sessionID)
             } else {
@@ -265,6 +267,7 @@ var Zone = module.exports = (function(){
                             _playerID = data.playerID
                             _player = player
                             Players.updateOnline(_playerID, Conf.status.online)
+                            Game.cancel_delay_remove_army(_playerID)
                             conn.write(JSON.stringify({chan:"authend", ok:true}))
                             H.log("INFO. Zone.authenticate.ok", _playerID, data.token, _sessionID)
                         } else {

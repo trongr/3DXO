@@ -9,7 +9,7 @@ var H = module.exports = (function(){
     }
 
     H.log = function(msg, obj1, obj2, obj3, obj4, obj5, obj6){
-        var out = new Date().toISOString() + " " + msg
+        var out = new Date().toISOString() + " " + str(msg)
         out += " " + (obj1 != null ? str(obj1) : "-")
         out += " " + (obj2 != null ? str(obj2) : "-")
         out += " " + (obj3 != null ? str(obj3) : "-")
