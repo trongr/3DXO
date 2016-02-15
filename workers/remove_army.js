@@ -19,9 +19,10 @@ var Worker = module.exports = (function(){
     }
 
     function remove_army(data, done){
-        var playerID = data.player._id
+        var playerID = data.playerID
         var army_id = data.army_id
         H.log("INFO. Worker.remove_army", playerID, army_id)
+        // mach get player and check player.remove_army_job_id
         Pieces.removePlayerArmyByID(playerID, army_id, function(er, pieces){
             if (pieces){
                 Pub.removeMany(pieces)

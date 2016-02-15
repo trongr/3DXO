@@ -4,6 +4,16 @@ var SALT_WORK_FACTOR = 10;
 var DB = require("../db.js")
 
 var schema = mongoose.Schema({
+    // START. Unused fields:
+    armies: {type: Number},
+    // NOTE. not using this field anymore, but kept for reference:
+    // _id: false stops mongoose from creating default _id:
+    // enemies: [{
+    //     _id: false, // stop mongoose from creating default _id
+    //     name: {type: String},
+    // }]
+    // END. Unused fields
+
     name: {type: String, required: true, index: {unique:true}},
     pass: {type: String, required: true, select: false},
     token: {type: String, select: false}, // socket token
@@ -15,14 +25,7 @@ var schema = mongoose.Schema({
     modified: {type: Date, default: Date.now},
     online: {type: Number}, // online or offline. see conf.json/status
     last_new_army: {type: Date}, // used to rate limit players starting new game
-
-    armies: {type: Number}, // NOTE. not used anymore
-    // NOTE. not using this field anymore, but kept for reference:
-    // _id: false stops mongoose from creating default _id:
-    // enemies: [{
-    //     _id: false, // stop mongoose from creating default _id
-    //     name: {type: String},
-    // }]
+    remove_army_job_id: {type:Number}, // new Date().getTime(), used to track remove_army jobs
 });
 
 schema.pre("save", function(next) {

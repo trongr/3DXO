@@ -17,8 +17,8 @@ var Queue = require("../lib/queue.js")
 var S = Conf.zone_size
 var OK = "OK"
 // mach change
-var REMOVE_ARMY_TIMEOUT = 5 * 60 * 1000 // ms
-// var REMOVE_ARMY_TIMEOUT = 30 * 1000 // ms
+// var REMOVE_ARMY_TIMEOUT = 5 * 60 * 1000 // ms
+var REMOVE_ARMY_TIMEOUT = 30 * 1000 // ms
 var NEW_ARMY_RATE_LIMIT = 60 * 1000 // ms
 var NEW_ARMY_RATE_LIMIT_MSG = "Please wait "
     + parseInt(NEW_ARMY_RATE_LIMIT / 1000)
@@ -574,8 +574,7 @@ var Game = module.exports = (function(){
                 }
             },
             function(done){
-                Piece.findPlayerKing(playerID, function(er, king){
-                    if (king) delay_remove_army(player, king.army_id, false)
+                Game.delay_remove_army(playerID, false, function(er, remove_army_job_id){
                     done(er)
                 })
             },
@@ -641,26 +640,65 @@ var Game = module.exports = (function(){
         })
     }
 
-    // if is_player_army_alive === false, we set piece.alive false so
-    // they can't move them. set to true if e.g. player loses
-    // connection, so they can regain control when they reconnect
-    function delay_remove_army(player, army_id, is_player_army_alive){
-        var playerID = player._id
-        H.log("INFO. Game.delay_remove_army", playerID, army_id, is_player_army_alive)
-        Queue.job({
-            task: "remove_army",
-            title: "Game.delay_remove_army",
-            delay: REMOVE_ARMY_TIMEOUT,
-            player: player,
-            army_id: army_id
-        }, function(er){ // this is only the callback to job enqueue
-            if (er) H.log("ERROR. Game.delay_remove_army.Queue.job", player, army_id, er)
+    Game.delay_remove_army = function(playerID, is_player_army_alive, done){
+        var king = null
+        var army_id = null
+        var remove_army_job_id = null
+        H.log("INFO. Game.delay_remove_army", playerID, is_player_army_alive)
+        async.waterfall([
+            function(done){
+                Piece.findPlayerKing(playerID, function(er, _king){
+                    king = _king
+                    if (er) done(er)
+                    else if (king) done(null)
+                    else done(OK) // no army to remove
+                })
+            },
+            function(done){
+                // if is_player_army_alive === false, we set piece.alive false so
+                // they can't move them. set to true if e.g. player loses
+                // connection, so they can regain control when they reconnect
+                remove_army_job_id = new Date().getTime()
+                army_id = king.army_id
+                Queue.job({
+                    task: "remove_army",
+                    title: "Game.delay_remove_army",
+                    delay: REMOVE_ARMY_TIMEOUT,
+                    playerID: playerID,
+                    army_id: army_id,
+                    remove_army_job_id: remove_army_job_id
+                }, function(er){ // this is only the callback to job enqueue
+                    done(er)
+                })
+            },
+            function(done){
+                if (!is_player_army_alive){ // save a db update and only do it if false
+                    Pieces.set_player_army_alive(playerID, army_id, is_player_army_alive, function(er){
+                        done(er)
+                    })
+                } else done(null)
+            }
+        ], function(er){
+            // caller should check remove_army_job_id. if null then no
+            // remove_army job was fired
+            if (er == OK) done(null, null)
+            else if (er) done(["ERROR. Game.delay_remove_army", playerID, is_player_army_alive, er])
+            else done(null, remove_army_job_id)
         })
-        if (!is_player_army_alive){
-            Pieces.set_player_army_alive(playerID, army_id, false, function(er){
-                if (er) H.log(er)
-            })
-        }
+    }
+
+    Game.cancel_delay_remove_army = function(playerID, remove_army_job_id, done){
+        Player.update({
+            _id: playerID,
+            remove_army_job_id: remove_army_job_id
+        }, {
+            $set: {
+                remove_army_job_id: null
+            }
+        }, {}, function(er, num){
+            if (er) done(["ERROR. Game.cancel_delay_remove_army", playerID, remove_army_job_id, er])
+            else done(null)
+        })
     }
 
     function generateArmy(player, zone){

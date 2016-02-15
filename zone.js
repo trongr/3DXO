@@ -189,7 +189,9 @@ var Sub = (function(){
                 delete _zones[zone][playerID]
                 delete _players[playerID]
                 delete _sessions[sessionID]
-                if (player) Players.updateOnline(playerID, Conf.status.offline)
+                if (player){ // authenticated player
+                    Players.updateOnline(playerID, Conf.status.offline)
+                } // else guest: nothing else to clean up
                 H.log("INFO. Zone.removePlayer", playerID, sessionID)
             } else {
                 // this is a duplicate session that's been replaced by
