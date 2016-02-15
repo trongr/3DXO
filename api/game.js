@@ -19,9 +19,8 @@ var S = Conf.zone_size
 var OK = "OK"
 
 var REMOVE_ARMY_JOB_TTL = 60 * 60 * 1000 // ms
-// mach change
-// var REMOVE_ARMY_TIMEOUT = 5 * 60 * 1000 // ms
-var REMOVE_ARMY_TIMEOUT = 30 * 1000 // ms
+var REMOVE_ARMY_TIMEOUT = 5 * 60 * 1000 // ms
+// var REMOVE_ARMY_TIMEOUT = 30 * 1000 // ms
 var NEW_ARMY_RATE_LIMIT = 60 * 1000 // ms
 var NEW_ARMY_RATE_LIMIT_MSG = "Please wait "
     + parseInt(NEW_ARMY_RATE_LIMIT / 1000)
