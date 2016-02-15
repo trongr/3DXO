@@ -17,6 +17,8 @@ var Queue = require("../lib/queue.js")
 
 var S = Conf.zone_size
 var OK = "OK"
+
+var REMOVE_ARMY_JOB_TTL = 60 * 60 * 1000 // ms
 // mach change
 // var REMOVE_ARMY_TIMEOUT = 5 * 60 * 1000 // ms
 var REMOVE_ARMY_TIMEOUT = 30 * 1000 // ms
@@ -672,6 +674,7 @@ var Game = module.exports = (function(){
                     task: "remove_army",
                     title: "Game.delay_remove_army",
                     delay: REMOVE_ARMY_TIMEOUT,
+                    ttl: REMOVE_ARMY_JOB_TTL
                     playerID: playerID,
                     army_id: army_id,
                 }, function(er, _jobID){ // this is only the callback to job enqueue
@@ -697,12 +700,17 @@ var Game = module.exports = (function(){
 
     // mach
     Game.cancel_delay_remove_army = function(jobID, done){
-        Job.remove({
+        Job.update({
             _id: jobID
-        }, function(er) {
+        }, {
+            $set: {
+                cancelled: true,
+                modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
+            },
+        }, function(er, num){
             if (er) done(["ERROR. Game.cancel_delay_remove_army", jobID, er])
             else done(null)
-        });
+        })
     }
 
     function generateArmy(player, zone){
