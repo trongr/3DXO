@@ -16,6 +16,7 @@ var schema = mongoose.Schema({
 
     name: {type: String, required: true, index: {unique:true}},
     pass: {type: String, required: true, select: false},
+    email: {type: String, select: false},
     token: {type: String, select: false}, // socket token
     // team: {
     //     type: mongoose.Schema.Types.ObjectId,

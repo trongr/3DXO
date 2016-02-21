@@ -31,6 +31,7 @@ var Auth = module.exports = (function(){
     function authRegister(req, res){ // register
         var name = req.body.name
         var pass = req.body.pass
+        var email = req.body.email
         var error_msg = Validate.usernamePassword(name, pass)
         if (error_msg){
             return res.send({info:error_msg})
@@ -49,6 +50,7 @@ var Auth = module.exports = (function(){
                 createPlayer({
                     name: name,
                     pass: pass,
+                    email: email,
                 }, done)
             }
         ], function(er, player){

@@ -172,6 +172,7 @@ var Menu = (function(){
         var username = $("#register_username").val()
         var password = $("#register_password").val()
         var password_retype = $("#register_password_retype").val()
+        var email = $("#register_email").val()
         var player = null
         if (!username || !password){
             $this.prop('disabled', false);
@@ -189,6 +190,7 @@ var Menu = (function(){
                 API.Auth.post({
                     name: username,
                     pass: password,
+                    email: email,
                 }, function(er, _player){
                     player = _player
                     done(er)
