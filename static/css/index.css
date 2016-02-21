@@ -52,6 +52,7 @@ hr {
     border: none;
     background: rgba(0, 34, 115, 0.3);
     color: #ffffff;
+    width: 300px;
 }
 
 #menu_box input[type=button] {
@@ -62,6 +63,7 @@ hr {
     font-weight: bold;
     cursor: pointer;
     cursor: hand;
+    width: auto;
 }
 
 /* end menu css */
@@ -94,6 +96,7 @@ hr {
 
 #console_out_box a {
     color: yellow;
+    font-weight: bold;
 }
 
 #console_out_box .console_line_box {

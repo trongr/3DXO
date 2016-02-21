@@ -1,32 +1,4 @@
-// when you load an army, also load the zone onto the client, otw when
-// the client moves to an unloaded zone, it will load the zone and
-// another duplicate copy (lol) of the same army
-
 // change ground opacity depending on the time of day. implement a world clock
-
-// turn light.castShadow = true and move the directional light with
-// the camera
-
-// checker board pattern so you can see better... MAYBE
-// toggle hide hud
-
-// keyboard moving: e.g. b2ru3: second bishop right up 3, n4ur: fourth
-// knight up 2 right 1, n4ru: fourth knight right 2 up 1, etc.
-
-// + for grid intersections
-
-// unhighlight cells and rollover when you lose
-
-// gradient color code the counters to make it more obvious and make a
-// big counter for the active token
-
-// pawns aren't allowed to move towards the nearest (cause you can
-// have multiple) king during combat
-//
-// you can't move the same piece twice in the same round
-//
-// free roaming lets you move any piece to a neighbouring grid, but no
-// farther
 
 function log(msg, data){
     console.log(H.shortTimeBrackets(), msg, data)
@@ -133,6 +105,7 @@ var Menu = (function(){
             +               "<input id='register_username' type='text' placeholder='username'><br>"
             +               "<input id='register_password' type='password' placeholder='passphrase'><br>"
             +               "<input id='register_password_retype' type='password' placeholder='retype passphrase'><br>"
+            +               "<input id='register_email' type='email' placeholder='optional email'><br>"
             +               "<input id='register_button' type='button' value='register'>"
             +           "</div>"
             +           "<div id='login_box'>"
@@ -513,18 +486,24 @@ var Console = (function(){
                       + "is still under development. In the meantime your pieces will disappear 10 minutes after you log out, giving other players 10 minutes to capture your king "
                       + "and gain your pieces. <b class='yellow'>You can respawn a new army at any time by clicking on the <u>NEW_GAME</u> button.</b> "
                       + "<br><br><b class='yellow'>It's highly recommended that you team up with other players around you,</b> as your opponents will "
-                      + "most likely do the same, and they'll overwhelm you on your own."
+                      + "most likely do the same, and they'll overwhelm you on your own. You can chat using the chat box at the bottom of this panel."
                       + "<br><br>Please use <b class='yellow'>Google Chrome</b> for best performance."
                       + "</div>")
-        Console.print("<h2 class='console_header' data-console-line='links'>IV. Links</h2>")
-        Console.print("<div class='console_content' data-console-line='links'>To read more about the game, check out the <a href='http://chessv2.tumblr.com/' target='_blank'><b>Ragnablog.</b></a> "
-                      + "<br><br>See <a href='https://en.wikipedia.org/wiki/Kung-Fu_Chess' target='_blank'><b>Kung-Fu Chess [Wikipedia]</b></a> "
-                      + "for a similar game for two or four players. Recently a team from Japan has also made a physical two-player board: "
-                      + "<a href='https://www.reddit.com/r/gaming/comments/3lyryx/chess_too_boring_for_ya_not_anymore/' target='_blank'><b>Dengekisen [reddit].</b></a> "
-                      + "As far as I know Ragnarook is the only MMO Chess variant."
+        Console.print("<h2 class='console_header' data-console-line='links'>IV. Blog and Community</h2>")
+        Console.print("<div class='console_content' data-console-line='links'>To learn more about Ragnarook, "
+                      + "e.g. development progress, possible directions the game is heading, etc., check out the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a> "
+                      + "<br><br>Help us make Ragnarook the Best Strategy Game in the world! "
+                      + "Join our <a href='https://www.facebook.com/groups/1755519304678543/' target='_blank'>facebook group</a> to give feedback, suggest new features and gameplay mechanics, report bugs, discuss strategies, etc. "
                       + "</div>")
         Console.print("<h2 class='console_header' data-console-line='about'>V. About</h2>")
-        Console.print("<div class='console_content' data-console-line='about'>Hello! My name is Trong. I'm a web developer from Toronto, Canada, and Ragnarook is my first game. Enjoy!</div>")
+        Console.print("<div class='console_content' data-console-line='about'>Hello! My name is Trong. I'm a developer from Toronto, Canada, and Ragnarook is my first game. Enjoy! "
+                      + "<br><br>SIMILAR GAMES. See <a href='https://en.wikipedia.org/wiki/Kung-Fu_Chess' target='_blank'>Kung-Fu Chess [Wikipedia]</a> "
+                      + "for a variant for two or four players. Recently a team from Japan has also made a physical two-player board: "
+                      + "<a href='https://www.reddit.com/r/gaming/comments/3lyryx/chess_too_boring_for_ya_not_anymore/' target='_blank'>Dengekisen [reddit].</a> "
+                      + "<br><br>CREDITS. The 3D front end is made using <a href='http://threejs.org/' target='_blank'>three.js.</a> "
+                      + "The back end uses Node, Mongo, and Redis."
+                      + "<br><br>CODE. Ragnarook is open source on <a href='https://github.com/trongr/3DXO' target='_blank'>GitHub.</a>"
+                      + "</div>")
         Console.print("<hr>")
         Console.info("Loading Game Assets")
         // Console.print("<h2>TIPS</h2>")
@@ -540,7 +519,7 @@ var Console = (function(){
             +           "<div id='console_out_box'></div>"
             +      "</div>"
             +      "<div id='console_in_box'>"
-            +           "<textarea id='console_input' rows='1' type='text' placeholder='chat or type /h'></textarea>"
+            +           "<textarea id='console_input' rows='1' type='text' placeholder='chat or type /h for help'></textarea>"
             +      "</div>"
         $("body").append(html)
 
@@ -2453,7 +2432,7 @@ var Nametag = (function(){
                 var text = "I surrender!"
             }
         } catch (e){
-            var text = "Loading . . . "
+            var text = "Loading Nametag"
         }
         var sprite = Word.makeTextSprite(text, {
             fontface: "Arial",
