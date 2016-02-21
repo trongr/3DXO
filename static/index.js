@@ -101,25 +101,34 @@ var Menu = (function(){
             +           "<button id='toggle_register' href='#'>REGISTER</button>"
             +           "<button id='toggle_login' href='#'>LOGIN</button>"
             +           "<button id='new_game' href='#'>NEW_GAME</button>"
-            +           "<div id='register_box'>"
+            +           "<div id='register_box' class='input_parent'>"
             +               "<input id='register_username' type='text' placeholder='username'><br>"
             +               "<input id='register_password' type='password' placeholder='passphrase'><br>"
             +               "<input id='register_password_retype' type='password' placeholder='retype passphrase'><br>"
             +               "<input id='register_email' type='email' placeholder='optional email'><br>"
-            +               "<input id='register_button' type='button' value='register'>"
+            +               "<button id='register_button'>register</button>"
             +           "</div>"
-            +           "<div id='login_box'>"
+            +           "<div id='login_box' class='input_parent'>"
             +               "<input id='login_username' type='text' placeholder='username'><br>"
             +               "<input id='login_password' type='password' placeholder='passphrase'><br>"
-            +               "<input id='login_button' type='button' value='login'>"
+            +               "<button id='login_button'>login</button>"
             +           "</div>"
             +      "</div>"
         $("body").append(html)
+        $("#menu_box").on("keypress", "input", menu_box_input_keypress)
         $("#toggle_register").on("click", toggle_register)
         $("#toggle_login").on("click", toggle_login)
         $("#new_game").on("click", new_game)
         $("#register_button").on("click", register_button)
         $("#login_button").on("click", login_button)
+    }
+
+    function menu_box_input_keypress(){
+        var key = event.keyCode || event.which
+        if (key == 13){ // new line
+            $(this).closest(".input_parent").find("button").click()
+            return false
+        }
     }
 
     function new_game(){
@@ -528,13 +537,12 @@ var Console = (function(){
         // Cache
         _console_in = $("#console_input").off()
             .on("focus", console_in_focus)
+            .on("keypress", console_in_keypress)
         _console_out = $("#console_out_box").off()
             .on("click", ".console_header", click_console_header)
             .on("scroll", scroll_console_out)
 
         alwaysFocus()
-
-        _console_in.on("keypress", keypressHandler)
     }
 
     function scroll_console_out(e){
@@ -556,7 +564,7 @@ var Console = (function(){
         return false
     }
 
-    function keypressHandler(event){
+    function console_in_keypress(event){
         var key = event.keyCode || event.which
         if (key == 13){ // new line
             processConsoleInput()

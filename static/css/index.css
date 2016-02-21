@@ -55,7 +55,8 @@ hr {
     width: 300px;
 }
 
-#menu_box input[type=button] {
+#login_box button,
+#register_box button {
     border: none;
     padding: 5px 10px 5px 10px;
     background: rgba(0, 34, 115, 0.3);
@@ -64,6 +65,7 @@ hr {
     cursor: pointer;
     cursor: hand;
     width: auto;
+    text-decoration: none;
 }
 
 /* end menu css */
