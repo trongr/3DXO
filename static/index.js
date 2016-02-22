@@ -123,7 +123,7 @@ var Menu = (function(){
         $("#login_button").on("click", login_button)
     }
 
-    function menu_box_input_keypress(){
+    function menu_box_input_keypress(event){
         var key = event.keyCode || event.which
         if (key == 13){ // new line
             $(this).closest(".input_parent").find("button").click()
