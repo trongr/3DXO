@@ -562,46 +562,31 @@ var Game = module.exports = (function(){
             },
             function(done){
                 try {
-                    var elapsed = new Date().getTime() - player.last_new_army.getTime()
+                    if (!player.last_new_army){
+                        return done(null)
+                    } else {
+                        var elapsed = new Date().getTime() - player.last_new_army.getTime()
+                    }
                     if (elapsed > NEW_ARMY_RATE_LIMIT){
+                        Game.delay_remove_army(playerID, false, function(er){
+                            if (er) H.log(er)
+                        })
                         done(null)
                     } else {
                         Pub.error(playerID, NEW_ARMY_RATE_LIMIT_MSG + " Time remaining: "
                                   + parseInt((NEW_ARMY_RATE_LIMIT - elapsed) / 1000) + " seconds.")
                         done(OK)
                     }
-                } catch (e){ // no player.last_new_army. this shouldn't happen once everyone has their
+                } catch (e){
                     H.log("ERROR. Game.buildArmy.NEW_ARMY_RATE_LIMIT.catch", player, e.stack)
                     done(null)
                 }
-            },
-            function(done){
-                Game.delay_remove_army(playerID, false, function(er){
-                    done(er)
-                })
             },
             function(done){
                 Players.update_last_new_army(player._id, new Date(), function(er){
                     done(er)
                 })
             },
-            // // TODO remove
-            // function(done){
-            //     // NOTE. count player's kings instead of using
-            //     // player.armies count in case it's wrong and they
-            //     // can't build new armies. this method also updates
-            //     // player.armies when it's wrong
-            //     Pieces.countPlayerArmies(player, function(er, count){
-            //         if (er){
-            //             done(er)
-            //         } else if (count == 0){
-            //             done(null)
-            //         } else {
-            //             Pub.error(playerID, "You can only build a new army if you have none left. Armies remaining: " + count)
-            //             done(OK)
-            //         }
-            //     })
-            // },
             function(done){
                 Game.findEmptyZone(function(er, _zone){
                     zone = _zone
