@@ -569,9 +569,8 @@ var Game = module.exports = (function(){
                     }
                     if (elapsed > NEW_ARMY_RATE_LIMIT){
                         Game.delay_remove_army(playerID, false, function(er){
-                            if (er) H.log(er)
+                            done(er)
                         })
-                        done(null)
                     } else {
                         Pub.error(playerID, NEW_ARMY_RATE_LIMIT_MSG + " Time remaining: "
                                   + parseInt((NEW_ARMY_RATE_LIMIT - elapsed) / 1000) + " seconds.")
