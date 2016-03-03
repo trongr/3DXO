@@ -451,13 +451,19 @@ var Console = (function(){
         Console.print("<span style='font-size:3em'>Ragnarook</span>")
         Console.print("[ Chess 2.0: Alpha Release ]")
         Console.print("<hr>")
-        Console.print("Ragnarook is a <b class='yellow'>Massively Multiplayer Persistent Open World Game</b> "
+        Console.print("Ragnarook is a Massively Multiplayer Persistent Open World Game "
                       + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
                       + "Prepare to punish your enemies in a semi-turn-based fashion!")
-        // Console.print("Ragnarook is a <i><b>Massively Multiplayer Online Open World Exploration Creative Building Semi-Real Time Strategy Role-Playing Game</b></i> "
+        // Console.print("Ragnarook is a <i>Massively Multiplayer Online Open World Exploration Creative Building Semi-Real Time Strategy Role-Playing Game</i> "
         //               + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
         //               + "Prepare to punish your enemies in a semi-turn-based fashion!")
         Console.print("<hr>")
+        Console.print("<h2 class='yellow'>Getting Started</h2>")
+        Console.print("<ol>"
+                      + "<li>Read Controls and Rules to learn how to play.</li>"
+                      + "<li>Register an account.</li>"
+                      + "<li>Play!</li>"
+                      + "</ol>")
         Console.print("<h2 class='console_header' data-console-line='controls'>I. Controls</h2>")
         Console.print("<ol class='console_content' data-console-line='controls'>"
                       + "<li>Left mouse click: move pieces.</li>"
@@ -473,32 +479,32 @@ var Console = (function(){
                       // + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
 
                       // // mode 1
-                      + "<li><b class='yellow'>You can move any number of pieces at any time.</b> Once moved, each piece needs "
+                      + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
                       + " 30 seconds to recharge before it can move again.</li>"
-                      + "<li><b class='yellow'>You can move your army from one zone to a neighbouring zone</b> if there are no "
+                      + "<li>You can move your army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemies in your zone, and no king or queen in the destination zone. If there are non-royal enemies in "
-                      + "the destination zone, they will be killed. <b class='green'>Click on your king to highlight available zones.</b></li>"
-                      + "<li><b class='yellow'>Capturing an enemy king will convert his remaining army to your side.</b></li>"
+                      + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
+                      + "<li>Capturing an enemy king will convert his remaining army to your side.</li>"
                       + "</ol>")
 
                       // // mode 2
-                      // + "<li><b class='yellow'><u>Limited Moves.</u> You can move one piece every 15 seconds per 8 x 8 zone.</b> A cross-zone move puts a clock on both zones. "
-                      // + "These moves are marked by <b class='yellow'>yellow clocks.</b></li>"
-                      // + "<li><b class='yellow'><u>Unlimited Moves.</u> You can additionally move any number of pieces in a zone,</b> provided there are no enemies in that zone. "
+                      // + "<li><u>Limited Moves.</u> You can move one piece every 15 seconds per 8 x 8 zone. A cross-zone move puts a clock on both zones. "
+                      // + "These moves are marked by yellow clocks.</li>"
+                      // + "<li><u>Unlimited Moves.</u> You can additionally move any number of pieces in a zone, provided there are no enemies in that zone. "
                       // + "Similarly, unlimited cross-zone moves require both zones to have no enemies. "
-                      // + "These moves are marked by <b class='green'>green clocks.</b></li>"
-                      // + "<li><b class='yellow'><u>Zone Moves.</u> You can move your army from one zone to a neighbouring zone</b> if there are no "
+                      // + "These moves are marked by green clocks.</li>"
+                      // + "<li><u>Zone Moves.</u> You can move your army from one zone to a neighbouring zone if there are no "
                       // + "enemies in your zone, and no king or queen in the destination zone. If there are non-royal enemies in "
-                      // + "the destination zone, they will be killed. <b class='green'>Click on your king to highlight available zones.</b></li>"
-                      // + "<li><b class='yellow'><u>Winning Moves.</u> Capturing an enemy king will convert his remaining army to your side.</b></li>"
+                      // + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
+                      // + "<li><u>Winning Moves.</u> Capturing an enemy king will convert his remaining army to your side.</li>"
                       // + "</ol>")
         Console.print("<h2 class='console_header' data-console-line='dev_note'>III. Gameplay Notes</h2>")
         Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay "
                       + "is still under development. In the meantime your pieces will disappear 10 minutes after you log out, giving other players 10 minutes to capture your king "
-                      + "and gain your pieces. <b class='yellow'>You can respawn a new army at any time by clicking on the <u>NEW_GAME</u> button.</b> "
-                      + "<br><br><b class='yellow'>It's highly recommended that you team up with other players around you,</b> as your opponents will "
+                      + "and gain your pieces. You can respawn a new army at any time by clicking on the <u>NEW_GAME</u> button. "
+                      + "<br><br>It's highly recommended that you team up with other players around you, as your opponents will "
                       + "most likely do the same, and they'll overwhelm you on your own. You can chat using the chat box at the bottom of this panel."
-                      + "<br><br>Please use <b class='yellow'>Google Chrome</b> for best performance."
+                      + "<br><br>Please use Google Chrome for best performance."
                       + "</div>")
         Console.print("<h2 class='console_header' data-console-line='links'>IV. Blog and Community</h2>")
         Console.print("<div class='console_content' data-console-line='links'>To learn more about Ragnarook, "
@@ -512,11 +518,11 @@ var Console = (function(){
                       + "for a variant for two or four players. Recently a team from Japan has also made a physical two-player board: "
                       + "<a href='https://www.reddit.com/r/gaming/comments/3lyryx/chess_too_boring_for_ya_not_anymore/' target='_blank'>Dengekisen [reddit].</a> "
                       + "<br><br>CREDITS. The 3D front end is made using <a href='http://threejs.org/' target='_blank'>three.js.</a> "
-                      + "The back end uses Node, Mongo, and Redis."
+                      + "The back end uses Node, Mongo, and Redis. The entire game is currently running on a free micro server, courtesy Amazon Web Services."
                       + "<br><br>CODE. Ragnarook is open source on <a href='https://github.com/trongr/3DXO' target='_blank'>GitHub.</a>"
                       + "</div>")
         Console.print("<hr>")
-        Console.info("Loading Game Assets")
+        Console.print(H.shortTimeBrackets() + " Loading game assets . . .")
         // Console.print("<h2>TIPS</h2>")
         // Console.print("<ol>"
         //               + "<li>Join an Alliance. Type <code> /h alliance </code> into the chat box below to find out why.</li>"
@@ -676,7 +682,7 @@ var Sock = (function(){
     }
 
     function authend(data, x, y){
-        Console.info("Done") // "Done" loading game assets
+        Console.print(H.shortTimeBrackets() + " . . . done!") // "Done" loading game assets
         if (data.ok){
             Console.info("Welcome " + Player.getPlayer().name + "!")
         } else {
