@@ -460,7 +460,8 @@ var Console = (function(){
         Console.print("<hr>")
         Console.print("<h2 class='yellow'>Getting Started</h2>")
         Console.print("<ol>"
-                      + "<li>Read Controls and Rules to learn how to play.</li>"
+                      + "<li>Read Controls and Rules to learn how to play. (Clicking on a piece during gameplay will show where you can move, "
+                      + "so it's OK if you don't know how to play Chess.)</li>"
                       + "<li>Register an account.</li>"
                       + "<li>Play!</li>"
                       + "</ol>")
@@ -481,7 +482,7 @@ var Console = (function(){
                       // // mode 1
                       + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
                       + " 30 seconds to recharge before it can move again.</li>"
-                      + "<li>You can move your army from an 8 x 8 zone to a neighbouring zone if there are no "
+                      + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
                       + "enemies in your zone, and no king or queen in the destination zone. If there are non-royal enemies in "
                       + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
                       + "<li>Capturing an enemy king will convert his remaining army to your side.</li>"
@@ -514,12 +515,12 @@ var Console = (function(){
                       + "</div>")
         Console.print("<h2 class='console_header' data-console-line='about'>V. About</h2>")
         Console.print("<div class='console_content' data-console-line='about'>Hello! My name is Trong. I'm a developer from Toronto, Canada, and Ragnarook is my first game. Enjoy! "
-                      + "<br><br>SIMILAR GAMES. See <a href='https://en.wikipedia.org/wiki/Kung-Fu_Chess' target='_blank'>Kung-Fu Chess [Wikipedia]</a> "
+                      + "<br><br>Similar games. See <a href='https://en.wikipedia.org/wiki/Kung-Fu_Chess' target='_blank'>Kung-Fu Chess</a> "
                       + "for a variant for two or four players. Recently a team from Japan has also made a physical two-player board: "
-                      + "<a href='https://www.reddit.com/r/gaming/comments/3lyryx/chess_too_boring_for_ya_not_anymore/' target='_blank'>Dengekisen [reddit].</a> "
-                      + "<br><br>CREDITS. The 3D front end is made using <a href='http://threejs.org/' target='_blank'>three.js.</a> "
-                      + "The back end uses Node, Mongo, and Redis. The entire game is currently running on a free micro server, courtesy Amazon Web Services."
-                      + "<br><br>CODE. Ragnarook is open source on <a href='https://github.com/trongr/3DXO' target='_blank'>GitHub.</a>"
+                      + "<a href='https://www.reddit.com/r/gaming/comments/3lyryx/chess_too_boring_for_ya_not_anymore/' target='_blank'>Dengekisen.</a> "
+                      + "<br><br>Code. Ragnarook is open source on <a href='https://github.com/trongr/3DXO' target='_blank'>GitHub.</a> "
+                      + "The 3D front end is made using <a href='http://threejs.org/' target='_blank'>three.js.</a> "
+                      + "The back end uses Node, Mongo, and Redis."
                       + "</div>")
         Console.print("<hr>")
         Console.print(H.shortTimeBrackets() + " Loading game assets . . .")
