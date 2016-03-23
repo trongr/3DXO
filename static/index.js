@@ -16,7 +16,7 @@ var K = (function(){
         // CAM_DIST_MAX: 150,
         // CAM_DIST_MAX: 1000,
 
-        CAM_DIST_INIT: 80,
+        CAM_DIST_INIT: 65,
         // CAM_DIST_INIT: 150,
         // CAM_DIST_INIT: 700,
 
@@ -460,8 +460,7 @@ var Console = (function(){
         Console.print("<hr>")
         Console.print("<h2 class='yellow'>Getting Started</h2>")
         Console.print("<ol>"
-                      + "<li>Read Controls and Rules to learn how to play. (Clicking on a piece during gameplay will show where you can move, "
-                      + "so it's OK if you don't know how to play Chess.)</li>"
+                      + "<li>Read the Rules to learn how to play, or watch this <a href='mach' target='_blank'>video tutorial.</a></li>"
                       + "<li>Register an account.</li>"
                       + "<li>Play!</li>"
                       + "</ol>")
@@ -1126,7 +1125,7 @@ var ClassicSet = (function(){
     function initGeometries(done){
         log("INFO. ClassicSet.initGeometries")
         var loader = new THREE.BinaryLoader();
-        var pieces = ["pawn", "rook", "knight", "bishop", "queen", "king"]
+        var pieces = ["pawn", "rook", "knight", "bishop", "queen", "king", "cannon"]
         async.each(pieces, function(piece, done){
             loader.load("static/models/" + piece + "0.js", function(geo){
                 log("INFO. ClassicSet.loaded", piece)
@@ -2449,7 +2448,7 @@ var Nametag = (function(){
                 var text = "I surrender!"
             }
         } catch (e){
-            var text = "Loading Nametag"
+            var text = "Loading User"
         }
         var sprite = Word.makeTextSprite(text, {
             fontface: "Arial",
