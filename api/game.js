@@ -99,6 +99,7 @@ var Move = (function(){
                 })
             },
             function(done){
+                // todo disable this
                 if (piece.kind == "pawn"){
                     validatePawnToKingMove(piece, to, done)
                 } else done(null)
@@ -131,10 +132,15 @@ var Move = (function(){
     }
 
     // Check if there are any pieces in the way
+    //
+    // TODO. this method checks blocking for both moving and
+    // capture. should separate that
     Move.validateBlock = function(piece, distance, direction, done){
+        var kind = piece.kind
         var dx = direction.dx
         var dy = direction.dy
         var isPawnKill = direction.isPawnKill
+        var obstacle_count = 0
         async.times(distance, function(i, done){
             var j = i + 1
             Piece.findOne({
@@ -143,14 +149,32 @@ var Move = (function(){
             }).exec(function(er, _piece){
                 if (er) return done(["Piece.findOne", er])
 
+                // cannon move
+                if (kind == "cannon"){
+                    if (!_piece) return done(null) // empty cell
+                    if (_piece){
+                        obstacle_count++
+                    }
+                    if (obstacle_count <= 1){
+                        done(null)
+                    } else if (obstacle_count == 2 && j == distance
+                        && !piece.player.equals(_piece.player)){
+                        done(null)
+                    } else {
+                        done(["Cannon move blocked", _piece])
+                    }
+                    return
+                }
+
                 // pawn kill but nothing at the kill destination: illegal move
                 if (isPawnKill && !_piece){
                     return done("Illegal pawn move")
                 }
 
                 if (!_piece) done(null) // empty cell
-                else if (_piece && j < distance) done(["Move blocked", _piece])
-                else if (_piece && j == distance && !piece.player.equals(_piece.player)){
+                else if (_piece && j < distance){
+                    done(["Move blocked", _piece])
+                } else if (_piece && j == distance && !piece.player.equals(_piece.player)){
                     done(null) // Blocked at the destination by non-friendly: can kill
                 } else if (_piece && j == distance){
                     done(["Move blocked by friendly", _piece])
