@@ -141,7 +141,7 @@ var Move = (function(){
         var dy = direction.dy
         var isPawnKill = direction.isPawnKill
         var obstacle_count = 0
-        async.times(distance, function(i, done){
+        async.timesSeries(distance, function(i, done){
             var j = i + 1
             Piece.findOne({
                 x: piece.x + j * dx,
@@ -151,17 +151,25 @@ var Move = (function(){
 
                 // cannon move
                 if (kind == "cannon"){
-                    if (!_piece) return done(null) // empty cell
                     if (_piece){
                         obstacle_count++
                     }
-                    if (obstacle_count <= 1){
+                    if (obstacle_count == 0){
                         done(null)
-                    } else if (obstacle_count == 2 && j == distance
-                        && !piece.player.equals(_piece.player)){
+                    } else if (obstacle_count == 1 && j < distance){
                         done(null)
+                    } else if (obstacle_count == 1 && j == distance){
+                        done(["Cannon move blocked"])
+                    } else if (obstacle_count == 2 && j == distance){
+                        if (_piece && !piece.player.equals(_piece.player)){
+                            done(null)
+                        } else {
+                            done(["Cannon end move blocked", _piece])
+                        }
+                    } else if (obstacle_count >= 2 && j < distance){
+                        done(["Cannon move: too many obstacles"])
                     } else {
-                        done(["Cannon move blocked", _piece])
+                        done(["Cannon move: this shouldn't happen", _piece])
                     }
                     return
                 }

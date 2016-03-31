@@ -2652,7 +2652,7 @@ var Game = (function(){
         var player = Player.getPlayer()
         async.waterfall([
             function(done){
-                return done(null) // NOTE. toggle to test server validation
+                // return done(null) // NOTE. toggle to test server validation
                 if (Move.isValidated(x, y, z)){
                     done(null)
                 } else if (piece.kind == "king" && Move.isValidatedZoneMove(x, y)){
