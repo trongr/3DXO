@@ -682,7 +682,7 @@ var Sock = (function(){
     }
 
     function authend(data, x, y){
-        Console.print(H.shortTimeBrackets() + " . . . done!") // "Done" loading game assets
+        Console.print(H.shortTimeBrackets() + " Done!") // "Done" loading game assets
         if (data.ok){
             Console.info("Welcome " + Player.getPlayer().name + "!")
         } else {
@@ -1813,6 +1813,7 @@ var Move = (function(){
         moves: {
             pawn: ["ioo", "oio", "noo", "ono"], // moving along axes
             rook: ["ioo", "oio", "noo", "ono"],
+            cannon: ["ioo", "oio", "noo", "ono"],
             knight: ["ii2", "i2i", "i2n", "in2", "nn2", "n2n", "n2i", "ni2"],
             bishop: ["iio", "ino", "nno", "nio"],
             king: [
@@ -1827,6 +1828,7 @@ var Move = (function(){
         kills: {
             pawn: ["iio", "nio", "ino", "nno"], // diagonal kills
             rook: ["ioo", "oio", "noo", "ono"],
+            cannon: ["ioo", "oio", "noo", "ono"],
             knight: ["ii2", "i2i", "i2n", "in2", "nn2", "n2n", "n2i", "ni2"],
             bishop: ["iio", "ino", "nno", "nio"],
             king: [
@@ -1947,16 +1949,28 @@ var Move = (function(){
     }
 
     function findAvailableKills(obj){
-        var range = Move.getKillRange(obj.game.piece.kind)
+        var kind = obj.game.piece.kind
+        var range = Move.getKillRange(kind)
         var killRules = Move.rules.kills[obj.game.piece.kind]
         var moves = []
-        for (var i = 0; i < killRules.length; i++){
-            var dirMoves = Move.findKillsInDirection(obj, [
-                Math.floor(obj.position.x),
-                Math.floor(obj.position.y),
-                Math.floor(obj.position.z),
-            ], Move.directions[killRules[i]], range, [])
-            moves.push.apply(moves, dirMoves)
+        if (kind == "cannon"){
+            for (var i = 0; i < killRules.length; i++){
+                var dirMoves = Move.findCannonKillsInDirection(obj, [
+                    Math.floor(obj.position.x),
+                    Math.floor(obj.position.y),
+                    Math.floor(obj.position.z),
+                ], Move.directions[killRules[i]], range, [], 0)
+                moves.push.apply(moves, dirMoves)
+            }
+        } else {
+            for (var i = 0; i < killRules.length; i++){
+                var dirMoves = Move.findKillsInDirection(obj, [
+                    Math.floor(obj.position.x),
+                    Math.floor(obj.position.y),
+                    Math.floor(obj.position.z),
+                ], Move.directions[killRules[i]], range, [])
+                moves.push.apply(moves, dirMoves)
+            }
         }
         return moves
     }
@@ -2000,6 +2014,38 @@ var Move = (function(){
         else return Move.findKillsInDirection(obj, [
             x, y, z
         ], direction, --range, moves) // keep going
+    }
+
+    Move.findCannonKillsInDirection = function(obj, from, direction, range, moves, obstacle_count){
+        if (range == 0) return [] // out of range
+        if (obstacle_count > 1) return moves
+
+        var x = from[0] + direction[0]
+        var y = from[1] + direction[1]
+        var z = from[2] + direction[2]
+
+        var box = Obj.findGameObjAtXY(x, y)
+        if (!box || !box.game){ // empty cell: keep looking
+            return Move.findCannonKillsInDirection(obj, [
+                x, y, z
+            ], direction, --range, moves, obstacle_count) // keep going
+        } else if (obstacle_count == 0){
+            obstacle_count++
+            return Move.findCannonKillsInDirection(obj, [
+                x, y, z
+            ], direction, --range, moves, obstacle_count) // keep going
+        } else { // already saw one obstacle: should be a kill move or friendly block
+            if (box.game.piece.player == obj.game.piece.player){ //
+                return []
+            } else {
+                return [{
+                    xyz:{x:x, y:y, z:z},
+                    kill: true,
+                    killMove: true, // the actual kill move, as opposed to intermediate cells
+                    direction: direction,
+                }]
+            }
+        }
     }
 
     // recursively find available moves
@@ -2343,6 +2389,17 @@ var SFX = (function(){
             kill: null
         },
         rook: {
+            i: 0,
+            move: [
+                new Audio('/static/snd/rook/knockwood01.mp3'),
+                new Audio('/static/snd/rook/knockwood01.mp3'),
+                new Audio('/static/snd/rook/knockwood01.mp3'),
+                new Audio('/static/snd/rook/knockwood01.mp3'),
+                new Audio('/static/snd/rook/knockwood01.mp3'),
+            ],
+            kill: null
+        },
+        cannon: { // mach custom sounds
             i: 0,
             move: [
                 new Audio('/static/snd/rook/knockwood01.mp3'),

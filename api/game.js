@@ -60,6 +60,7 @@ var Move = (function(){
         moves: {
             pawn: ["ioo", "oio", "noo", "ono"],
             rook: ["ioo", "oio", "noo", "ono"],
+            cannon: ["ioo", "oio", "noo", "ono"],
             knight: ["i2i", "ii2", "ni2", "n2i", "n2n", "nn2", "in2", "i2n"],
             bishop: ["iio", "ino", "nno", "nio"],
             king: [
