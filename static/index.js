@@ -2358,11 +2358,11 @@ var SFX = (function(){
         queen: {
             i: 0,
             move: [
-                new Audio('/static/snd/queen/acekick.mp3'),
-                new Audio('/static/snd/queen/acekick.mp3'),
-                new Audio('/static/snd/queen/acekick.mp3'),
-                new Audio('/static/snd/queen/acekick.mp3'),
-                new Audio('/static/snd/queen/acekick.mp3'),
+                new Audio('/static/snd/queen/cinematicfg.mp3'),
+                new Audio('/static/snd/queen/cinematicfg.mp3'),
+                new Audio('/static/snd/queen/cinematicfg.mp3'),
+                new Audio('/static/snd/queen/cinematicfg.mp3'),
+                new Audio('/static/snd/queen/cinematicfg.mp3'),
             ],
             kill: null
         },
@@ -2399,14 +2399,14 @@ var SFX = (function(){
             ],
             kill: null
         },
-        cannon: { // mach custom sounds
+        cannon: {
             i: 0,
             move: [
-                new Audio('/static/snd/rook/knockwood01.mp3'),
-                new Audio('/static/snd/rook/knockwood01.mp3'),
-                new Audio('/static/snd/rook/knockwood01.mp3'),
-                new Audio('/static/snd/rook/knockwood01.mp3'),
-                new Audio('/static/snd/rook/knockwood01.mp3'),
+                new Audio('/static/snd/cannon/acekick.mp3'),
+                new Audio('/static/snd/cannon/acekick.mp3'),
+                new Audio('/static/snd/cannon/acekick.mp3'),
+                new Audio('/static/snd/cannon/acekick.mp3'),
+                new Audio('/static/snd/cannon/acekick.mp3'),
             ],
             kill: null
         },
