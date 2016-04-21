@@ -77,39 +77,6 @@ var Move = (function(){
         }
     }
 
-    Move.validateOneMove = function(player, piece, to, done){
-        var distance, direction
-        async.waterfall([
-            function(done){
-                Move.validateDirection(piece, to, function(er, _direction){
-                    direction = _direction
-                    done(er)
-                })
-            },
-            function(done){
-                Move.validateDistance(piece, to, direction.isPawnKill, function(er, _distance){
-                    distance = _distance
-                    done(er)
-                })
-            },
-            function(done){
-                // distance and direction make it easier to look up pieces along the way
-                Move.validateBlock(piece, distance, direction, function(er){
-                    done(er)
-                })
-            },
-            function(done){
-                // todo disable this
-                if (piece.kind == "pawn"){
-                    validatePawnToKingMove(piece, to, done)
-                } else done(null)
-            },
-        ], function(er){
-            if (er) done(["ERROR. Game.Move.validateOneMove", player, piece, to, er])
-            else done(null)
-        })
-    }
-
     function validatePawnToKingMove(piece, to, done){
         var playerID = piece.player._id || piece.player
         var x = piece.x, y = piece.y
@@ -820,17 +787,24 @@ var Game = module.exports = (function(){
     }
 
     Game.sock = function(player, data){
-        var chan = data.chan
-        if (["move"].indexOf(chan) < 0){
-            return H.log("ERROR. Game.sock: unknown channel", data)
+        try {
+            Game.on[data.chan](player, data)
+        } catch (e){
+            H.p("ERROR. Game.sock.catch", [player, data], e.stack)
         }
-        Game.on[chan](player, data)
     }
 
     Game.on = (function(){
         var on = {}
 
-        on.move = function(player, data){
+        // mach real player moving cancels automove
+        // player = player OBJ
+        // data = {
+        //     playerID: playerID,
+        //     pieceID: pieceID,
+        //     to: [x, y],
+        // }
+        on.move = function(player, data, done){
             try {
                 var start = new Date().getTime()
                 var throw_msg = Validate.moveData(player, data)
@@ -919,6 +893,75 @@ var Game = module.exports = (function(){
                     H.log("ERROR. Game.move", playerID, pieceID, to, er)
                 }
                 alertElapsed(start, 1000, "Game.move")
+                if (done) done(er)
+            })
+        }
+
+        on.automove = function(player, data, done){
+            try {
+                var start = new Date().getTime()
+                var throw_msg = Validate.moveData(player, data)
+                if (throw_msg) throw throw_msg
+
+                var playerID = data.playerID
+                var pieceID = data.pieceID
+                var player, piece = null
+                var px, py = null
+                var to = [
+                    Math.floor(data.to[0]),
+                    Math.floor(data.to[1]),
+                ]
+            } catch (e){
+                return H.p("Game.move: invalid input", data, e.stack)
+            }
+            async.waterfall([
+                function(done){
+                    Player.findOneByID(playerID, function(er, _player){
+                        player = _player
+                        done(er)
+                    })
+                },
+                function(done){
+                    Piece.findOneByID(pieceID, function(er, _piece){
+                        piece = _piece
+                        if (piece){
+                            px = piece.x
+                            py = piece.y
+                        }
+                        done(er)
+                    })
+                },
+                function(done){
+                    Move.validatePlayerPiece(player, piece, function(er, msg){
+                        if (er == OK){
+                            Pub.error(playerID, msg)
+                            done(OK)
+                        } else done(er)
+                    })
+                },
+                function(done){
+                    Pieces.validatePieceTimeout(piece, function(er){
+                        if (er){
+                            Pub.error(playerID, er)
+                            done(OK)
+                        } else done(null)
+                    })
+                },
+                function(done){
+                    Queue.job({
+                        task: "automove",
+                        title: "Game.automove",
+                        playerID: playerID,
+                        pieceID: piece._id,
+                        to: to
+                    }, function(er){ // this is only the callback to job enqueue
+                        done(er)
+                    })
+                },
+            ], function(er){
+                H.p("Game.automove", [playerID, pieceID, to], er)
+                alertElapsed(start, 1000, "Game.automove")
+                if (done) done(er)
             })
         }
 
@@ -992,12 +1035,33 @@ var Game = module.exports = (function(){
         function oneMove(playerID, player, piece, to, hasEnemies, done){
             var nPiece = null
             var from = [piece.x, piece.y] // save this to pub remove from later this method
+            var distance, direction
             async.waterfall([
                 function(done){
-                    Move.validateOneMove(player, piece, to, function(er){
+                    Move.validateDirection(piece, to, function(er, _direction){
+                        direction = _direction
                         done(er)
                     })
                 },
+                function(done){
+                    Move.validateDistance(piece, to, direction.isPawnKill, function(er, _distance){
+                        distance = _distance
+                        done(er)
+                    })
+                },
+                function(done){
+                    // distance and direction make it easier to look up pieces along the way
+                    Move.validateBlock(piece, distance, direction, function(er){
+                        done(er)
+                    })
+                },
+                // optional
+                // function(done){
+                //     // todo disable this
+                //     if (piece.kind == "pawn"){
+                //         validatePawnToKingMove(piece, to, done)
+                //     } else done(null)
+                // },
                 function(done){
                     // capturedKing not null means this is a KING_KILLER move, and game over for capturedKing.player
                     Move.oneMove(piece, to, function(er, _piece, capturedKing){
@@ -1154,6 +1218,34 @@ var Game = module.exports = (function(){
 
         return on
     }())
+
+    Game.findAvailableMoves = function(pieceID, done){
+        var piece = null
+        var moves = []
+        async.waterfall([
+            function(done){
+                Piece.findOneByID(pieceID, function(er, _piece){
+                    piece = _piece
+                    done(er)
+                })
+            },
+            function(done){
+                var rules = Move.rules.moves[piece.kind]
+                var range = Conf.range[piece.kind]
+                var x = piece.x
+                var y = piece.y
+                rules.forEach(function(rule){
+                    var move = Move.directions[rule]
+                    for (var i = 1; i <= range; i++){
+                        moves.push([i * move[0] + x, i * move[1] + y])
+                    }
+                })
+                done(null)
+            }
+        ], function(er){
+            done(er, moves)
+        })
+    }
 
     return Game
 }())

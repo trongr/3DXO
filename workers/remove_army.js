@@ -19,23 +19,9 @@ var Worker = module.exports = (function(){
             // cancelled, i.e. removed from the mongo db:
             var data = _job.data
             var jobID = data.jobID
-            H.log("INFO. Worker.Job.findOneByID", jobID)
-            Job.findOneByID(jobID, function(er, job){
-                if (er){
-                    var error = ["ERROR. Worker.remove_army.Job.findOneByID", data, er]
-                } else if (job && job.cancelled){
-                    var error = "INFO. Worker.remove_army.Job.findOneByID: cancelled: " + jobID
-                } else if (job){
-                    var error = null
-                } else {
-                    var error = ["ERROR. Worker.remove_army.Job.findOneByID: job not found", data]
-                }
-                if (error){
-                    H.log(error)
-                    done(error)
-                } else {
-                    remove_army(job, done)
-                }
+            Job.checkJobCancelled(jobID, function(er, job){
+                if (er) done(er)
+                else remove_army(job, done)
             })
         });
     }

@@ -288,7 +288,8 @@ var Zone = module.exports = (function(){
                 } else if (chan == "chat"){
                     if (_player) pubChat(_player, data)
                     else Pub.error(_playerID, UNAUTHENTICATED_SOCKET_CHAT)
-                } else if (chan == "move"){
+                } else if (chan == "move" ||
+                           chan == "automove"){
                     if (_player) Game.sock(_player, data)
                     else Pub.error(_playerID, UNAUTHENTICATED_SOCKET_MOVE)
                 } else {

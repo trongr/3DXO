@@ -29,4 +29,19 @@ schema.statics.findOneByID = function(jobID, done){
     })
 };
 
+schema.statics.checkJobCancelled = function(jobID, done){
+    this.findOneByID(jobID, function(er, job){
+        if (er){
+            var error = ["ERROR. Worker.automove.Job.findOneByID", jobID, er]
+        } else if (job && job.cancelled){
+            var error = "INFO. Worker.automove.Job.findOneByID: cancelled: " + jobID
+        } else if (job){
+            var error = null
+        } else {
+            var error = ["ERROR. Worker.automove.Job.findOneByID: job not found", jobID]
+        }
+        done(error, job)
+    })
+}
+
 module.exports = mongoose.model('Job', schema);

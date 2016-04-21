@@ -1,11 +1,29 @@
 if (typeof module === "undefined"){
     var module = {}
 }
+
 var H = module.exports = (function(){
     var H = {}
 
+    var OK = "OK"
+
     H.param = function(req, param){
         return req.params[param] || req.query[param] || req.body[param]
+    }
+
+    H.p = function(msg, data, er){
+        try {
+            // mach error logging server
+            console.log(JSON.stringify({
+                t: new Date(),
+                type: ((er && er != OK)? "ERROR" : "INFO"),
+                msg: msg,
+                data: data,
+                er: er,
+            }, 0, 2))
+        } catch (e){
+            console.log(new Date() + " ERROR. H.p.catch: " + msg, data, er, e.stack)
+        }
     }
 
     H.log = function(msg, obj1, obj2, obj3, obj4, obj5, obj6){
@@ -80,6 +98,14 @@ var H = module.exports = (function(){
         g = g.substr(g.length - 2)
         b = b.substr(b.length - 2)
         return r + g + b
+    }
+
+    H.compareLists = function(a, b){
+        try {
+            return a.toString() == b.toString()
+        } catch (e){
+            return a == b
+        }
     }
 
     return H

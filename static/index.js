@@ -771,6 +771,7 @@ var Select = (function(){
         }
 
         if (_isSelecting){ // try to move the piece
+            // mach
             Game.move(_selected, pos)
             _isSelecting = false
         } else { // start selecting
@@ -2650,29 +2651,45 @@ var Game = (function(){
         var z = 1 // height of every game piece
         var piece = selected.game.piece
         var player = Player.getPlayer()
-        async.waterfall([
-            function(done){
-                // return done(null) // NOTE. toggle to test server validation
-                if (Move.isValidated(x, y, z)){
-                    done(null)
-                } else if (piece.kind == "king" && Move.isValidatedZoneMove(x, y)){
-                    // NOTE. regular move takes precedence over zone move
-                    done(null)
-                } else done("ERROR. Invalid move.")
-            },
-            function(done){
-                done(null)
-                Sock.send("move", {
-                    playerID: player._id,
-                    pieceID: piece._id,
-                    to: [x, y],
-                })
-            },
-        ], function(er){
-            Obj.highlight(Select.getSelected(), false)
-            Highlight.hideAllHighlights()
-            Scene.render()
+        if (Move.isValidated(x, y, z)){
+            var move_name = "move"
+        } else {
+            var move_name = "automove"
+        }
+        Sock.send(move_name, {
+            playerID: player._id,
+            pieceID: piece._id,
+            to: [x, y],
         })
+        Obj.highlight(Select.getSelected(), false)
+        Highlight.hideAllHighlights()
+        Scene.render()
+        // async.waterfall([
+        //     function(done){
+        //         // return done(null) // NOTE. toggle to test server validation
+        //         if (Move.isValidated(x, y, z)){
+        //             done(null)
+        //             // mach remove zonemove
+        //         } else if (piece.kind == "king" && Move.isValidatedZoneMove(x, y)){
+        //             // NOTE. regular move takes precedence over zone move
+        //             done(null)
+        //         } else {
+        //             done("ERROR. Invalid move.")
+        //         }
+        //     },
+        //     function(done){
+        //         done(null)
+        //         Sock.send("move", {
+        //             playerID: player._id,
+        //             pieceID: piece._id,
+        //             to: [x, y],
+        //         })
+        //     },
+        // ], function(er){
+        //     Obj.highlight(Select.getSelected(), false)
+        //     Highlight.hideAllHighlights()
+        //     Scene.render()
+        // })
     }
 
     Game.on = (function(){
