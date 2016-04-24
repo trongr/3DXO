@@ -8,6 +8,7 @@ var Clocks = require("../api/clocks.js")
 var Game = require("../api/game.js")
 var Job = require("../models/job.js")
 var Player = require("../models/player.js")
+var Piece = require("../models/piece.js")
 var Conf = require("../static/conf.json") // shared with client
 
 var Worker = module.exports = (function(){
@@ -41,7 +42,8 @@ var Worker = module.exports = (function(){
         var jobID = job._id
         var data = job.data
         var playerID = data.playerID
-        var player = null
+        var pieceID = data.pieceID
+        var player, piece = null
         H.p("Worker.automove", data)
         async.waterfall([
             function(done){
@@ -51,9 +53,17 @@ var Worker = module.exports = (function(){
                 })
             },
             function(done){
+                Piece.findOneByID(pieceID, function(er, _piece){
+                    piece = _piece
+                    done(er)
+                })
+            },
+            function(done){
+                data.piece = piece
                 automove_loop(jobID, player, data, done)
             }
         ], function(er){
+            H.p("automove.done", data, er)
             done(er)
         })
     }
@@ -61,6 +71,7 @@ var Worker = module.exports = (function(){
     function automove_loop(jobID, player, data, done){
         var working = false
         var pieceID = data.pieceID
+        var piece = data.piece
         var finalTo = data.to
         var nextTo = null
         var lastSuccessfulMove = new Date("2016").getTime() // some time long ago
@@ -91,7 +102,7 @@ var Worker = module.exports = (function(){
                     // stop automove if error for now
                     clearInterval(automove_timeout)
                     done(er)
-                } else if (H.compareLists(finalTo, nextTo)){ // got to destination
+                } else if (isAtFinalDst(piece, nextTo, finalTo)){
                     clearInterval(automove_timeout)
                     done(null)
                 } else {
@@ -102,18 +113,38 @@ var Worker = module.exports = (function(){
         }, 1000)
     }
 
+    function isAtFinalDst(piece, to, finalTo){
+        // for now knights and bishops can't get to certain squares on
+        // their own without doing some smart non-greedy maneuvering
+        if (piece.kind == "knight"){
+            return ((to[0] == finalTo[0] && Math.abs(to[1] - finalTo[1]) == 1) ||
+                    (to[1] == finalTo[1] && Math.abs(to[0] - finalTo[0]) == 1) ||
+                    (Math.abs(to[0] - finalTo[0]) == 1 && Math.abs(to[1] - finalTo[1]) == 1) ||
+                    H.compareLists(finalTo, to))
+        } else if (piece.kind == "bishop"){
+            return ((to[0] == finalTo[0] && Math.abs(to[1] - finalTo[1]) == 1) ||
+                    (to[1] == finalTo[1] && Math.abs(to[0] - finalTo[0]) == 1) ||
+                    H.compareLists(finalTo, to))
+        } else {
+            return H.compareLists(finalTo, to)
+        }
+    }
+
     function best_move(pieceID, to, done){
         var moves = []
         var nTo = [] // [x, y]
+        var piece = null
         async.waterfall([
             function(done){
-                Game.findAvailableMoves(pieceID, function(er, _moves){
+                Game.findAvailableMoves(pieceID, function(er, _piece, _moves){
+                    piece = _piece
                     moves = _moves
                     done(er)
                 })
             },
             function(done){
-                nTo = best_to(moves, to)
+                from = [piece.x, piece.y]
+                nTo = best_to(moves, from, to)
                 done(null)
             }
         ], function(er){
@@ -121,19 +152,18 @@ var Worker = module.exports = (function(){
         })
     }
 
-    function best_to(moves, to){
+    function best_to(moves, from, to){
         var moves_with_dist = []
         moves.forEach(function(move){
             moves_with_dist.push({
                 move: move,
-                dist: Math.abs(move[0] - to[0]) + Math.abs(move[1] - to[1])
+                dist: Math.sqrt(Math.pow(Math.abs(move[0] - to[0]), 2) +
+                                Math.pow(Math.abs(move[1] - to[1]), 2)),
             })
         })
         moves_with_dist.sort(function(a, b){
             return a.dist - b.dist
         })
-        // mach remove
-        // H.p("best_to", [moves_with_dist[0].move, moves_with_dist])
         return moves_with_dist[0].move
     }
 

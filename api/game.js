@@ -1243,7 +1243,7 @@ var Game = module.exports = (function(){
                 done(null)
             }
         ], function(er){
-            done(er, moves)
+            done(er, piece, moves)
         })
     }
 
