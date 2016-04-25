@@ -771,7 +771,6 @@ var Select = (function(){
         }
 
         if (_isSelecting){ // try to move the piece
-            // mach
             Game.move(_selected, pos)
             _isSelecting = false
         } else { // start selecting

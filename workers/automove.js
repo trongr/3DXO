@@ -84,8 +84,12 @@ var Worker = module.exports = (function(){
             // case we can retry a second later with this approach
             if (new Date().getTime() - lastSuccessfulMove < AUTOMOVE_INTERVAL) return
 
-            // mach check job cancelled each iteration
             async.waterfall([
+                function(done){
+                    Job.checkJobCancelled(jobID, function(er, job){
+                        done(er)
+                    })
+                },
                 function(done){
                     best_move(pieceID, finalTo, function(er, _nextTo){
                         nextTo = _nextTo
@@ -97,7 +101,10 @@ var Worker = module.exports = (function(){
                     Game.on.move(player, data, done)
                 }
             ], function(er){
-                if (er){
+                if (er == OK){
+                    clearInterval(automove_timeout)
+                    done(null)
+                } else if (er){
                     // mach
                     // stop automove if error for now
                     clearInterval(automove_timeout)
