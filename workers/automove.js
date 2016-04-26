@@ -1,3 +1,4 @@
+var _ = require("lodash")
 var async = require('async');
 var kue = require('kue');
 var queue = kue.createQueue(require("../lib/queue_conf.js"));
@@ -11,11 +12,14 @@ var Player = require("../models/player.js")
 var Piece = require("../models/piece.js")
 var Conf = require("../static/conf.json") // shared with client
 
+var OK = "OK"
+
 var Worker = module.exports = (function(){
     var Worker = {}
 
     var CONCURRENCY = 1000
     var AUTOMOVE_INTERVAL = Conf.recharge
+    var AUTOMOVE_LOOP_MAX_ERCOUNT = 10 // mach change to 50
 
     Worker.init = function(){
         H.p("Starting Worker.automove")
@@ -68,6 +72,7 @@ var Worker = module.exports = (function(){
         })
     }
 
+    // mach check timeout errors
     function automove_loop(jobID, player, data, done){
         var working = false
         var pieceID = data.pieceID
@@ -75,6 +80,9 @@ var Worker = module.exports = (function(){
         var finalTo = data.to
         var nextTo = null
         var lastSuccessfulMove = new Date("2016").getTime() // some time long ago
+        var bad_moves = [] // stores disallowed moves and retry, ignoring them next time
+        var ercount = 0 // number of bad moves to make in one
+                        // iteration. end automove_loop if more than AUTOMOVE_LOOP_MAX_ERCOUNT
         var automove_timeout = setInterval(function(){
             if (working) return
 
@@ -91,7 +99,7 @@ var Worker = module.exports = (function(){
                     })
                 },
                 function(done){
-                    best_move(pieceID, finalTo, function(er, _nextTo){
+                    best_move(pieceID, finalTo, bad_moves, function(er, _nextTo){
                         nextTo = _nextTo
                         done(er)
                     })
@@ -101,20 +109,24 @@ var Worker = module.exports = (function(){
                     Game.on.move(player, data, done)
                 }
             ], function(er){
-                if (er == OK){
-                    clearInterval(automove_timeout)
-                    done(null)
-                } else if (er){
-                    // mach
-                    // stop automove if error for now
+                if (er && ercount > AUTOMOVE_LOOP_MAX_ERCOUNT){
                     clearInterval(automove_timeout)
                     done(er)
+                } else if (er){
+                    ercount += 1
+                    if (nextTo) bad_moves.push(nextTo)
+                    else bad_moves = [] // null nextTo means ran out
+                                        // of good moves, so need to
+                                        // clear bad_moves
+                    working = false // continue
                 } else if (isAtFinalDst(piece, nextTo, finalTo)){
                     clearInterval(automove_timeout)
                     done(null)
                 } else {
-                    working = false // continue
                     lastSuccessfulMove = new Date().getTime()
+                    bad_moves = []
+                    working = false // continue
+                    ercount = 0
                 }
             })
         }, 1000)
@@ -137,7 +149,7 @@ var Worker = module.exports = (function(){
         }
     }
 
-    function best_move(pieceID, to, done){
+    function best_move(pieceID, to, bad_moves, done){
         var moves = []
         var nTo = [] // [x, y]
         var piece = null
@@ -150,28 +162,60 @@ var Worker = module.exports = (function(){
                 })
             },
             function(done){
+                moves = difference(moves, bad_moves)
                 from = [piece.x, piece.y]
                 nTo = best_to(moves, from, to)
-                done(null)
+                if (!nTo) done("automove.best_move: no more moves")
+                else done(null)
             }
         ], function(er){
             done(er, nTo)
         })
     }
 
-    function best_to(moves, from, to){
-        var moves_with_dist = []
-        moves.forEach(function(move){
-            moves_with_dist.push({
-                move: move,
-                dist: Math.sqrt(Math.pow(Math.abs(move[0] - to[0]), 2) +
-                                Math.pow(Math.abs(move[1] - to[1]), 2)),
+    function difference(list1, list2){
+        try {
+            return list1.filter(function(item){
+                return indexOf(list2, item) < 0
             })
-        })
-        moves_with_dist.sort(function(a, b){
-            return a.dist - b.dist
-        })
-        return moves_with_dist[0].move
+        } catch (e){
+            return list1
+        }
+    }
+
+    function indexOf(list, item){
+        try {
+            for (var i = 0; i < list.length; i++){
+                if (_.isEqual(list[i], item)){
+                    return i
+                }
+            }
+            return -1
+        } catch (e){
+            return -1
+        }
+    }
+
+    function best_to(moves, from, to){
+        try {
+            var moves_with_dist = []
+            moves.forEach(function(move){
+                moves_with_dist.push({
+                    move: move,
+                    dist: Math.sqrt(Math.pow(Math.abs(move[0] - to[0]), 2) +
+                                    Math.pow(Math.abs(move[1] - to[1]), 2)),
+                })
+            })
+            moves_with_dist.sort(function(a, b){
+                return a.dist - b.dist
+            })
+            return moves_with_dist[0].move // ... here: got no more
+                                           // moves left to try
+                                           // (completely blocked on
+                                           // all sides)
+        } catch (e){
+            return null // because ...
+        }
     }
 
     return Worker

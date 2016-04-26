@@ -4,7 +4,8 @@
     "active_zone_half_width": 5,
     "max_chatters": 100,
     "code": {
-        "get_player": "get_player"
+        "get_player": "get_player",
+        "block": "block"
     },
     "status": {
         "online": 1,

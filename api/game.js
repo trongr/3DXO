@@ -157,8 +157,10 @@ var Move = (function(){
                 else done(null) // Nothing's in the way
             });
         }, function(er){
-            if (er) done(["ERROR. Move.validateBlock", piece, distance, direction, er])
+            if (er) done(Conf.code.block)
             else done(null)
+            // if (er) done(["ERROR. Move.validateBlock", piece, distance, direction, er])
+            // else done(null)
         })
     }
 
@@ -872,6 +874,7 @@ var Game = module.exports = (function(){
                 //     })
                 // },
                 function(done){
+                    // mach remove zone move
                     // this means the king is making a zone move:
                     if (piece.kind == "king" &&
                         (Math.abs(piece.x - to[0]) > 1 ||
@@ -1074,10 +1077,8 @@ var Game = module.exports = (function(){
                 },
             ], function(er){
                 var showClock = true
-                if (er == OK){
+                if (er){
                     done(er)
-                } else if (er){
-                    done(["ERROR. Game.oneMove", player, piece, to, er])
                 } else {
                     Pub.remove(nPiece, [
                         H.toZoneCoordinate(from[0], S),

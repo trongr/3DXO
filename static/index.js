@@ -1864,11 +1864,12 @@ var Move = (function(){
 
         Highlight.highlightCells(_validatedMoves)
 
-        // highlight available zones so you can move an entire army by
-        // clicking on the king
-        if (obj.game.piece.kind == "king"){
-            highlightZoneMoves(obj.game.piece)
-        }
+        // mach remove disable zone move: too confusing
+        // // highlight available zones so you can move an entire army by
+        // // clicking on the king
+        // if (obj.game.piece.kind == "king"){
+        //     highlightZoneMoves(obj.game.piece)
+        // }
     }
 
     function filterPawnToKingMoves(obj, validatedMoves){
