@@ -288,12 +288,9 @@ var Zone = module.exports = (function(){
                 } else if (chan == "chat"){
                     if (_player) pubChat(_player, data)
                     else Pub.error(_playerID, UNAUTHENTICATED_SOCKET_CHAT)
-                } else if (chan == "move" ||
-                           chan == "automove"){
+                } else {
                     if (_player) Game.sock(_player, data)
                     else Pub.error(_playerID, UNAUTHENTICATED_SOCKET_MOVE)
-                } else {
-                    H.log("ERROR. Zone.data: unknown chan", _playerID, chan)
                 }
             } catch (e){
                 return H.log("ERROR. Zone.data.catch", msg, e.stack)

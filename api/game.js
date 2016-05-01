@@ -890,7 +890,7 @@ var Game = module.exports = (function(){
                     } else done(null)
                 },
             ], function(er){
-                if (er == OK){
+                if (er == OK || er == Conf.code.block){
                     // ignore
                 } else if (er){
                     H.log("ERROR. Game.move", playerID, pieceID, to, er)
@@ -915,7 +915,7 @@ var Game = module.exports = (function(){
                     Math.floor(data.to[1]),
                 ]
             } catch (e){
-                return H.p("Game.move: invalid input", data, e.stack)
+                return H.p("game.automove: invalid input", data, e.stack)
             }
             async.waterfall([
                 function(done){
@@ -950,6 +950,7 @@ var Game = module.exports = (function(){
                         } else done(null)
                     })
                 },
+                // mach cancel existing automove job if any
                 function(done){
                     Queue.job({
                         task: "automove",
@@ -964,6 +965,27 @@ var Game = module.exports = (function(){
             ], function(er){
                 H.p("Game.automove", [playerID, pieceID, to], er)
                 alertElapsed(start, 1000, "Game.automove")
+                if (done) done(er)
+            })
+        }
+
+        on.cancel_automove = function(player, data, done){
+            try {
+                var start = new Date().getTime()
+                var throw_msg = Validate.playerPieceIDs(player, data)
+                if (throw_msg) throw throw_msg
+
+                var playerID = data.playerID
+                var pieceID = mongoose.Types.ObjectId(data.pieceID)
+                var player, piece = null
+            } catch (e){
+                return H.p("game.cancel_automove: invalid input", data, e.stack)
+            }
+            Job.cancelJob({
+                "data.pieceID": pieceID
+            }, function(er, num){
+                H.p("Game.cancel_automove", [playerID, pieceID, num], er)
+                alertElapsed(start, 1000, "Game.cancel_automove")
                 if (done) done(er)
             })
         }

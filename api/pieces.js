@@ -74,6 +74,8 @@ var Pieces = module.exports = (function(){
         if (elapsed >= Conf.recharge){
             done(null)
         } else {
+            // mach
+            H.p("pieces.validatePieceTimeout", piece._id)
             done("Charging: ready in " + parseInt((Conf.recharge - elapsed) / 1000) + " sec.")
         }
     }

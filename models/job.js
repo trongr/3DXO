@@ -1,6 +1,7 @@
 var mongoose = require('mongoose');
 var DB = require("../db.js")
 
+// todo index data.pieceID for automove job lookup
 var schema = mongoose.Schema({
     task: {type: String},
     created: {
@@ -26,6 +27,19 @@ schema.statics.findOneByID = function(jobID, done){
     this.findById(jobID, function(er, job){
         if (job) done(null, job)
         else done(["ERROR. Job.findOneByID", jobID, er])
+    })
+};
+
+schema.statics.cancelJob = function(query, done){
+    this.update(query, {
+        $set: {
+            cancelled: true,
+            modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
+        },
+    }, {
+        multi: true
+    }, function(er, num){
+        done(er, num)
     })
 };
 

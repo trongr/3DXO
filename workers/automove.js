@@ -13,13 +13,14 @@ var Piece = require("../models/piece.js")
 var Conf = require("../static/conf.json") // shared with client
 
 var OK = "OK"
+var JOB_CANCELLED = "JOB_CANCELLED"
 
 var Worker = module.exports = (function(){
     var Worker = {}
 
     var CONCURRENCY = 1000
     var AUTOMOVE_INTERVAL = Conf.recharge
-    var AUTOMOVE_LOOP_MAX_ERCOUNT = 10 // mach change to 50
+    var AUTOMOVE_LOOP_MAX_ERCOUNT = 64
 
     Worker.init = function(){
         H.p("Starting Worker.automove")
@@ -31,7 +32,10 @@ var Worker = module.exports = (function(){
             var jobID = data.jobID
             Job.checkJobCancelled(jobID, function(er, job){
                 if (er) done(er)
-                else automove(job, done)
+                else automove(job, function(er){
+                    Job.remove({_id: jobID}, function(er){})
+                    done(er)
+                })
             })
         });
     }
@@ -72,7 +76,6 @@ var Worker = module.exports = (function(){
         })
     }
 
-    // mach check timeout errors
     function automove_loop(jobID, player, data, done){
         var working = false
         var pieceID = data.pieceID
@@ -95,7 +98,8 @@ var Worker = module.exports = (function(){
             async.waterfall([
                 function(done){
                     Job.checkJobCancelled(jobID, function(er, job){
-                        done(er)
+                        if (er) done(JOB_CANCELLED)
+                        else done(null)
                     })
                 },
                 function(done){
@@ -109,10 +113,13 @@ var Worker = module.exports = (function(){
                     Game.on.move(player, data, done)
                 }
             ], function(er){
-                if (er && ercount > AUTOMOVE_LOOP_MAX_ERCOUNT){
+                if ((er && ercount > AUTOMOVE_LOOP_MAX_ERCOUNT) ||
+                    er == JOB_CANCELLED){
+                    H.p("automove.automove_loop: done", [er, ercount])
                     clearInterval(automove_timeout)
                     done(er)
                 } else if (er){
+                    // mach only specific errors should go here, everything else goes up ^
                     ercount += 1
                     if (nextTo) bad_moves.push(nextTo)
                     else bad_moves = [] // null nextTo means ran out
@@ -120,6 +127,7 @@ var Worker = module.exports = (function(){
                                         // clear bad_moves
                     working = false // continue
                 } else if (isAtFinalDst(piece, nextTo, finalTo)){
+                    H.p("automove.automove_loop: done")
                     clearInterval(automove_timeout)
                     done(null)
                 } else {
@@ -155,6 +163,7 @@ var Worker = module.exports = (function(){
         var piece = null
         async.waterfall([
             function(done){
+                // mach remove blocked squares
                 Game.findAvailableMoves(pieceID, function(er, _piece, _moves){
                     piece = _piece
                     moves = _moves

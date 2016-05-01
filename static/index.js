@@ -770,19 +770,25 @@ var Select = (function(){
             ) // normal's unit length so gotta scale by half to fit inside the box
         }
 
+        // mach right click (no drag) cancels selection
+        if (Player.objBelongsToPlayer(obj)){ // selecting your own piece
+            Highlight.hideAllHighlights()
+            _selected = obj
+            Obj.highlight(obj, true)
+            Move.highlightAvailableMoves(obj)
+            _isSelecting = true
+            Game.cancel_automove(_selected)
+            return
+        }
+
         if (_isSelecting){ // try to move the piece
             Game.move(_selected, pos)
             _isSelecting = false
-        } else { // start selecting
-            if (Player.objBelongsToPlayer(obj)){ // selecting your own piece
-                _selected = obj
-                Obj.highlight(obj, true)
-                Move.highlightAvailableMoves(obj)
-                _isSelecting = true
-            } else { // selecting someone else's piece or empty space
-                Obj.highlight(_selected, false)
-                _isSelecting = false
-            }
+        } else {
+            // selecting someone else's piece or empty space
+            // Obj.highlight(_selected, false)
+            Highlight.hideAllHighlights()
+            _isSelecting = false
         }
     }
 
@@ -1858,9 +1864,9 @@ var Move = (function(){
             return item.kill == false || item.killMove == true // Only interested in actual moveable positions
         })
 
-        if (obj.game.piece.kind == "pawn"){
-            _validatedMoves = filterPawnToKingMoves(obj, _validatedMoves)
-        }
+        // if (obj.game.piece.kind == "pawn"){
+        //     _validatedMoves = filterPawnToKingMoves(obj, _validatedMoves)
+        // }
 
         Highlight.highlightCells(_validatedMoves)
 
@@ -2642,6 +2648,16 @@ var Game = (function(){
         ], function(er){
             if (er) Console.error("ERROR. If you're reading this it means something's gone wrong with the game. Please come back later.")
 
+        })
+    }
+
+    // mach
+    Game.cancel_automove = function(selected){
+        var piece = selected.game.piece
+        var player = Player.getPlayer()
+        Sock.send("cancel_automove", {
+            playerID: player._id,
+            pieceID: piece._id,
         })
     }
 
