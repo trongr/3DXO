@@ -119,6 +119,7 @@ var Worker = module.exports = (function(){
                     clearInterval(automove_timeout)
                     done(er)
                 } else if (er){
+                    // mach don't push nextTo if timeout error
                     // mach only specific errors should go here, everything else goes up ^
                     ercount += 1
                     if (nextTo) bad_moves.push(nextTo)

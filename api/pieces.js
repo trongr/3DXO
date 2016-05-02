@@ -72,11 +72,10 @@ var Pieces = module.exports = (function(){
         // can move
         var elapsed = new Date().getTime() - new Date(piece.moved).getTime()
         if (elapsed >= Conf.recharge){
-            done(null)
+            done(null, 0)
         } else {
-            // mach
-            H.p("pieces.validatePieceTimeout", piece._id)
-            done("Charging: ready in " + parseInt((Conf.recharge - elapsed) / 1000) + " sec.")
+            var wait_time = Conf.recharge - elapsed
+            done("Charging: ready in " + parseInt((wait_time) / 1000) + " sec.", wait_time)
         }
     }
 

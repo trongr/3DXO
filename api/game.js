@@ -799,7 +799,6 @@ var Game = module.exports = (function(){
     Game.on = (function(){
         var on = {}
 
-        // mach real player moving cancels automove
         // player = player OBJ
         // data = {
         //     playerID: playerID,
@@ -914,6 +913,7 @@ var Game = module.exports = (function(){
                     Math.floor(data.to[0]),
                     Math.floor(data.to[1]),
                 ]
+                var wait_time = 0
             } catch (e){
                 return H.p("game.automove: invalid input", data, e.stack)
             }
@@ -943,24 +943,31 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Pieces.validatePieceTimeout(piece, function(er){
-                        if (er){
-                            Pub.error(playerID, er)
-                            done(OK)
-                        } else done(null)
-                    })
-                },
-                // mach cancel existing automove job if any
-                function(done){
-                    Queue.job({
-                        task: "automove",
-                        title: "Game.automove",
-                        playerID: playerID,
-                        pieceID: piece._id,
-                        to: to
-                    }, function(er){ // this is only the callback to job enqueue
+                    // todo maybe do a find first. if exists cancel
+                    Job.cancelJob({
+                        "data.pieceID": pieceID
+                    }, function(er, num){
                         done(er)
                     })
+                },
+                function(done){
+                    Pieces.validatePieceTimeout(piece, function(er, _wait_time){
+                        wait_time = _wait_time || 0
+                        done(null)
+                    })
+                },
+                function(done){
+                    setTimeout(function(){
+                        Queue.job({
+                            task: "automove",
+                            title: "Game.automove",
+                            playerID: playerID,
+                            pieceID: pieceID,
+                            to: to
+                        }, function(er){ // this is only the callback to job enqueue
+                            done(er)
+                        })
+                    }, wait_time)
                 },
             ], function(er){
                 H.p("Game.automove", [playerID, pieceID, to], er)
@@ -976,7 +983,7 @@ var Game = module.exports = (function(){
                 if (throw_msg) throw throw_msg
 
                 var playerID = data.playerID
-                var pieceID = mongoose.Types.ObjectId(data.pieceID)
+                var pieceID = data.pieceID
                 var player, piece = null
             } catch (e){
                 return H.p("game.cancel_automove: invalid input", data, e.stack)
