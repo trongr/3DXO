@@ -963,7 +963,8 @@ var Game = module.exports = (function(){
                             title: "Game.automove",
                             playerID: playerID,
                             pieceID: pieceID,
-                            to: to
+                            to: to,
+                            remove: true // remove on complete (and failed)
                         }, function(er){ // this is only the callback to job enqueue
                             done(er)
                         })
