@@ -3,6 +3,7 @@ var async = require('async');
 var kue = require('kue');
 var queue = kue.createQueue(require("../lib/queue_conf.js"));
 var H = require("../static/js/h.js")
+var K = require("../api/k.js")
 var Pub = require("../api/pub.js")
 var Pieces = require("../api/pieces.js")
 var Clocks = require("../api/clocks.js")
@@ -13,7 +14,6 @@ var Piece = require("../models/piece.js")
 var Conf = require("../static/conf.json") // shared with client
 
 var OK = "OK"
-var JOB_CANCELLED = "JOB_CANCELLED"
 
 var Worker = module.exports = (function(){
     var Worker = {}
@@ -98,7 +98,7 @@ var Worker = module.exports = (function(){
             async.waterfall([
                 function(done){
                     Job.checkJobCancelled(jobID, function(er, job){
-                        if (er) done(JOB_CANCELLED)
+                        if (er) done(K.code.job_cancelled)
                         else done(null)
                     })
                 },
@@ -114,13 +114,13 @@ var Worker = module.exports = (function(){
                 }
             ], function(er){
                 if ((er && ercount > AUTOMOVE_LOOP_MAX_ERCOUNT) ||
-                    er == JOB_CANCELLED){
+                    er == K.code.job_cancelled ||
+                    er == K.code.piece_timeout){
                     H.p("automove.automove_loop: done", [er, ercount])
                     clearInterval(automove_timeout)
                     done(er)
                 } else if (er){
-                    // mach don't push nextTo if timeout error
-                    // mach only specific errors should go here, everything else goes up ^
+                    // todo only specific errors should go here, everything else goes up ^
                     ercount += 1
                     if (nextTo) bad_moves.push(nextTo)
                     else bad_moves = [] // null nextTo means ran out

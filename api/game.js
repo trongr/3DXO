@@ -8,6 +8,7 @@ var Job = require("../models/job.js")
 var Piece = require("../models/piece.js")
 var Player = require("../models/player.js")
 var Pub = require("../api/pub.js")
+var K = require("../api/k.js")
 var Auth = require("../api/auth.js")
 var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
@@ -157,7 +158,7 @@ var Move = (function(){
                 else done(null) // Nothing's in the way
             });
         }, function(er){
-            if (er) done(Conf.code.block)
+            if (er) done(K.code.block)
             else done(null)
             // if (er) done(["ERROR. Move.validateBlock", piece, distance, direction, er])
             // else done(null)
@@ -852,7 +853,7 @@ var Game = module.exports = (function(){
                     Pieces.validatePieceTimeout(piece, function(er){
                         if (er){
                             Pub.error(playerID, er)
-                            done(OK)
+                            done(K.code.piece_timeout)
                         } else done(null)
                     })
                 },
@@ -889,7 +890,8 @@ var Game = module.exports = (function(){
                     } else done(null)
                 },
             ], function(er){
-                if (er == OK || er == Conf.code.block){
+                if (er == OK || er == K.code.block ||
+                    er == K.code.piece_timeout){
                     // ignore
                 } else if (er){
                     H.log("ERROR. Game.move", playerID, pieceID, to, er)
