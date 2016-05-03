@@ -874,7 +874,7 @@ var Game = module.exports = (function(){
                 //     })
                 // },
                 function(done){
-                    // mach remove zone move
+                    // todo remove zone move: not used anymore
                     // this means the king is making a zone move:
                     if (piece.kind == "king" &&
                         (Math.abs(piece.x - to[0]) > 1 ||

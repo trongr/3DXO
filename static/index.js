@@ -98,6 +98,9 @@ var Menu = (function(){
 
     Menu.init = function(){
         var html = "<div id='menu_box'>"
+        // mach
+            +           "<input id='play_as_guest_input' type='text' placeholder='pick a username'>"
+            +           "<button id='play_as_guest_button' href='#'>Play as guest</button>"
             +           "<button id='toggle_register' href='#'>REGISTER</button>"
             +           "<button id='toggle_login' href='#'>LOGIN</button>"
             +           "<button id='new_game' href='#'>NEW_GAME</button>"
@@ -121,6 +124,13 @@ var Menu = (function(){
         $("#new_game").on("click", new_game)
         $("#register_button").on("click", register_button)
         $("#login_button").on("click", login_button)
+
+        $("#play_as_guest_input").on("focus", play_as_guest_input_focus)
+
+    }
+
+    function play_as_guest_input_focus(){
+        Console.toggleAlwaysFocus(false)
     }
 
     function menu_box_input_keypress(event){
@@ -458,71 +468,66 @@ var Console = (function(){
         //               + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
         //               + "Prepare to punish your enemies in a semi-turn-based fashion!")
         Console.print("<hr>")
-        Console.print("<h2 class='yellow'>Getting Started</h2>")
+        // Console.print("<h2 class='yellow'>Getting Started</h2>")
+        // Console.print("<ol>"
+        //               + "<li>Read the Rules to learn how to play, or watch this <a href='mach' target='_blank'>video tutorial.</a></li>"
+        //               + "<li>Register an account.</li>"
+        //               + "<li>Play!</li>"
+        // //               + "</ol>")
+        Console.print("<h2 class='yellow'>How to play</h2>")
         Console.print("<ol>"
-                      + "<li>Read the Rules to learn how to play, or watch this <a href='mach' target='_blank'>video tutorial.</a></li>"
-                      + "<li>Register an account.</li>"
-                      + "<li>Play!</li>"
-                      + "</ol>")
-        Console.print("<h2 class='console_header' data-console-line='controls'>I. Controls</h2>")
-        Console.print("<ol class='console_content' data-console-line='controls'>"
                       + "<li>Left mouse click: move pieces.</li>"
                       + "<li>Right mouse drag: navigate map.</li>"
                       + "<li>Middle mouse scroll: zoom.</li>"
                       + "</ol>")
-        Console.print("<h2 class='console_header' data-console-line='rules'>II. Rules</h2>")
-        Console.print("<ol class='console_content' data-console-line='rules'>"
-                      // + "<li></li>"
-                      // alternatively different zones have different rules, e.g. some zones lets you move
-                      // any number of pieces, some 4 at a time, some 2, some just 1, per army.
+        // Console.print("<h2 class='console_header' data-console-line='rules'>II. Rules</h2>")
+        // Console.print("<ol class='console_content' data-console-line='rules'>"
+        //               // + "<li></li>"
+        //               // alternatively different zones have different rules, e.g. some zones lets you move
+        //               // any number of pieces, some 4 at a time, some 2, some just 1, per army.
 
-                      // + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
+        //               // + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
 
-                      // // mode 1
-                      + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
-                      + " 30 seconds to recharge before it can move again.</li>"
-                      + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
-                      + "enemies in your zone, and no king or queen in the destination zone. If there are non-royal enemies in "
-                      + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
-                      + "<li>Capturing an enemy king will convert his remaining army to your side.</li>"
-                      + "</ol>")
+        //               // // mode 1
+        //               + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
+        //               + " 30 seconds to recharge before it can move again.</li>"
+        //               + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
+        //               + "enemies in your zone, and no king or queen in the destination zone. If there are non-royal enemies in "
+        //               + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
+        //               + "<li>Capturing an enemy king will convert his remaining army to your side.</li>"
+        //               + "</ol>")
 
-                      // // mode 2
-                      // + "<li><u>Limited Moves.</u> You can move one piece every 15 seconds per 8 x 8 zone. A cross-zone move puts a clock on both zones. "
-                      // + "These moves are marked by yellow clocks.</li>"
-                      // + "<li><u>Unlimited Moves.</u> You can additionally move any number of pieces in a zone, provided there are no enemies in that zone. "
-                      // + "Similarly, unlimited cross-zone moves require both zones to have no enemies. "
-                      // + "These moves are marked by green clocks.</li>"
-                      // + "<li><u>Zone Moves.</u> You can move your army from one zone to a neighbouring zone if there are no "
-                      // + "enemies in your zone, and no king or queen in the destination zone. If there are non-royal enemies in "
-                      // + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
-                      // + "<li><u>Winning Moves.</u> Capturing an enemy king will convert his remaining army to your side.</li>"
-                      // + "</ol>")
-        Console.print("<h2 class='console_header' data-console-line='dev_note'>III. Gameplay Notes</h2>")
-        Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay "
-                      + "is still under development. In the meantime your pieces will disappear 10 minutes after you log out, giving other players 10 minutes to capture your king "
-                      + "and gain your pieces. You can respawn a new army at any time by clicking on the <u>NEW_GAME</u> button. "
-                      + "<br><br>It's highly recommended that you team up with other players around you, as your opponents will "
-                      + "most likely do the same, and they'll overwhelm you on your own. You can chat using the chat box at the bottom of this panel."
-                      + "<br><br>Please use Google Chrome for best performance."
-                      + "</div>")
-        Console.print("<h2 class='console_header' data-console-line='links'>IV. Blog and Community</h2>")
-        Console.print("<div class='console_content' data-console-line='links'>To learn more about Ragnarook, "
-                      + "e.g. development progress, possible directions the game is heading, etc., check out the <a href='http://chessv2.tumblr.com/' target='_blank'>Ragnablog.</a> "
-                      + "<br><br>Help us make Ragnarook the Best Strategy Game in the world! "
-                      + "Join our <a href='https://www.facebook.com/groups/1755519304678543/' target='_blank'>facebook group</a> to give feedback, suggest new features and gameplay mechanics, report bugs, discuss strategies, etc. "
-                      + "</div>")
-        Console.print("<h2 class='console_header' data-console-line='about'>V. About</h2>")
-        Console.print("<div class='console_content' data-console-line='about'>Hello! My name is Trong. I'm a developer from Toronto, Canada, and Ragnarook is my first game. Enjoy! "
-                      + "<br><br>Similar games. See <a href='https://en.wikipedia.org/wiki/Kung-Fu_Chess' target='_blank'>Kung-Fu Chess</a> "
-                      + "for a variant for two or four players. Recently a team from Japan has also made a physical two-player board: "
-                      + "<a href='https://www.reddit.com/r/gaming/comments/3lyryx/chess_too_boring_for_ya_not_anymore/' target='_blank'>Dengekisen.</a> "
-                      + "<br><br>Code. Ragnarook is open source on <a href='https://github.com/trongr/3DXO' target='_blank'>GitHub.</a> "
-                      + "The 3D front end is made using <a href='http://threejs.org/' target='_blank'>three.js.</a> "
-                      + "The back end uses Node, Mongo, and Redis."
+        //               // // mode 2
+        //               // + "<li><u>Limited Moves.</u> You can move one piece every 15 seconds per 8 x 8 zone. A cross-zone move puts a clock on both zones. "
+        //               // + "These moves are marked by yellow clocks.</li>"
+        //               // + "<li><u>Unlimited Moves.</u> You can additionally move any number of pieces in a zone, provided there are no enemies in that zone. "
+        //               // + "Similarly, unlimited cross-zone moves require both zones to have no enemies. "
+        //               // + "These moves are marked by green clocks.</li>"
+        //               // + "<li><u>Zone Moves.</u> You can move your army from one zone to a neighbouring zone if there are no "
+        //               // + "enemies in your zone, and no king or queen in the destination zone. If there are non-royal enemies in "
+        //               // + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
+        //               // + "<li><u>Winning Moves.</u> Capturing an enemy king will convert his remaining army to your side.</li>"
+        //               // + "</ol>")
+        // Console.print("<h2 class='console_header' data-console-line='dev_note'>III. Gameplay Notes</h2>")
+        // Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay "
+        //               + "is still under development. In the meantime your pieces will disappear 10 minutes after you log out, giving other players 10 minutes to capture your king "
+        //               + "and gain your pieces. You can respawn a new army at any time by clicking on the <u>NEW_GAME</u> button. "
+        //               + "<br><br>It's highly recommended that you team up with other players around you, as your opponents will "
+        //               + "most likely do the same, and they'll overwhelm you on your own. You can chat using the chat box at the bottom of this panel."
+        //               + "<br><br>Please use Google Chrome for best performance."
+        //               + "</div>")
+        Console.print("<h2 class='console_header' data-console-line='about'>About</h2>")
+        Console.print("<div class='console_content' data-console-line='about'>Hello! My name is Trong. I'm a developer from Toronto, Canada, and Ragnarook is my first game. Enjoy!<br><br>"
+                      // + "<a href='https://www.facebook.com/groups/1755519304678543/' target='_blank'>facebook</a> <a href='http://chessv2.tumblr.com/' target='_blank'>blog</a>"
+                      + "<a href='https://www.facebook.com/groups/1755519304678543/' target='_blank'>facebook</a>"
+                      // + "<br><br>Similar games. See <a href='https://en.wikipedia.org/wiki/Kung-Fu_Chess' target='_blank'>Kung-Fu Chess</a> "
+                      // + "for a variant for two or four players. Recently a team from Japan has also made a physical two-player board: "
+                      // + "<a href='https://www.reddit.com/r/gaming/comments/3lyryx/chess_too_boring_for_ya_not_anymore/' target='_blank'>Dengekisen.</a> "
+                      // + "<br><br>Code. Ragnarook is open source on <a href='https://github.com/trongr/3DXO' target='_blank'>GitHub.</a> "
+                      // + "The 3D front end is made using <a href='http://threejs.org/' target='_blank'>three.js.</a> "
+                      // + "The back end uses Node, Mongo, and Redis."
                       + "</div>")
         Console.print("<hr>")
-        Console.print(H.shortTimeBrackets() + " Loading game assets . . .")
         // Console.print("<h2>TIPS</h2>")
         // Console.print("<ol>"
         //               + "<li>Join an Alliance. Type <code> /h alliance </code> into the chat box below to find out why.</li>"
@@ -536,7 +541,8 @@ var Console = (function(){
             +           "<div id='console_out_box'></div>"
             +      "</div>"
             +      "<div id='console_in_box'>"
-            +           "<textarea id='console_input' rows='1' type='text' placeholder='chat or type /h for help'></textarea>"
+            // +           "<textarea id='console_input' rows='1' type='text' placeholder='chat or type /h for help'></textarea>"
+            +           "<textarea id='console_input' rows='1' type='text' placeholder='type to chat'></textarea>"
             +      "</div>"
         $("body").append(html)
 
@@ -682,11 +688,10 @@ var Sock = (function(){
     }
 
     function authend(data, x, y){
-        Console.print(H.shortTimeBrackets() + " Done!") // "Done" loading game assets
         if (data.ok){
             Console.info("Welcome " + Player.getPlayer().name + "!")
         } else {
-            Console.info("Welcome Guest! Log in to play and chat.")
+            Console.info("Welcome Guest!")
         }
         initSocket(x, y)
     }
@@ -770,7 +775,7 @@ var Select = (function(){
             ) // normal's unit length so gotta scale by half to fit inside the box
         }
 
-        // mach right click (no drag) cancels selection
+        // todo right click (no drag) cancels selection
         if (Player.objBelongsToPlayer(obj)){ // selecting your own piece
             Highlight.hideAllHighlights()
             _selected = obj
@@ -2651,7 +2656,6 @@ var Game = (function(){
         })
     }
 
-    // mach
     Game.cancel_automove = function(selected){
         var piece = selected.game.piece
         var player = Player.getPlayer()

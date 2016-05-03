@@ -68,6 +68,19 @@ hr {
     text-decoration: none;
 }
 
+#menu_box input#play_as_guest_input {
+    width: 150px;
+}
+
+#menu_box button#play_as_guest_button {
+    background: #6BC982;
+    height: 35px;
+    margin: 0 5px 0 5px;
+    padding: 0 10px 0 10px;
+    font-weight: bold;
+    text-decoration: none;
+}
+
 /* end menu css */
 /* end menu css */
 /* end menu css */
