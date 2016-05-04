@@ -763,20 +763,26 @@ var Game = module.exports = (function(){
         var count = 0
         var pieces = null
         var nPiece = piece
-        var x, y
+        var x, y, error
         async.doWhilst(
             function(done){
+                error = null
                 x = H.toZoneCoordinate(nPiece.x, S) + direction.dx * S // zone coordinates
                 y = H.toZoneCoordinate(nPiece.y, S) + direction.dy * S // zone coordinates
                 Pieces.findPiecesInZone(x, y, function(er, _pieces){
                     pieces = _pieces
-                    done(er)
+                    if (er) error = er
+                    done(null) // done(er) here doesn't do anything
                 })
             },
             function(){
-                H.log("INFO. Game.zoneSearch", count, nPiece.x, nPiece.y)
-                count++ // todo make sure this doesn't blow up
-                if (pieces && pieces.length == 0){
+                H.p("Game.zoneSearch", [nPiece.x, nPiece.y, count])
+                count++
+                // mach binary search for empty land
+                if (count > 1000){
+                    error = "ERROR. too many tries to create random username"
+                    return false
+                } else if (pieces && pieces.length == 0){
                     return false // found empty zone
                 } else {
                     nPiece = pieces[0]
@@ -784,7 +790,7 @@ var Game = module.exports = (function(){
                 }
             },
             function(er){
-                done(er, [x, y])
+                done(error, [x, y])
             }
         )
     }

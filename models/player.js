@@ -18,6 +18,7 @@ var schema = mongoose.Schema({
     pass: {type: String, required: true, select: false},
     email: {type: String, select: false},
     token: {type: String, select: false}, // socket token
+    guest: {type: Boolean, default: false},
     // team: {
     //     type: mongoose.Schema.Types.ObjectId,
     //     ref: 'Team'

@@ -98,7 +98,6 @@ var Menu = (function(){
 
     Menu.init = function(){
         var html = "<div id='menu_box'>"
-        // mach
             +           "<input id='play_as_guest_input' type='text' placeholder='pick a username'>"
             +           "<button id='play_as_guest_button' href='#'>Play as guest</button>"
             +           "<button id='toggle_register' href='#'>REGISTER</button>"
@@ -126,7 +125,42 @@ var Menu = (function(){
         $("#login_button").on("click", login_button)
 
         $("#play_as_guest_input").on("focus", play_as_guest_input_focus)
+        $("#play_as_guest_button").on("click", play_as_guest_button_click)
 
+    }
+
+    function play_as_guest_button_click(){
+        var $this = $(this)
+        $this.prop('disabled', true);
+        var username = $("#play_as_guest_input").val()
+        var player = null
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
+        async.waterfall([
+            function(done){
+                API.Auth.register_anonymous_player({
+                    name: username,
+                }, function(er, _player){
+                    player = _player
+                    done(er)
+                })
+            },
+            function(done){
+                Console.info("Register successful")
+                API.Game.buildArmy(player._id, function(er){
+                    done(er)
+                })
+            }
+        ], function(er){
+            if (er){
+                Console.warn(er)
+            } else {
+                Console.info("Registration successful")
+                location.href = "/";
+            }
+            $this.prop('disabled', false);
+        })
     }
 
     function play_as_guest_input_focus(){

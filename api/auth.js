@@ -1,9 +1,11 @@
+var randomstring = require("randomstring")
 var redis = require("redis")
 var crypto = require('crypto')
 var _ = require("lodash")
 var async = require("async")
 var express = require('express');
 var H = require("../static/js/h.js")
+var K = require("./k.js")
 var Validate = require("../lib/validate.js")
 var Player = require("../models/player.js")
 
@@ -20,13 +22,79 @@ var Auth = module.exports = (function(){
         else return res.send({info:"ERROR. Player not logged in"})
     }
 
-    var ERROR_REGISTER = "REGISTER ERROR. Something's wrong with the game. Please let us know"
+    var ERROR_REGISTER = "REGISTER ERROR. Please try again"
     var ERROR_LOGIN = "LOGIN ERROR. Something's wrong with the game. Please let us know"
     var ERROR_INVALID_LOGIN = "Wrong username or password"
 
     Auth.router.route("/")
         .get(authLogin)
         .post(authRegister)
+
+    Auth.router.route("/register_anonymous_player")
+        .post(auth_register_anonymous_player)
+
+    function auth_register_anonymous_player(req, res){ // register
+        var username = req.body.name || ""
+        doWhilst_create_anonymous_player(username, function(er, player){
+            H.p("Auth.auth_register_anonymous_player", [username, player], er)
+            if (er && er.code == OK){
+                res.send({info:er.info})
+            } else if (er){
+                res.send({info:ERROR_REGISTER})
+            } else if (player){
+                req.session.player = player
+                res.send({player:player})
+            } else {
+                res.send({info:ERROR_REGISTER})
+            }
+        })
+    }
+
+    function doWhilst_create_anonymous_player(username, done){
+        var count = 0
+        var player, error = null
+        async.doWhilst(
+            function(done){
+                error = null // reset error
+                create_anonymous_player(username, function(er, _player){
+                    player = _player
+                    if (er) error = K.code.create_player
+                    done(null) // done(er) here doesn't do anything
+                })
+            },
+            function(){
+                H.p("auth.doWhilst_create_anonymous_player", [username, count], error)
+                count++
+                if (count > 10){
+                    error = {
+                        code: OK,
+                        info: "Please choose a longer username"
+                    }
+                    return false
+                } else if (error == K.code.create_player){
+                    return true // failed to create unique player: continue
+                } else if (player){
+                    return false // successfully created unique player: return
+                } else {
+                    return true // failed to create unique player: continue
+                }
+            },
+            function(er){
+                done(error, player)
+            }
+        )
+    }
+
+    function create_anonymous_player(username, done){
+        var tail = "_" + randomstring.generate(4)
+        var random_username = username + tail
+        var random_pass = randomstring.generate(64) // not really secure but ok for guest players
+        createPlayer({
+            name: random_username,
+            pass: random_pass,
+            guest: true
+        }, done)
+    }
 
     function authRegister(req, res){ // register
         var name = req.body.name

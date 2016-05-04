@@ -67,6 +67,16 @@ var API = (function(){
             })
         }
 
+        Auth.register_anonymous_player = function(data, done){
+            var url = API_PREFIX + "auth/register_anonymous_player"
+            API.req("post", url, data, function(er, re){
+                if (er) done(er)
+                else if (re && re.player) done(null, re.player)
+                else if (re && re.info) done(re.info)
+                else done("ERROR. API.Auth.register_anonymous_player")
+            })
+        }
+
         return Auth
     }())
 
