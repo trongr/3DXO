@@ -37,10 +37,8 @@ var Auth = module.exports = (function(){
         var username = req.body.name || ""
         doWhilst_create_anonymous_player(username, function(er, player){
             H.p("Auth.auth_register_anonymous_player", [username, player], er)
-            if (er && er.code == OK){
-                res.send({info:er.info})
-            } else if (er){
-                res.send({info:ERROR_REGISTER})
+            if (er){
+                res.send({info:er})
             } else if (player){
                 req.session.player = player
                 res.send({player:player})
@@ -56,7 +54,14 @@ var Auth = module.exports = (function(){
         async.doWhilst(
             function(done){
                 error = null // reset error
-                create_anonymous_player(username, function(er, _player){
+                // count + 4 so random part gets longer each try: less likely to collide
+                var random_username = username + "_" + randomstring.generate(count + 4)
+                var random_pass = randomstring.generate(64) // not really secure but ok for guest players
+                createPlayer({
+                    name: random_username,
+                    pass: random_pass,
+                    guest: true
+                }, function(er, _player){
                     player = _player
                     if (er) error = K.code.create_player
                     done(null) // done(er) here doesn't do anything
@@ -66,10 +71,7 @@ var Auth = module.exports = (function(){
                 H.p("auth.doWhilst_create_anonymous_player", [username, count], error)
                 count++
                 if (count > 10){
-                    error = {
-                        code: OK,
-                        info: "Please choose a longer username"
-                    }
+                    error = "ERROR. Couldn't create random username. Please try again"
                     return false
                 } else if (error == K.code.create_player){
                     return true // failed to create unique player: continue
@@ -83,17 +85,6 @@ var Auth = module.exports = (function(){
                 done(error, player)
             }
         )
-    }
-
-    function create_anonymous_player(username, done){
-        var tail = "_" + randomstring.generate(4)
-        var random_username = username + tail
-        var random_pass = randomstring.generate(64) // not really secure but ok for guest players
-        createPlayer({
-            name: random_username,
-            pass: random_pass,
-            guest: true
-        }, done)
     }
 
     function authRegister(req, res){ // register
