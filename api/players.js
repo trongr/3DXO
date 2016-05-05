@@ -2,6 +2,7 @@ var _ = require("lodash")
 var async = require("async")
 var express = require('express');
 var H = require("../static/js/h.js")
+var K = require("./k.js")
 var Conf = require("../static/conf.json") // shared with client
 var Player = require("../models/player.js")
 var Piece = require("../models/piece.js")
@@ -19,14 +20,14 @@ var Players = module.exports = (function(){
                 var player, king = null
             } catch (e){
                 H.log("ERROR. Players.get: invalid data", req.query, req.session, e.stack)
-                return res.send({info:Conf.code.get_player})
+                return res.send({info:K.code.get_player})
             }
             Player.findOne({name:name}, function(er, player){
                 if (player){
                     res.send({ok:true, player:player})
                 } else {
                     H.log("ERROR. Players.get", name, er)
-                    res.send({info:Conf.code.get_player})
+                    res.send({info:K.code.get_player})
                 }
             })
         })
@@ -40,7 +41,7 @@ var Players = module.exports = (function(){
             var player, kings = null
         } catch (e){
             H.log("ERROR. Players.getPlayerByID: invalid data", req.params, e.stack)
-            return res.send({info:Conf.code.get_player})
+            return res.send({info:K.code.get_player})
         }
         async.waterfall([
             function(done){
@@ -60,7 +61,7 @@ var Players = module.exports = (function(){
                 res.send({ok:true, player:player, kings:kings})
             } else {
                 H.log("ERROR. Players.getPlayerByID", playerID)
-                res.send({info:Conf.code.get_player})
+                res.send({info:K.code.get_player})
             }
         })
     }

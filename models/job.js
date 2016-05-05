@@ -1,5 +1,6 @@
 var mongoose = require('mongoose');
 var DB = require("../db.js")
+var H = require("../static/js/h.js")
 
 // todo index data.pieceID for automove job lookup
 var schema = mongoose.Schema({
@@ -55,6 +56,47 @@ schema.statics.checkJobCancelled = function(jobID, done){
             var error = ["ERROR. Worker.automove.Job.findOneByID: job not found", jobID]
         }
         done(error, job)
+    })
+}
+
+schema.statics.cancel_delay_remove_army = function(playerID, done){
+    H.p("Job.cancel_delay_remove_army", playerID)
+    this.update({
+        "task": "remove_army",
+        "data.playerID": playerID,
+        "data.army_alive": true // only let player cancel
+        // remove_army jobs, i.e. reclaim
+        // their army if it's still alive
+    }, {
+        $set: {
+            cancelled: true,
+            modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
+        },
+    }, {
+        multi: true
+    }, function(er, num){
+        if (er) var error = ["ERROR. Job.cancel_delay_remove_army", playerID, er]
+        if (done) done(error)
+        else if (error) H.p("Job.cancel_delay_remove_army", null, error)
+    })
+}
+
+schema.statics.cancel_delay_remove_anonymous_player = function(playerID, done){
+    H.p("Job.cancel_delay_remove_anonymous_player", playerID)
+    this.update({
+        "task": "remove_anonymous_player",
+        "data.playerID": playerID,
+    }, {
+        $set: {
+            cancelled: true,
+            modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
+        },
+    }, {
+        multi: true
+    }, function(er, num){
+        if (er) var error = ["ERROR. Job.cancel_delay_remove_anonymous_player", playerID, er]
+        if (done) done(error)
+        else if (error) H.p("Job.cancel_delay_remove_anonymous_player", null, error)
     })
 }
 

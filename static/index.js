@@ -98,7 +98,7 @@ var Menu = (function(){
 
     Menu.init = function(){
         var html = "<div id='menu_box'>"
-            +           "<input id='play_as_guest_input' type='text' placeholder='pick a username'>"
+            +           "<input id='play_as_guest_input' type='text' placeholder='pick a name (opt.)'>"
             +           "<button id='play_as_guest_button' href='#'>Play as guest</button>"
             +           "<button id='toggle_register' href='#'>REGISTER</button>"
             +           "<button id='toggle_login' href='#'>LOGIN</button>"
@@ -125,8 +125,17 @@ var Menu = (function(){
         $("#login_button").on("click", login_button)
 
         $("#play_as_guest_input").on("focus", play_as_guest_input_focus)
+        $("#play_as_guest_input").on("keypress", play_as_guest_input_keypress)
         $("#play_as_guest_button").on("click", play_as_guest_button_click)
 
+    }
+
+    function play_as_guest_input_keypress(event){
+        var key = event.keyCode || event.which
+        if (key == 13){ // new line
+            $("#play_as_guest_button").click()
+            return false
+        }
     }
 
     function play_as_guest_button_click(){
@@ -498,58 +507,13 @@ var Console = (function(){
         Console.print("Ragnarook is a Massively Multiplayer Persistent Open World Game "
                       + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
                       + "Prepare to punish your enemies in a semi-turn-based fashion!")
-        // Console.print("Ragnarook is a <i>Massively Multiplayer Online Open World Exploration Creative Building Semi-Real Time Strategy Role-Playing Game</i> "
-        //               + "based on Chess, where players form Alliances, build Empires, and conquer the World. "
-        //               + "Prepare to punish your enemies in a semi-turn-based fashion!")
         Console.print("<hr>")
-        // Console.print("<h2 class='yellow'>Getting Started</h2>")
-        // Console.print("<ol>"
-        //               + "<li>Read the Rules to learn how to play, or watch this <a href='mach' target='_blank'>video tutorial.</a></li>"
-        //               + "<li>Register an account.</li>"
-        //               + "<li>Play!</li>"
-        // //               + "</ol>")
         Console.print("<h2 class='yellow'>How to play</h2>")
         Console.print("<ol>"
                       + "<li>Left mouse click: move pieces.</li>"
                       + "<li>Right mouse drag: navigate map.</li>"
                       + "<li>Middle mouse scroll: zoom.</li>"
                       + "</ol>")
-        // Console.print("<h2 class='console_header' data-console-line='rules'>II. Rules</h2>")
-        // Console.print("<ol class='console_content' data-console-line='rules'>"
-        //               // + "<li></li>"
-        //               // alternatively different zones have different rules, e.g. some zones lets you move
-        //               // any number of pieces, some 4 at a time, some 2, some just 1, per army.
-
-        //               // + "<li>Similar to Chess: click on a piece to see its available moves.</li>"
-
-        //               // // mode 1
-        //               + "<li>You can move any number of pieces at any time. Once moved, each piece needs "
-        //               + " 30 seconds to recharge before it can move again.</li>"
-        //               + "<li>You can move your entire army from an 8 x 8 zone to a neighbouring zone if there are no "
-        //               + "enemies in your zone, and no king or queen in the destination zone. If there are non-royal enemies in "
-        //               + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
-        //               + "<li>Capturing an enemy king will convert his remaining army to your side.</li>"
-        //               + "</ol>")
-
-        //               // // mode 2
-        //               // + "<li><u>Limited Moves.</u> You can move one piece every 15 seconds per 8 x 8 zone. A cross-zone move puts a clock on both zones. "
-        //               // + "These moves are marked by yellow clocks.</li>"
-        //               // + "<li><u>Unlimited Moves.</u> You can additionally move any number of pieces in a zone, provided there are no enemies in that zone. "
-        //               // + "Similarly, unlimited cross-zone moves require both zones to have no enemies. "
-        //               // + "These moves are marked by green clocks.</li>"
-        //               // + "<li><u>Zone Moves.</u> You can move your army from one zone to a neighbouring zone if there are no "
-        //               // + "enemies in your zone, and no king or queen in the destination zone. If there are non-royal enemies in "
-        //               // + "the destination zone, they will be killed. Click on your king to highlight available zones.</li>"
-        //               // + "<li><u>Winning Moves.</u> Capturing an enemy king will convert his remaining army to your side.</li>"
-        //               // + "</ol>")
-        // Console.print("<h2 class='console_header' data-console-line='dev_note'>III. Gameplay Notes</h2>")
-        // Console.print("<div class='console_content' data-console-line='dev_note'>Ragnarook is in early alpha, and persistent gameplay "
-        //               + "is still under development. In the meantime your pieces will disappear 10 minutes after you log out, giving other players 10 minutes to capture your king "
-        //               + "and gain your pieces. You can respawn a new army at any time by clicking on the <u>NEW_GAME</u> button. "
-        //               + "<br><br>It's highly recommended that you team up with other players around you, as your opponents will "
-        //               + "most likely do the same, and they'll overwhelm you on your own. You can chat using the chat box at the bottom of this panel."
-        //               + "<br><br>Please use Google Chrome for best performance."
-        //               + "</div>")
         Console.print("<h2 class='console_header' data-console-line='about'>About</h2>")
         Console.print("<div class='console_content' data-console-line='about'>Hello! My name is Trong. I'm a developer from Toronto, Canada, and Ragnarook is my first game. Enjoy!<br><br>"
                       // + "<a href='https://www.facebook.com/groups/1755519304678543/' target='_blank'>facebook</a> <a href='http://chessv2.tumblr.com/' target='_blank'>blog</a>"

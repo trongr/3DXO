@@ -19,13 +19,16 @@ var Queue = require("../lib/queue.js")
 var S = Conf.zone_size
 var OK = "OK"
 
-var REMOVE_ARMY_JOB_TTL = 60 * 60 * 1000 // ms
-var REMOVE_ARMY_TIMEOUT = 10 * 60 * 1000 // ms
-// var REMOVE_ARMY_TIMEOUT = 30 * 1000 // ms
+var REMOVE_ARMY_JOB_TTL = 60 * 60 * 1000 // ms. 1 hour
+var REMOVE_ARMY_TIMEOUT = 10 * 60 * 1000 // ms. 10 mins
 var NEW_ARMY_RATE_LIMIT = 60 * 1000 // ms
 var NEW_ARMY_RATE_LIMIT_MSG = "Please wait "
     + parseInt(NEW_ARMY_RATE_LIMIT / 1000)
     + " sec. in between starting a new game.";
+
+// should be the same as REMOVE_ARMY_JOB_TTL and REMOVE_ARMY_TIMEOUT
+var REMOVE_ANONYMOUS_PLAYER_JOB_TTL = 60 * 60 * 1000 // ms. 1 hour
+var REMOVE_ANONYMOUS_PLAYER_TIMEOUT = 10 * 60 * 1000 // ms. 10 mins
 
 function alertElapsed(start, max_dur, msg){
     var elapsed = new Date().getTime() - start
@@ -655,7 +658,8 @@ var Game = module.exports = (function(){
                     ttl: REMOVE_ARMY_JOB_TTL,
                     playerID: playerID,
                     army_id: army_id,
-                    army_alive: army_alive
+                    army_alive: army_alive,
+                    remove: true
                 }, function(er){ // this is only the callback to job enqueue
                     done(er)
                 })
@@ -674,25 +678,16 @@ var Game = module.exports = (function(){
         })
     }
 
-    Game.cancel_delay_remove_army = function(playerID, done){
-        H.log("INFO. Game.cancel_delay_remove_army", playerID)
-        Job.update({
-            "task": "remove_army",
-            "data.playerID": playerID,
-            "data.army_alive": true // only let player cancel
-                                    // remove_army jobs, i.e. reclaim
-                                    // their army if it's still alive
-        }, {
-            $set: {
-                cancelled: true,
-                modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
-            },
-        }, {
-            multi: true
-        }, function(er, num){
-            if (er) var error = ["ERROR. Game.cancel_delay_remove_army", playerID, er]
-            if (done) done(error)
-            else if (error) H.log(error)
+    Game.delay_remove_anonymous_player = function(playerID){
+        Queue.job({
+            task: "remove_anonymous_player",
+            title: "Game.delay_remove_anonymous_player",
+            delay: REMOVE_ANONYMOUS_PLAYER_TIMEOUT,
+            ttl: REMOVE_ANONYMOUS_PLAYER_JOB_TTL,
+            playerID: playerID,
+            remove: true
+        }, function(er){ // this is only the callback to job enqueue
+            H.p("Game.delay_remove_anonymous_player", playerID, er)
         })
     }
 

@@ -68,4 +68,13 @@ schema.statics.findOneByID = function(playerID, done){
     })
 };
 
+schema.statics.remove_anonymous_player = function(playerID, done){
+    this.remove({
+        _id: playerID,
+        guest: true
+    }, function(er) {
+        done(er)
+    });
+};
+
 module.exports = mongoose.model('Player', schema);

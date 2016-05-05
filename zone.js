@@ -7,6 +7,7 @@ var Conf = require("./static/conf.json") // shared with client
 var Game = require("./api/game.js")
 var Players = require("./api/players.js")
 var Player = require("./models/player.js")
+var Job = require("./models/job.js")
 var Pub = require("./api/pub.js")
 var Validate = require("./lib/validate.js")
 
@@ -194,6 +195,7 @@ var Sub = (function(){
                     Game.delay_remove_army(playerID, true, function(er){
                         if (er) H.log(er)
                     })
+                    if (player.guest) Game.delay_remove_anonymous_player(playerID)
                 } // else guest: nothing else to clean up
                 H.log("INFO. Zone.removePlayer", playerID, sessionID)
             } else {
@@ -267,7 +269,13 @@ var Zone = module.exports = (function(){
                             _playerID = data.playerID
                             _player = player
                             Players.updateOnline(_playerID, Conf.status.online)
-                            Game.cancel_delay_remove_army(_playerID)
+                            // wait in case server slow and still
+                            // hadn't created the job obj, so this
+                            // can't cancel it
+                            setTimeout(function(){
+                                Job.cancel_delay_remove_army(_playerID)
+                                Job.cancel_delay_remove_anonymous_player(_playerID)
+                            }, 5000)
                             conn.write(JSON.stringify({chan:"authend", ok:true}))
                             H.log("INFO. Zone.authenticate.ok", _playerID, data.token, _sessionID)
                         } else {
