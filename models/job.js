@@ -47,13 +47,13 @@ schema.statics.cancelJob = function(query, done){
 schema.statics.checkJobCancelled = function(jobID, done){
     this.findOneByID(jobID, function(er, job){
         if (er){
-            var error = ["ERROR. Worker.automove.Job.findOneByID", jobID, er]
+            var error = ["ERROR. Job.findOneByID", jobID, er]
         } else if (job && job.cancelled){
-            var error = "INFO. Worker.automove.Job.findOneByID: cancelled: " + jobID
+            var error = "INFO. Job.findOneByID: cancelled: " + jobID
         } else if (job){
             var error = null
         } else {
-            var error = ["ERROR. Worker.automove.Job.findOneByID: job not found", jobID]
+            var error = ["ERROR. Job.findOneByID: job not found", jobID]
         }
         done(error, job)
     })
@@ -77,7 +77,7 @@ schema.statics.cancel_delay_remove_army = function(playerID, done){
     }, function(er, num){
         if (er) var error = ["ERROR. Job.cancel_delay_remove_army", playerID, er]
         if (done) done(error)
-        else if (error) H.p("Job.cancel_delay_remove_army", null, error)
+        else if (error) H.p("Job.cancel_delay_remove_army", playerID, error)
     })
 }
 
@@ -96,7 +96,7 @@ schema.statics.cancel_delay_remove_anonymous_player = function(playerID, done){
     }, function(er, num){
         if (er) var error = ["ERROR. Job.cancel_delay_remove_anonymous_player", playerID, er]
         if (done) done(error)
-        else if (error) H.p("Job.cancel_delay_remove_anonymous_player", null, error)
+        else if (error) H.p("Job.cancel_delay_remove_anonymous_player", playerID, error)
     })
 }
 

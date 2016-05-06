@@ -20,8 +20,10 @@ var Worker = module.exports = (function(){
             var data = _job.data
             var jobID = data.jobID
             Job.checkJobCancelled(jobID, function(er, job){
-                if (er) done(er)
-                else remove_army(job, function(er){
+                if (er){
+                    Job.remove({_id: jobID}, function(er){})
+                    done(er)
+                } else remove_army(job, function(er){
                     Job.remove({_id: jobID}, function(er){})
                     done(er)
                 })

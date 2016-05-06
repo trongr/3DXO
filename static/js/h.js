@@ -11,6 +11,7 @@ var H = module.exports = (function(){
         return req.params[param] || req.query[param] || req.body[param]
     }
 
+    // USE ON SERVER ONLY, DO NOT USE ON CLIENT
     H.p = function(msg, data, er){
         try {
             // mach error logging server
@@ -18,7 +19,7 @@ var H = module.exports = (function(){
                 t: new Date(),
                 type: ((er && er != OK)? "ERROR" : "INFO"),
                 msg: msg,
-                data: data,
+                data: data, // stringify so you can query by text
                 er: er,
             }, 0, 2))
         } catch (e){

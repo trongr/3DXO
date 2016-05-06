@@ -34,6 +34,12 @@ hr {
     cursor: hand;
 }
 
+#menu_info_box {
+    color: yellow;
+    margin: 5px;
+    display: none;
+}
+
 #register_box {
     color: white;
     margin: 5px;

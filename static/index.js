@@ -12,8 +12,8 @@ var K = (function(){
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
         CAM_DIST_MIN: 50,
 
-        CAM_DIST_MAX: 100,
-        // CAM_DIST_MAX: 150,
+        // CAM_DIST_MAX: 100,
+        CAM_DIST_MAX: 150,
         // CAM_DIST_MAX: 1000,
 
         CAM_DIST_INIT: 65,
@@ -103,6 +103,7 @@ var Menu = (function(){
             +           "<button id='toggle_register' href='#'>REGISTER</button>"
             +           "<button id='toggle_login' href='#'>LOGIN</button>"
             +           "<button id='new_game' href='#'>NEW_GAME</button>"
+            +           "<div id='menu_info_box'>mach</div>"
             +           "<div id='register_box' class='input_parent'>"
             +               "<input id='register_username' type='text' placeholder='username'><br>"
             +               "<input id='register_password' type='password' placeholder='passphrase'><br>"
@@ -238,11 +239,11 @@ var Menu = (function(){
         var player = null
         if (!username || !password){
             $this.prop('disabled', false);
-            return Console.warn("Please enter both username and passphrase")
+            return log_menu_info_box("Please enter both username and passphrase")
         }
         if (password != password_retype){
             $this.prop('disabled', false);
-            return Console.warn("Passphrases don't match")
+            return log_menu_info_box("Passphrases don't match")
         }
         // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
         // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
@@ -266,7 +267,7 @@ var Menu = (function(){
             }
         ], function(er){
             if (er){
-                Console.warn(er)
+                $("#menu_info_box").show().html(er)
             } else {
                 Console.info("Registration successful")
                 location.href = "/";
@@ -282,7 +283,7 @@ var Menu = (function(){
         var password = $("#login_password").val()
         if (!username || !password){
             $this.prop('disabled', false);
-            return Console.warn("Please enter both username and passphrase")
+            return log_menu_info_box("Please enter both username and passphrase")
         }
         // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
         // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
@@ -295,10 +296,14 @@ var Menu = (function(){
                 Console.info("Login successful")
                 location.href = "/";
             } else {
-                Console.warn(er)
+                log_menu_info_box(er)
             }
             $this.prop('disabled', false);
         })
+    }
+
+    function log_menu_info_box(msg){
+        $("#menu_info_box").show().html(msg)
     }
 
     return Menu
