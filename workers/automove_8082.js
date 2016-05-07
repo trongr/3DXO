@@ -8,9 +8,6 @@ var async = require('async');
 
 var H = require("../static/js/h.js")
 var K = require("../api/k.js")
-var Pub = require("../api/pub.js")
-var Pieces = require("../api/pieces.js")
-var Clocks = require("../api/clocks.js")
 var Game = require("../api/game.js")
 var Job = require("../models/job.js")
 var Player = require("../models/player.js")

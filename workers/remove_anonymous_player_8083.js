@@ -7,7 +7,6 @@ var _ = require("lodash")
 var async = require('async');
 
 var H = require("../static/js/h.js")
-var Pub = require("../api/pub.js")
 var Job = require("../models/job.js")
 var Player = require("../models/player.js")
 
