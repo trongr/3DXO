@@ -207,6 +207,7 @@ var Menu = (function(){
 
     function toggle_register(){
         $("#register_box").toggle()
+        $("#menu_info_box").hide()
         if ($("#register_box").is(":visible")){
             $("#login_box").hide()
             Console.toggleAlwaysFocus(false)
@@ -219,6 +220,7 @@ var Menu = (function(){
 
     function toggle_login(){
         $("#login_box").toggle()
+        $("#menu_info_box").hide()
         if ($("#login_box").is(":visible")){
             $("#register_box").hide()
             Console.toggleAlwaysFocus(false)

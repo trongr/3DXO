@@ -1,6 +1,7 @@
 var mongoose = require('mongoose');
 var DB = require("../db.js")
 var H = require("../static/js/h.js")
+var K = require("../api/k.js")
 
 // todo index data.pieceID for automove job lookup
 var schema = mongoose.Schema({
@@ -20,7 +21,7 @@ var schema = mongoose.Schema({
         // use: db.jobs.getIndexes()
     },
     modified: {type: Date, default: Date.now},
-    cancelled: { type:Boolean, default:false },
+    status: { type: String, default:"new"}, // new, working, cancelled, done, error. see api/k.js
     data: {type: mongoose.Schema.Types.Mixed}
 });
 
@@ -34,7 +35,7 @@ schema.statics.findOneByID = function(jobID, done){
 schema.statics.cancelJob = function(query, done){
     this.update(query, {
         $set: {
-            cancelled: true,
+            status: K.job.cancelled,
             modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
         },
     }, {
@@ -48,7 +49,7 @@ schema.statics.checkJobCancelled = function(jobID, done){
     this.findOneByID(jobID, function(er, job){
         if (er){
             var error = ["ERROR. Job.findOneByID", jobID, er]
-        } else if (job && job.cancelled){
+        } else if (job && job.status == K.job.cancelled){
             var error = "INFO. Job.findOneByID: cancelled: " + jobID
         } else if (job){
             var error = null
@@ -69,7 +70,7 @@ schema.statics.cancel_delay_remove_army = function(playerID, done){
         // their army if it's still alive
     }, {
         $set: {
-            cancelled: true,
+            status: K.job.cancelled,
             modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
         },
     }, {
@@ -88,7 +89,7 @@ schema.statics.cancel_delay_remove_anonymous_player = function(playerID, done){
         "data.playerID": playerID,
     }, {
         $set: {
-            cancelled: true,
+            status: K.job.cancelled,
             modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
         },
     }, {

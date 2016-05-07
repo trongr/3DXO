@@ -6,4 +6,11 @@ var K = module.exports = {
         block: "block",
         piece_timeout: "piece_timeout",
     },
+    job: {
+        "new": "new",
+        cancelled: "cancelled",
+        working: "working",
+        done: "done",
+        error: "error",
+    }
 }
