@@ -56,20 +56,26 @@ var Worker = module.exports = (function(){
             // mach update job status
             async.waterfall([
                 function(done){
-                    Job.checkJobCancelled(jobID, function(er, _job){
+                    Job.update_job_status(jobID, K.job.new, K.job.working, function(er, _job){
                         job = _job
-                        done(er)
+                        if (job) done(null)
+                        else done("no job or status changed: most likely cancelled")
                     })
                 },
                 function(done){
                     setTimeout(function(){
                         automove(job, done)
                     }, job.data.delay || 0)
-                }
-                // mach update job status to done, even though will
-                // delete right away, in case delete fails and you can
-                // still tell the job is done or not. if not done
-                // retry when worker restarts
+                },
+                // update job status to done, even though will delete
+                // right away, in case delete fails and you can still
+                // tell the job is done or not. if not done retry when
+                // worker restarts
+                function(done){
+                    Job.update_job_status(jobID, K.job.working, K.job.done, function(er, _job){
+                        done(er)
+                    })
+                },
             ], function(er){
                 H.p("worker.automove", job, er)
                 Job.remove({_id: jobID}, function(er){})
@@ -219,6 +225,7 @@ var Worker = module.exports = (function(){
         })
     }
 
+    // mach move to h.js
     function difference(list1, list2){
         try {
             return list1.filter(function(item){

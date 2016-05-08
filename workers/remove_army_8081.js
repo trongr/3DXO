@@ -4,6 +4,8 @@ var express    = require('express');
 var app        = express();
 var morgan = require('morgan');
 var bodyParser = require('body-parser');
+
+var K = require("../api/k.js")
 var H = require("../static/js/h.js")
 var Pub = require("../api/pub.js")
 var Pieces = require("../api/pieces.js")
@@ -44,25 +46,31 @@ var Worker = module.exports = (function(){
             } catch (e){
                 return H.p("worker.remove_army: invalid data", req.body, true)
             }
+            // todo refactor:
             // NOTE. Use this pattern to check if the job has been
             // cancelled, i.e. removed from the mongo db:
-            // mach update job status
             async.waterfall([
                 function(done){
-                    Job.checkJobCancelled(jobID, function(er, _job){
+                    Job.update_job_status(jobID, K.job.new, K.job.working, function(er, _job){
                         job = _job
-                        done(er)
+                        if (job) done(null)
+                        else done("no job or status changed: most likely cancelled")
                     })
                 },
                 function(done){
                     setTimeout(function(){
                         remove_army(job, done)
                     }, job.data.delay || 0)
-                }
-                // mach update job status to done, even though will
-                // delete right away, in case delete fails and you can
-                // still tell the job is done or not. if not done
-                // retry when worker restarts
+                },
+                // update job status to done, even though will delete
+                // right away, in case delete fails and you can still
+                // tell the job is done or not. if not done retry when
+                // worker restarts
+                function(done){
+                    Job.update_job_status(jobID, K.job.working, K.job.done, function(er, _job){
+                        done(er)
+                    })
+                },
             ], function(er){
                 H.p("worker.remove_army", job, er)
                 Job.remove({_id: jobID}, function(er){})

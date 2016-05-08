@@ -83,7 +83,6 @@ schema.statics.cancel_delay_remove_army = function(playerID, done){
 }
 
 schema.statics.cancel_delay_remove_anonymous_player = function(playerID, done){
-    H.p("Job.cancel_delay_remove_anonymous_player", playerID)
     this.update({
         "task": "remove_anonymous_player",
         "data.playerID": playerID,
@@ -98,6 +97,26 @@ schema.statics.cancel_delay_remove_anonymous_player = function(playerID, done){
         if (er) var error = ["ERROR. Job.cancel_delay_remove_anonymous_player", playerID, er]
         if (done) done(error)
         else if (error) H.p("Job.cancel_delay_remove_anonymous_player", playerID, error)
+    })
+}
+
+schema.statics.update_job_status = function(jobID, old_status, status, done){
+    this.findOneAndUpdate({
+        _id: jobID,
+        status: old_status // need this in case status changed before we update
+    }, {
+        $set: {
+            status: status,
+            modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
+        },
+    }, {
+        new: true
+    }, function(er, job){
+        if (er){
+            done(["ERROR. job.update_job_status", jobID, old_status, status, er])
+        } else {
+            done(null, job)
+        }
     })
 }
 

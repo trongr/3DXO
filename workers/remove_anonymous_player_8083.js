@@ -41,29 +41,35 @@ var Worker = module.exports = (function(){
                 var jobID = req.body.jobID
                 var job = null
             } catch (e){
-                return H.p("worker.automove: invalid data", req.body, true)
+                return H.p("worker.remove_anonymous_player: invalid data", req.body, true)
             }
             // NOTE. Use this pattern to check if the job has been
             // cancelled, i.e. removed from the mongo db:
             // mach update job status
             async.waterfall([
                 function(done){
-                    Job.checkJobCancelled(jobID, function(er, _job){
+                    Job.update_job_status(jobID, K.job.new, K.job.working, function(er, _job){
                         job = _job
-                        done(er)
+                        if (job) done(null)
+                        else done("no job or status changed: most likely cancelled")
                     })
                 },
                 function(done){
                     setTimeout(function(){
                         remove_anonymous_player(job, done)
                     }, job.data.delay || 0)
-                }
-                // mach update job status to done, even though will
-                // delete right away, in case delete fails and you can
-                // still tell the job is done or not. if not done
-                // retry when worker restarts
+                },
+                // update job status to done, even though will delete
+                // right away, in case delete fails and you can still
+                // tell the job is done or not. if not done retry when
+                // worker restarts
+                function(done){
+                    Job.update_job_status(jobID, K.job.working, K.job.done, function(er, _job){
+                        done(er)
+                    })
+                },
             ], function(er){
-                H.p("worker.automove", job, er)
+                H.p("worker.remove_anonymous_player", job, er)
                 Job.remove({_id: jobID}, function(er){})
             })
         })
