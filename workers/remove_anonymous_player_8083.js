@@ -1,78 +1,23 @@
-var http       = require("http")
-var express    = require('express');
-var app        = express();
-var morgan = require('morgan');
-var bodyParser = require('body-parser');
 var _ = require("lodash")
 var async = require('async');
-
 var H = require("../static/js/h.js")
 var Job = require("../models/job.js")
 var Player = require("../models/player.js")
-
-// app.use(morgan('dev'));
-app.use(morgan('combined', {
-    // toggle to see request logs
-    // skip: function(req, res) { return res.statusCode < 400 }
-}));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// cross-origin
-app.use(function(req, res, next) {
-    res.header("Access-Control-Allow-Origin", req.headers.origin) // allows all
-    res.header("Access-Control-Allow-Credentials", "true")
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
-    next()
-});
+var Jobs = require("./jobs.js")
 
 var Worker = module.exports = (function(){
-    var Worker = {
-        router: express.Router()
-    }
+    var Worker = {}
 
+    // move to jobs.js
     var CONCURRENCY = 1000
 
-    Worker.router.route("/")
-        .post(function(req, res){
-            // maybe respond only after successfully updated job status from new to working
-            res.send({ok:true})
-            try {
-                var jobID = req.body.jobID
-                var job = null
-            } catch (e){
-                return H.p("worker.remove_anonymous_player: invalid data", req.body, true)
-            }
-            // NOTE. Use this pattern to check if the job has been
-            // cancelled, i.e. removed from the mongo db:
-            // mach update job status
-            async.waterfall([
-                function(done){
-                    Job.update_job_status(jobID, K.job.new, K.job.working, function(er, _job){
-                        job = _job
-                        if (job) done(null)
-                        else done("no job or status changed: most likely cancelled")
-                    })
-                },
-                function(done){
-                    setTimeout(function(){
-                        remove_anonymous_player(job, done)
-                    }, job.data.delay || 0)
-                },
-                // update job status to done, even though will delete
-                // right away, in case delete fails and you can still
-                // tell the job is done or not. if not done retry when
-                // worker restarts
-                function(done){
-                    Job.update_job_status(jobID, K.job.working, K.job.done, function(er, _job){
-                        done(er)
-                    })
-                },
-            ], function(er){
-                H.p("worker.remove_anonymous_player", job, er)
-                Job.remove({_id: jobID}, function(er){})
-            })
+    Worker.init = function(){
+        Jobs.on({
+            task: "remove_anonymous_player",
+            port: 8083,
+            handler: remove_anonymous_player
         })
+    }
 
     // job is the mongo job obj
     function remove_anonymous_player(job, done){
@@ -86,9 +31,4 @@ var Worker = module.exports = (function(){
     return Worker
 }())
 
-app.use('/api/v1/worker/remove_anonymous_player', Worker.router);
-
-var port = process.env.PORT || 8083;
-server = http.createServer(app);
-server.listen(port);
-console.log('starting remove_anonymous_player server on port ' + port);
+Worker.init()

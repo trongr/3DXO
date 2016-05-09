@@ -960,6 +960,7 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
+                    // mach delay automove instead of setTimeout here
                     setTimeout(function(){
                         Queue.job({
                             task: "automove",
