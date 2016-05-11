@@ -19,11 +19,15 @@ var Worker = module.exports = (function(){
     var AUTOMOVE_LOOP_MAX_ERCOUNT = 64
 
     Worker.init = function(){
-        Jobs.on({
-            task: "automove",
-            port: 8082,
-            handler: automove
-        })
+        Jobs.listen({port: 8082})
+        Jobs.on({task: "automove", handler: automove})
+        Jobs.on({task: "cancel_automove", handler: cancel_automove})
+    }
+
+    // mach this guy doesn't know the jobID to cancel
+    function cancel_automove(job, done){
+        console.log("cancelling automove")
+        done(null)
     }
 
     // job is the mongo job obj

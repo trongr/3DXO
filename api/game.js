@@ -14,7 +14,7 @@ var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
 var Clocks = require("../api/clocks.js")
 var Validate = require("../lib/validate.js")
-var Queue = require("../lib/queue.js")
+var Boss = require("../workers/boss.js")
 
 var S = Conf.zone_size
 var OK = "OK"
@@ -651,7 +651,7 @@ var Game = module.exports = (function(){
             },
             function(done){
                 army_id = king.army_id
-                Queue.job({
+                Boss.job({
                     task: "remove_army",
                     title: "Game.delay_remove_army",
                     delay: REMOVE_ARMY_TIMEOUT,
@@ -659,7 +659,6 @@ var Game = module.exports = (function(){
                     playerID: playerID,
                     army_id: army_id,
                     army_alive: army_alive,
-                    remove: true
                 }, function(er){ // this is only the callback to job enqueue
                     done(er)
                 })
@@ -679,13 +678,12 @@ var Game = module.exports = (function(){
     }
 
     Game.delay_remove_anonymous_player = function(playerID){
-        Queue.job({
+        Boss.job({
             task: "remove_anonymous_player",
             title: "Game.delay_remove_anonymous_player",
             delay: REMOVE_ANONYMOUS_PLAYER_TIMEOUT,
             ttl: REMOVE_ANONYMOUS_PLAYER_JOB_TTL,
             playerID: playerID,
-            remove: true
         }, function(er){ // this is only the callback to job enqueue
             H.p("Game.delay_remove_anonymous_player", playerID, er)
         })
@@ -947,6 +945,7 @@ var Game = module.exports = (function(){
                 },
                 function(done){
                     // todo maybe do a find first. if exists cancel
+                    // mach
                     Job.cancelJob({
                         "data.pieceID": pieceID
                     }, function(er, num){
@@ -960,19 +959,16 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    // mach delay automove instead of setTimeout here
-                    setTimeout(function(){
-                        Queue.job({
-                            task: "automove",
-                            title: "Game.automove",
-                            playerID: playerID,
-                            pieceID: pieceID,
-                            to: to,
-                            remove: true // remove on complete (and failed)
-                        }, function(er){ // this is only the callback to job enqueue
-                            done(er)
-                        })
-                    }, wait_time)
+                    Boss.job({
+                        task: "automove",
+                        title: "Game.automove",
+                        playerID: playerID,
+                        pieceID: pieceID,
+                        to: to,
+                        delay: wait_time
+                    }, function(er){ // this is only the callback to job enqueue
+                        done(er)
+                    })
                 },
             ], function(er){
                 H.p("Game.automove", [playerID, pieceID, to], er)
@@ -993,6 +989,7 @@ var Game = module.exports = (function(){
             } catch (e){
                 return H.p("game.cancel_automove: invalid input", data, e.stack)
             }
+            // mach
             Job.cancelJob({
                 "data.pieceID": pieceID
             }, function(er, num){

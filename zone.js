@@ -272,6 +272,7 @@ var Zone = module.exports = (function(){
                             // wait in case server slow and still
                             // hadn't created the job obj, so this
                             // can't cancel it
+                            // mach
                             setTimeout(function(){
                                 Job.cancel_delay_remove_army(_playerID)
                                 Job.cancel_delay_remove_anonymous_player(_playerID)

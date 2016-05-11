@@ -13,11 +13,14 @@ var Worker = module.exports = (function(){
     var CONCURRENCY = 1000
 
     Worker.init = function(){
-        Jobs.on({
-            task: "remove_army",
-            port: 8081,
-            handler: remove_army
-        })
+        Jobs.listen({port: 8081})
+        Jobs.on({task: "remove_army", handler: remove_army})
+        Jobs.on({task: "cancel_remove_army", handler: cancel_remove_army})
+    }
+
+    function cancel_remove_army(job, done){
+        // mach
+        done(null)
     }
 
     // job is the mongo job obj
