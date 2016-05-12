@@ -7,8 +7,9 @@ var K = module.exports = {
         piece_timeout: "piece_timeout",
     },
     job: {
-        "new": "new", // job created, until delay times out
-        working: "working", // (possible delay over) starts working
+        "new": "new",
+        working: "working",
+        // these will probably not be around cause we'll delete most jobs
         cancelled: "cancelled",
         done: "done",
         error: "error",

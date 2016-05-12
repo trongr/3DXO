@@ -5,7 +5,7 @@ var _ = require("lodash")
 var async = require("async")
 var express = require('express');
 var H = require("../static/js/h.js")
-var K = require("./k.js")
+var K = require("../k.js")
 var Validate = require("../lib/validate.js")
 var Player = require("../models/player.js")
 

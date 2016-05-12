@@ -192,9 +192,7 @@ var Sub = (function(){
                 delete _sessions[sessionID]
                 if (player){ // authenticated player
                     Players.updateOnline(playerID, Conf.status.offline)
-                    Game.delay_remove_army(playerID, true, function(er){
-                        if (er) H.log(er)
-                    })
+                    Game.delay_remove_army(playerID, true, function(er){if (er) H.log(er)})
                     if (player.guest) Game.delay_remove_anonymous_player(playerID)
                 } // else guest: nothing else to clean up
                 H.log("INFO. Zone.removePlayer", playerID, sessionID)
@@ -272,10 +270,9 @@ var Zone = module.exports = (function(){
                             // wait in case server slow and still
                             // hadn't created the job obj, so this
                             // can't cancel it
-                            // mach
                             setTimeout(function(){
-                                Job.cancel_delay_remove_army(_playerID)
-                                Job.cancel_delay_remove_anonymous_player(_playerID)
+                                Job.cancel_remove_army(_playerID)
+                                Job.cancel_remove_anonymous_player(_playerID)
                             }, 5000)
                             conn.write(JSON.stringify({chan:"authend", ok:true}))
                             H.log("INFO. Zone.authenticate.ok", _playerID, data.token, _sessionID)

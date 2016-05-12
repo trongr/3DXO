@@ -1,3 +1,4 @@
+var async = require("async")
 var mongoose = require('mongoose');
 var Validate = require("../lib/validate.js")
 var DB = require("../db.js")
@@ -9,34 +10,22 @@ var schema = mongoose.Schema({
     // previous x and y
     px: {type: Number, required: true, validate: [Validate.isInt, "x not int"]},
     py: {type: Number, required: true, validate: [Validate.isInt, "y not int"]},
-    army_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true
-    },
-    player: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Player',
-        required: true,
-    },
+    army_id: {type: mongoose.Schema.Types.ObjectId, required: true},
+    player: {type: mongoose.Schema.Types.ObjectId, ref: 'Player', required: true},
     // team: {
     //     type: mongoose.Schema.Types.ObjectId,
     //     ref: 'Team',
     //     required: true,
     // },
-    created: {
-        type: Date,
-        default: Date.now
-    },
-    modified: {
-        type: Date,
-        default: Date.now
-    },
-    moved: { // when this piece last moved
-        type: Date,
-        default: null
-    },
-    alive: { type:Boolean, default:true }
+    created: {type: Date, default: Date.now},
+    modified: {type: Date, default: Date.now},
+    moved: { type: Date, default: null}, // when this piece last moved
+    alive: { type:Boolean, default:true },
+
+    automove: {type: mongoose.Schema.Types.ObjectId, ref: 'Job'},
 });
+
+schema.index({x:1, y:1})
 
 // todo time this for performance
 schema.statics.random = function(callback) {
@@ -80,6 +69,47 @@ schema.statics.findPlayerKings = function(playerID, done){
     }, null, {}, function(er, kings){
         if (kings) done(null, kings)
         else done(["ERROR. Piece.findPlayerKings", playerID, er])
+    })
+}
+
+schema.statics.update_automove_job_id = function(pieceID, jobID, done){
+    this.update({
+        _id: pieceID
+    }, {
+        $set: {
+            automove: jobID
+        }
+    }, function(er, re){
+        done(er)
+    })
+}
+
+schema.statics.remove_by_player_and_army_id = function(playerID, army_id, done){
+    var _this = this
+    var pieces = []
+    async.waterfall([
+        function(done){
+            // just find so we can return and publish these
+            _this.find({
+                player: playerID,
+                army_id: army_id
+            }).exec(function(er, _pieces){
+                pieces = _pieces
+                done(er)
+            });
+        },
+        function(done){
+            // might not be most efficient to do another dup search here, but eh:
+            _this.remove({
+                player: playerID,
+                army_id: army_id
+            }, function(er) {
+                done(er)
+            });
+        }
+    ], function(er){
+        if (er) done(["ERROR. Piece.remove_by_player_and_army_id", playerID, army_id, er])
+        else done(null, pieces)
     })
 }
 

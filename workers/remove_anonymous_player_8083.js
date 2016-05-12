@@ -14,12 +14,6 @@ var Worker = module.exports = (function(){
     Worker.init = function(){
         Jobs.listen({port: 8083})
         Jobs.on({task: "remove_anonymous_player", handler: remove_anonymous_player})
-        Jobs.on({task: "cancel_remove_anonymous_player", handler: cancel_remove_anonymous_player})
-    }
-
-    function cancel_remove_anonymous_player(job, done){
-        // mach
-        done(null)
     }
 
     // job is the mongo job obj

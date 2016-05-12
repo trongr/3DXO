@@ -1,27 +1,26 @@
 var mongoose = require('mongoose');
 var DB = require("../db.js")
 var H = require("../static/js/h.js")
-var K = require("../api/k.js")
+var K = require("../k.js")
 
-// todo index data.pieceID for automove job lookup
 var schema = mongoose.Schema({
     task: {type: String},
     created: {
         type: Date, default: Date.now,
-        expires: 7 * 24 * 60 * 60, // in seconds
-        // IMPORTANT.
-        // IMPORTANT.
-        // IMPORTANT. documents expire after 7 days so you can't
-        // schedule jobs to run more than 7 days into the future. if
-        // you need to do that use mongoose's expireAt feature
-        //
-        // NOTE. if you change expires, you have to drop the index in
-        // mongo, otw it'll stay the same in the db. use:
-        // db.jobs.dropIndex('created_1'). to see a list of indices,
-        // use: db.jobs.getIndexes()
+        // expires: 7 * 24 * 60 * 60, // in seconds
+        // // IMPORTANT.
+        // // IMPORTANT.
+        // // IMPORTANT. documents expire after 7 days so you can't
+        // // schedule jobs to run more than 7 days into the future. if
+        // // you need to do that use mongoose's expireAt feature
+        // //
+        // // NOTE. if you change expires, you have to drop the index in
+        // // mongo, otw it'll stay the same in the db. use:
+        // // db.jobs.dropIndex('created_1'). to see a list of indices,
+        // // use: db.jobs.getIndexes()
     },
     modified: {type: Date, default: Date.now},
-    status: { type: String, default:"new"}, // new, working, cancelled, done, error. see api/k.js
+    status: {type: String, default:"new"}, // new, working, cancelled, done, error. see k.js
     data: {type: mongoose.Schema.Types.Mixed}
 });
 
@@ -60,50 +59,34 @@ schema.statics.checkJobCancelled = function(jobID, done){
     })
 }
 
-schema.statics.cancel_delay_remove_army = function(playerID, done){
-    H.p("Job.cancel_delay_remove_army", playerID)
-    this.update({
+schema.statics.cancel_remove_army = function(playerID, done){
+    this.remove({
         "task": "remove_army",
         "data.playerID": playerID,
-        "data.army_alive": true // only let player cancel
-        // remove_army jobs, i.e. reclaim
-        // their army if it's still alive
-    }, {
-        $set: {
-            status: K.job.cancelled,
-            modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
-        },
-    }, {
-        multi: true
-    }, function(er, num){
+        // only let player cancel remove_army jobs, i.e. reclaim their
+        // army if it's still alive:
+        "data.army_alive": true
+    }, function(er, re){
         if (er) var error = ["ERROR. Job.cancel_delay_remove_army", playerID, er]
         if (done) done(error)
         else if (error) H.p("Job.cancel_delay_remove_army", playerID, error)
     })
 }
 
-schema.statics.cancel_delay_remove_anonymous_player = function(playerID, done){
-    this.update({
+schema.statics.cancel_remove_anonymous_player = function(playerID, done){
+    this.remove({
         "task": "remove_anonymous_player",
         "data.playerID": playerID,
-    }, {
-        $set: {
-            status: K.job.cancelled,
-            modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
-        },
-    }, {
-        multi: true
-    }, function(er, num){
+    }, function(er, re){
         if (er) var error = ["ERROR. Job.cancel_delay_remove_anonymous_player", playerID, er]
         if (done) done(error)
         else if (error) H.p("Job.cancel_delay_remove_anonymous_player", playerID, error)
     })
 }
 
-schema.statics.update_job_status = function(jobID, old_status, status, done){
+schema.statics.update_job_status = function(jobID, status, done){
     this.findOneAndUpdate({
         _id: jobID,
-        status: old_status // need this in case status changed before we update
     }, {
         $set: {
             status: status,
@@ -112,11 +95,8 @@ schema.statics.update_job_status = function(jobID, old_status, status, done){
     }, {
         new: true
     }, function(er, job){
-        if (er){
-            done(["ERROR. job.update_job_status", jobID, old_status, status, er])
-        } else {
-            done(null, job)
-        }
+        if (job) done(null, job)
+        else done(["ERROR. job.update_job_status", jobID, status, er])
     })
 }
 

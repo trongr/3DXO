@@ -8,7 +8,7 @@ var Job = require("../models/job.js")
 var Piece = require("../models/piece.js")
 var Player = require("../models/player.js")
 var Pub = require("../api/pub.js")
-var K = require("../api/k.js")
+var K = require("../k.js")
 var Auth = require("../api/auth.js")
 var Players = require("../api/players.js")
 var Pieces = require("../api/pieces.js")
@@ -19,23 +19,14 @@ var Boss = require("../workers/boss.js")
 var S = Conf.zone_size
 var OK = "OK"
 
-var REMOVE_ARMY_JOB_TTL = 60 * 60 * 1000 // ms. 1 hour
 var REMOVE_ARMY_TIMEOUT = 10 * 60 * 1000 // ms. 10 mins
 var NEW_ARMY_RATE_LIMIT = 60 * 1000 // ms
 var NEW_ARMY_RATE_LIMIT_MSG = "Please wait "
     + parseInt(NEW_ARMY_RATE_LIMIT / 1000)
     + " sec. in between starting a new game.";
 
-// should be the same as REMOVE_ARMY_JOB_TTL and REMOVE_ARMY_TIMEOUT
-var REMOVE_ANONYMOUS_PLAYER_JOB_TTL = 60 * 60 * 1000 // ms. 1 hour
+// should be the same as REMOVE_ARMY_TIMEOUT
 var REMOVE_ANONYMOUS_PLAYER_TIMEOUT = 10 * 60 * 1000 // ms. 10 mins
-
-function alertElapsed(start, max_dur, msg){
-    var elapsed = new Date().getTime() - start
-    if (elapsed > max_dur){
-        H.log("WARNING. " + msg + ".elapsed", elapsed)
-    }
-}
 
 var Move = (function(){
     var Move = {}
@@ -555,7 +546,6 @@ var Game = module.exports = (function(){
             }
             var player, zone = null
             var pieces = []
-            var start = new Date().getTime()
         } catch (e){
             H.log("ERROR. Game.buildArmy: invalid data", playerID, req.session.player._id, e)
             return res.send({info:ERROR_BUILD_ARMY})
@@ -575,9 +565,7 @@ var Game = module.exports = (function(){
                         var elapsed = new Date().getTime() - player.last_new_army.getTime()
                     }
                     if (elapsed > NEW_ARMY_RATE_LIMIT){
-                        Game.delay_remove_army(playerID, false, function(er){
-                            done(er)
-                        })
+                        Game.delay_remove_army(playerID, false, done)
                     } else {
                         Pub.error(playerID, NEW_ARMY_RATE_LIMIT_MSG + " Time remaining: "
                                   + parseInt((NEW_ARMY_RATE_LIMIT - elapsed) / 1000) + " seconds.")
@@ -629,7 +617,6 @@ var Game = module.exports = (function(){
                 Pub.new_army(pieces, zone)
                 res.send({ok:true, pieces:pieces})
             }
-            alertElapsed(start, 2000, "Game.buildArmy")
         })
     }
 
@@ -651,17 +638,12 @@ var Game = module.exports = (function(){
             },
             function(done){
                 army_id = king.army_id
-                Boss.job({
-                    task: "remove_army",
-                    title: "Game.delay_remove_army",
-                    delay: REMOVE_ARMY_TIMEOUT,
-                    ttl: REMOVE_ARMY_JOB_TTL,
+                Boss.remove_army({
                     playerID: playerID,
                     army_id: army_id,
                     army_alive: army_alive,
-                }, function(er){ // this is only the callback to job enqueue
-                    done(er)
-                })
+                    delay: REMOVE_ARMY_TIMEOUT,
+                }, done)
             },
             function(done){
                 if (!army_alive){ // save a db update and only do it if false
@@ -678,14 +660,9 @@ var Game = module.exports = (function(){
     }
 
     Game.delay_remove_anonymous_player = function(playerID){
-        Boss.job({
-            task: "remove_anonymous_player",
-            title: "Game.delay_remove_anonymous_player",
-            delay: REMOVE_ANONYMOUS_PLAYER_TIMEOUT,
-            ttl: REMOVE_ANONYMOUS_PLAYER_JOB_TTL,
+        Boss.remove_anonymous_player({
             playerID: playerID,
-        }, function(er){ // this is only the callback to job enqueue
-            H.p("Game.delay_remove_anonymous_player", playerID, er)
+            delay: REMOVE_ANONYMOUS_PLAYER_TIMEOUT,
         })
     }
 
@@ -801,17 +778,15 @@ var Game = module.exports = (function(){
 
         // player = player OBJ
         // data = {
-        //     playerID: playerID,
         //     pieceID: pieceID,
         //     to: [x, y],
         // }
         on.move = function(player, data, done){
             try {
-                var start = new Date().getTime()
-                var throw_msg = Validate.moveData(player, data)
+                var throw_msg = Validate.moveData(data)
                 if (throw_msg) throw throw_msg
 
-                var playerID = data.playerID
+                var playerID = player._id
                 var pieceID = data.pieceID
                 var player, piece = null
                 var px, py = null
@@ -821,7 +796,7 @@ var Game = module.exports = (function(){
                 ]
                 var hasEnemies = false
             } catch (e){
-                return H.log("ERROR. Game.move: invalid input", data, e.stack)
+                return H.p("Game.move", [player, data, e.stack], "invalid input")
             }
             async.waterfall([
                 function(done){
@@ -895,15 +870,13 @@ var Game = module.exports = (function(){
                 } else if (er){
                     H.log("ERROR. Game.move", playerID, pieceID, to, er)
                 }
-                alertElapsed(start, 1000, "Game.move")
                 if (done) done(er)
             })
         }
 
         on.automove = function(player, data, done){
             try {
-                var start = new Date().getTime()
-                var throw_msg = Validate.moveData(player, data)
+                var throw_msg = Validate.moveData(data)
                 if (throw_msg) throw throw_msg
 
                 var playerID = data.playerID
@@ -914,7 +887,7 @@ var Game = module.exports = (function(){
                     Math.floor(data.to[0]),
                     Math.floor(data.to[1]),
                 ]
-                var wait_time = 0
+                var delay = 0
             } catch (e){
                 return H.p("game.automove: invalid input", data, e.stack)
             }
@@ -944,59 +917,37 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    // todo maybe do a find first. if exists cancel
-                    // mach
-                    Job.cancelJob({
-                        "data.pieceID": pieceID
-                    }, function(er, num){
+                    Boss.cancel_automove(pieceID, function(er){
                         done(er)
                     })
                 },
                 function(done){
-                    Pieces.validatePieceTimeout(piece, function(er, _wait_time){
-                        wait_time = _wait_time || 0
+                    Pieces.validatePieceTimeout(piece, function(er, _delay){
+                        delay = _delay || 0
                         done(null)
                     })
                 },
                 function(done){
-                    Boss.job({
-                        task: "automove",
-                        title: "Game.automove",
-                        playerID: playerID,
+                    Boss.automove({
                         pieceID: pieceID,
                         to: to,
-                        delay: wait_time
-                    }, function(er){ // this is only the callback to job enqueue
-                        done(er)
-                    })
+                        delay: delay,
+                    }, done)
                 },
             ], function(er){
                 H.p("Game.automove", [playerID, pieceID, to], er)
-                alertElapsed(start, 1000, "Game.automove")
                 if (done) done(er)
             })
         }
 
         on.cancel_automove = function(player, data, done){
             try {
-                var start = new Date().getTime()
-                var throw_msg = Validate.playerPieceIDs(player, data)
-                if (throw_msg) throw throw_msg
-
-                var playerID = data.playerID
                 var pieceID = data.pieceID
-                var player, piece = null
+                Validate.mongoID(pieceID)
             } catch (e){
-                return H.p("game.cancel_automove: invalid input", data, e.stack)
+                return H.p("game.cancel_automove", [data, e.stack], "invalid input")
             }
-            // mach
-            Job.cancelJob({
-                "data.pieceID": pieceID
-            }, function(er, num){
-                H.p("Game.cancel_automove", [playerID, pieceID, num], er)
-                alertElapsed(start, 1000, "Game.cancel_automove")
-                if (done) done(er)
-            })
+            Boss.cancel_automove(pieceID)
         }
 
         // convenient method to check from and to zone
@@ -1129,7 +1080,6 @@ var Game = module.exports = (function(){
 
         // moving an entire army from one zone to another
         function zoneMove(playerID, player, king, to, done){
-            var start = new Date().getTime()
             var pieces, dx, dy
             async.waterfall([
                 function(done){
@@ -1161,7 +1111,6 @@ var Game = module.exports = (function(){
                     pubZoneMovePieces(_pieces)
                     done(null)
                 }
-                alertElapsed(start, 2000, "Game.zoneMove")
             })
         }
 

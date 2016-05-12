@@ -2,12 +2,12 @@ var request = require('request');
 var async = require('async');
 var H = require("../static/js/h.js")
 var Job = require("../models/job.js")
+var Piece = require("../models/piece.js")
+var Player = require("../models/player.js")
+var K = require("../k.js")
 
 var Boss = module.exports = (function(){
     var Boss = {}
-
-    // mach need this too
-    var JOB_TTL = 24 * 60 * 60 * 1000 // 24 hours in ms
 
     var worker_urls = {
         // mach have a list of workers per task
@@ -16,27 +16,74 @@ var Boss = module.exports = (function(){
         remove_anonymous_player: "http://localhost:8083/remove_anonymous_player",
     }
 
-    Boss.job = function(data, done){
-        var task = data.task
+    function create_job(task, data, handler){
+        var job, jobID = null
         async.waterfall([
             function(done){
+                job = new Job({
+                    task: task,
+                    status: K.job.new,
+                    data: data
+                })
+                job.save(function(er){
+                    jobID = job._id
+                    done(er)
+                })
+            },
+            function(done){
+                handler(jobID, done)
+            },
+            function(done){
                 // mach try on a list of workers
+                // mach if er retry on another worker
                 request.post({
                     url: worker_urls[task],
                     body: {
-                        data: data
+                        job: job
                     },
                     json: true
                 }, function(er, re, body){
                     done(er)
-                    // mach if er retry on another worker
                 });
-            },
+            }
         ], function(er){
-            if (done){
-                if (er) done(["ERROR. Boss.job", data, er])
-                else done(null)
-            } else H.log("ERROR. Boss.job", data, er)
+            if (er){
+                H.p("boss.create_job", [task, data], er)
+                Job.remove({_id: jobID}, function(er){})
+            }
+        })
+    }
+
+    Boss.automove = function(data, done){
+        var task = "automove"
+        var pieceID = data.pieceID
+        create_job(task, data, function(jobID, done){
+            Piece.update_automove_job_id(pieceID, jobID, done)
+        })
+    }
+
+    Boss.cancel_automove = function(pieceID, done){
+        Piece.findOneByID(pieceID, function(er, piece){
+            if (piece && piece.automove){
+                Job.remove({_id: piece.automove}, function(er){})
+            }
+            if (done) done(null)
+        })
+    }
+
+    Boss.remove_army = function(data, done){
+        var task = "remove_army"
+        var playerID = data.playerID
+        create_job(task, data, function(jobID, done){
+            Player.update_remove_army_job_id(playerID, jobID, done)
+        })
+    }
+
+    Boss.remove_anonymous_player = function(data, done){
+        var task = "remove_anonymous_player"
+        var playerID = data.playerID
+        create_job(task, data, function(jobID, done){
+            Player.update_remove_anonymous_player_job_id(playerID, jobID, done)
         })
     }
 

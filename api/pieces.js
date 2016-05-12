@@ -228,34 +228,6 @@ var Pieces = module.exports = (function(){
         })
     }
 
-    Pieces.removePlayerArmyByID = function(playerID, army_id, done){
-        var pieces = []
-        async.waterfall([
-            function(done){
-                // just find so we can return and publish these
-                Piece.find({
-                    player: playerID,
-                    army_id: army_id
-                }).exec(function(er, _pieces){
-                    pieces = _pieces
-                    done(er)
-                });
-            },
-            function(done){
-                // might not be most efficient to do another dup search here, but eh:
-                Piece.remove({
-                    player: playerID,
-                    army_id: army_id
-                }, function(er) {
-                    done(er)
-                });
-            }
-        ], function(er){
-            if (er) done(["ERROR. Pieces.removePlayerArmyByID", playerID, army_id, er])
-            else done(null, pieces)
-        })
-    }
-
     Pieces.set_player_army_alive = function(playerID, army_id, alive, done){
         Piece.update({
             player: playerID,

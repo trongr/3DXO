@@ -27,7 +27,9 @@ var schema = mongoose.Schema({
     modified: {type: Date, default: Date.now},
     online: {type: Number}, // online or offline. see conf.json/status
     last_new_army: {type: Date}, // used to rate limit players starting new game
-    remove_army_job_id: {type:Number}, // new Date().getTime(), used to track remove_army jobs
+
+    remove_army: {type: mongoose.Schema.Types.ObjectId, ref: 'Job'},
+    remove_anonymous_player: {type: mongoose.Schema.Types.ObjectId, ref: 'Job'},
 });
 
 schema.pre("save", function(next) {
@@ -76,5 +78,29 @@ schema.statics.remove_anonymous_player = function(playerID, done){
         done(er)
     });
 };
+
+schema.statics.update_remove_army_job_id = function(playerID, jobID, done){
+    this.update({
+        _id: playerID
+    }, {
+        $set: {
+            remove_army: jobID
+        }
+    }, function(er, re){
+        done(er)
+    })
+}
+
+schema.statics.update_remove_anonymous_player_job_id = function(playerID, jobID, done){
+    this.update({
+        _id: playerID
+    }, {
+        $set: {
+            remove_anonymous_player: jobID
+        }
+    }, function(er, re){
+        done(er)
+    })
+}
 
 module.exports = mongoose.model('Player', schema);

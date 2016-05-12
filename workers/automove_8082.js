@@ -1,7 +1,7 @@
 var _ = require("lodash")
 var async = require('async');
 var H = require("../static/js/h.js")
-var K = require("../api/k.js")
+var K = require("../k.js")
 var Game = require("../api/game.js")
 var Job = require("../models/job.js")
 var Player = require("../models/player.js")
@@ -21,38 +21,28 @@ var Worker = module.exports = (function(){
     Worker.init = function(){
         Jobs.listen({port: 8082})
         Jobs.on({task: "automove", handler: automove})
-        Jobs.on({task: "cancel_automove", handler: cancel_automove})
-    }
-
-    // mach this guy doesn't know the jobID to cancel
-    function cancel_automove(job, done){
-        console.log("cancelling automove")
-        done(null)
     }
 
     // job is the mongo job obj
     // data = {
-    //     playerID: playerID,
     //     pieceID: pieceID,
     //     to: [x, y],
     // }
     function automove(job, done){
         var jobID = job._id
         var data = job.data
-        var playerID = data.playerID
         var pieceID = data.pieceID
         var player, piece = null
-        H.p("Worker.automove", data)
         async.waterfall([
             function(done){
-                Player.findOneByID(playerID, function(er, _player){
-                    player = _player
+                Piece.findOneByID(pieceID, function(er, _piece){
+                    piece = _piece
                     done(er)
                 })
             },
             function(done){
-                Piece.findOneByID(pieceID, function(er, _piece){
-                    piece = _piece
+                Player.findOneByID(piece.player, function(er, _player){
+                    player = _player
                     done(er)
                 })
             },
@@ -61,7 +51,6 @@ var Worker = module.exports = (function(){
                 automove_loop(jobID, player, data, done)
             }
         ], function(er){
-            H.p("automove.done", data, er)
             done(er)
         })
     }
