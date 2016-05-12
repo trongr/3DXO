@@ -601,17 +601,11 @@ var Game = module.exports = (function(){
                     done(er)
                 })
             },
-            // TODO. remove
-            // function(done){
-            //     Players.incArmies(playerID, 1, function(er, _player){
-            //         done(er)
-            //     })
-            // },
         ], function(er){
             if (er == OK){
                 res.send({info:ERROR_BUILD_ARMY})
             } else if (er){
-                H.log("ERROR. Game.buildArmy", playerID, er)
+                H.p("Game.buildArmy", playerID, er)
                 res.send({info:ERROR_BUILD_ARMY})
             } else {
                 Pub.new_army(pieces, zone)
@@ -626,7 +620,7 @@ var Game = module.exports = (function(){
     Game.delay_remove_army = function(playerID, army_alive, done){
         var king = null
         var army_id = null
-        H.log("INFO. Game.delay_remove_army", playerID, army_alive)
+        H.p("Game.delay_remove_army", [playerID, army_alive])
         async.waterfall([
             function(done){
                 Piece.findPlayerKing(playerID, function(er, _king){
@@ -643,9 +637,7 @@ var Game = module.exports = (function(){
                     army_id: army_id,
                     army_alive: army_alive,
                     delay: REMOVE_ARMY_TIMEOUT,
-                }, done)
-            },
-            function(done){
+                })
                 if (!army_alive){ // save a db update and only do it if false
                     Pieces.set_player_army_alive(playerID, army_id, army_alive, function(er){
                         done(er)
@@ -917,22 +909,16 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Boss.cancel_automove(pieceID, function(er){
-                        done(er)
-                    })
-                },
-                function(done){
+                    Boss.cancel_automove(pieceID)
                     Pieces.validatePieceTimeout(piece, function(er, _delay){
                         delay = _delay || 0
+                        Boss.automove({
+                            pieceID: pieceID,
+                            to: to,
+                            delay: delay
+                        })
                         done(null)
                     })
-                },
-                function(done){
-                    Boss.automove({
-                        pieceID: pieceID,
-                        to: to,
-                        delay: delay,
-                    }, done)
                 },
             ], function(er){
                 H.p("Game.automove", [playerID, pieceID, to], er)

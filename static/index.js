@@ -102,7 +102,6 @@ var Menu = (function(){
             +           "<button id='play_as_guest_button' href='#'>Play as guest</button>"
             +           "<button id='toggle_register' href='#'>REGISTER</button>"
             +           "<button id='toggle_login' href='#'>LOGIN</button>"
-            +           "<button id='new_game' href='#'>NEW_GAME</button>"
             +           "<div id='menu_info_box'>mach</div>"
             +           "<div id='register_box' class='input_parent'>"
             +               "<input id='register_username' type='text' placeholder='username'><br>"
@@ -117,6 +116,9 @@ var Menu = (function(){
             +               "<button id='login_button'>login</button>"
             +           "</div>"
             +      "</div>"
+            +      "<div id='logged_in_menu_box'>"
+            +           "<button id='new_game' href='#'>NEW GAME</button>"
+            +      "</div>"
         $("body").append(html)
         $("#menu_box").on("keypress", "input", menu_box_input_keypress)
         $("#toggle_register").on("click", toggle_register)
@@ -129,6 +131,17 @@ var Menu = (function(){
         $("#play_as_guest_input").on("keypress", play_as_guest_input_keypress)
         $("#play_as_guest_button").on("click", play_as_guest_button_click)
 
+    }
+
+    // mach
+    Menu.toggle_logged_in_menu_box = function(is_logged_in){
+        if (is_logged_in){
+            $("#logged_in_menu_box").show()
+            $("#menu_box").hide()
+        } else {
+            $("#logged_in_menu_box").hide()
+            $("#menu_box").show()
+        }
     }
 
     function play_as_guest_input_keypress(event){
@@ -698,6 +711,7 @@ var Sock = (function(){
         } else {
             Console.info("Welcome Guest!")
         }
+        Menu.toggle_logged_in_menu_box(data.ok)
         initSocket(x, y)
     }
 

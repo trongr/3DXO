@@ -16,16 +16,21 @@ hr {
 /* begin menu css */
 /* begin menu css */
 
-#menu_box {
+#menu_box,
+#logged_in_menu_box {
     color: white;
     margin: 5px;
     position: fixed;
-    /* right: 0; */
     left: 310px; /* same as console_box width */
     top: 5px;
 }
 
-#menu_box button {
+#logged_in_menu_box {
+    display: none;
+}
+
+#menu_box button,
+#logged_in_menu_box button {
     color: white;
     background: none;
     border: none;
@@ -78,6 +83,7 @@ hr {
     width: 150px;
 }
 
+#logged_in_menu_box button#new_game,
 #menu_box button#play_as_guest_button {
     background: #6BC982;
     height: 35px;

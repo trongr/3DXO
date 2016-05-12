@@ -54,7 +54,7 @@ var Boss = module.exports = (function(){
         })
     }
 
-    Boss.automove = function(data, done){
+    Boss.automove = function(data){
         var task = "automove"
         var pieceID = data.pieceID
         create_job(task, data, function(jobID, done){
@@ -62,16 +62,15 @@ var Boss = module.exports = (function(){
         })
     }
 
-    Boss.cancel_automove = function(pieceID, done){
+    Boss.cancel_automove = function(pieceID){
         Piece.findOneByID(pieceID, function(er, piece){
             if (piece && piece.automove){
                 Job.remove({_id: piece.automove}, function(er){})
             }
-            if (done) done(null)
         })
     }
 
-    Boss.remove_army = function(data, done){
+    Boss.remove_army = function(data){
         var task = "remove_army"
         var playerID = data.playerID
         create_job(task, data, function(jobID, done){
@@ -79,7 +78,7 @@ var Boss = module.exports = (function(){
         })
     }
 
-    Boss.remove_anonymous_player = function(data, done){
+    Boss.remove_anonymous_player = function(data){
         var task = "remove_anonymous_player"
         var playerID = data.playerID
         create_job(task, data, function(jobID, done){
