@@ -1,7 +1,7 @@
 // change ground opacity depending on the time of day. implement a world clock
 
 function log(msg, data){
-    console.log(H.shortTimeBrackets(), msg, data)
+    console.log(H.shortTimeDot(), msg, data)
 }
 
 var K = (function(){
@@ -117,15 +117,17 @@ var Menu = (function(){
             +           "</div>"
             +      "</div>"
             +      "<div id='logged_in_menu_box'>"
-            +           "<button id='new_game' href='#'>NEW GAME</button>"
+            +           "<button id='new_game_button' href='#'>NEW GAME</button>"
+            +           "<button id='logout_button' href='#'>logout</button>"
             +      "</div>"
         $("body").append(html)
         $("#menu_box").on("keypress", "input", menu_box_input_keypress)
         $("#toggle_register").on("click", toggle_register)
         $("#toggle_login").on("click", toggle_login)
-        $("#new_game").on("click", new_game)
+        $("#new_game_button").on("click", new_game_button)
         $("#register_button").on("click", register_button)
         $("#login_button").on("click", login_button)
+        $("#logout_button").on("click", logout_button)
 
         $("#play_as_guest_input").on("focus", play_as_guest_input_focus)
         $("#play_as_guest_input").on("keypress", play_as_guest_input_keypress)
@@ -198,7 +200,7 @@ var Menu = (function(){
         }
     }
 
-    function new_game(){
+    function new_game_button(){
         var $this = $(this)
         $this.prop('disabled', true);
         // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
@@ -312,6 +314,22 @@ var Menu = (function(){
                 location.href = "/";
             } else {
                 log_menu_info_box(er)
+            }
+            $this.prop('disabled', false);
+        })
+    }
+
+    function logout_button(){
+        var $this = $(this)
+        $this.prop('disabled', true);
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
+        // REMEMBER TO RE-ENABLE BUTTON WHEN YOU RETURN
+        API.Auth.logout(function(er, player){
+            if (player){
+                location.href = "/";
+            } else {
+                alertify.error("Couldn't log out. Please try again.")
             }
             $this.prop('disabled', false);
         })
@@ -509,15 +527,15 @@ var Console = (function(){
     }
 
     Console.info = function(text){
-        Console.print("<span class='console_info'>" + H.shortTimeBrackets() + " " + text + "</span>")
+        Console.print("<span class='console_info'>" + H.shortTimeDot() + " " + text + "</span>")
     }
 
     Console.warn = function(text){
-        Console.print("<span class='console_warning'>" + H.shortTimeBrackets() + " " + text + "</span>")
+        Console.print("<span class='console_warning'>" + H.shortTimeDot() + " " + text + "</span>")
     }
 
     Console.error = function(text){
-        Console.print("<span class='console_error'>" + H.shortTimeBrackets() + " " + text + "</span>")
+        Console.print("<span class='console_error'>" + H.shortTimeDot() + " " + text + "</span>")
     }
 
     function helloConsole(){
@@ -537,7 +555,8 @@ var Console = (function(){
         Console.print("<h2 class='console_header' data-console-line='about'>About</h2>")
         Console.print("<div class='console_content' data-console-line='about'>Hello! My name is Trong. I'm a developer from Toronto, Canada, and Ragnarook is my first game. Enjoy!<br><br>"
                       // + "<a href='https://www.facebook.com/groups/1755519304678543/' target='_blank'>facebook</a> <a href='http://chessv2.tumblr.com/' target='_blank'>blog</a>"
-                      + "<a href='https://www.facebook.com/groups/1755519304678543/' target='_blank'>facebook</a>"
+                      + "Join our <a href='https://www.facebook.com/groups/1755519304678543/' target='_blank'>facebook group.</a><br>"
+                      + "Watch me code Ragnarook live on <a href='https://www.twitch.tv/devgruxcon' target='_blank'>twitch.</a>"
                       // + "<br><br>Similar games. See <a href='https://en.wikipedia.org/wiki/Kung-Fu_Chess' target='_blank'>Kung-Fu Chess</a> "
                       // + "for a variant for two or four players. Recently a team from Japan has also made a physical two-player board: "
                       // + "<a href='https://www.reddit.com/r/gaming/comments/3lyryx/chess_too_boring_for_ya_not_anymore/' target='_blank'>Dengekisen.</a> "
@@ -730,6 +749,9 @@ var Sock = (function(){
         // Chatting by playerID means that even if a player isn't looking at a zone, you
         // can still talk to them as long as you can see their pieces. Chatting by zone
         // OTOH won't send your msg to them if they're looking somewhere else.
+        //
+        // TODO. should make it so you can only chat with someone if
+        // you can see their name tag
         if (players.length < Conf.max_chatters){
             Sock.send("chat", {zone:_zone, text:text, players:players})
         } else {

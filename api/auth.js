@@ -30,6 +30,9 @@ var Auth = module.exports = (function(){
         .get(authLogin)
         .post(authRegister)
 
+    Auth.router.route("/logout")
+        .get(authLogout)
+
     Auth.router.route("/register_anonymous_player")
         .post(auth_register_anonymous_player)
 
@@ -163,6 +166,16 @@ var Auth = module.exports = (function(){
             } else {
                 res.send({info:"unauthenticated guest"})
             }
+        }
+    }
+
+    function authLogout(req, res){
+        if (req.session.player){
+            var player = req.session.player
+            req.session.destroy()
+            res.send({player:player})
+        } else {
+            res.send({info:"unauthenticated guest"})
         }
     }
 

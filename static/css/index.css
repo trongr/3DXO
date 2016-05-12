@@ -83,7 +83,7 @@ hr {
     width: 150px;
 }
 
-#logged_in_menu_box button#new_game,
+#logged_in_menu_box button#new_game_button,
 #menu_box button#play_as_guest_button {
     background: #6BC982;
     height: 35px;

@@ -95,7 +95,6 @@ var Worker = module.exports = (function(){
                 if ((er && ercount > AUTOMOVE_LOOP_MAX_ERCOUNT) ||
                     er == K.code.job_cancelled ||
                     er == K.code.piece_timeout){
-                    H.p("automove.automove_loop: done", [er, ercount])
                     clearInterval(automove_timeout)
                     done(er)
                 } else if (er){
@@ -107,10 +106,9 @@ var Worker = module.exports = (function(){
                                         // clear bad_moves
                     working = false // continue
                 } else if (isAtFinalDst(piece, nextTo, finalTo)){
-                    H.p("automove.automove_loop: done")
                     clearInterval(automove_timeout)
                     done(null)
-                } else {
+                } else { // successful move. repeat
                     lastSuccessfulMove = new Date().getTime()
                     bad_moves = []
                     working = false // continue

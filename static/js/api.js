@@ -57,6 +57,16 @@ var API = (function(){
             })
         }
 
+        Auth.logout = function(done){
+            var url = API_PREFIX + "auth/logout"
+            API.req("get", url, {}, function(er, re){
+                if (er) done(er)
+                else if (re && re.player) done(null, re.player)
+                else if (re && re.info) done(re.info)
+                else done("ERROR. API.Auth.logout")
+            })
+        }
+
         Auth.post = function(data, done){
             var url = API_PREFIX + "auth"
             API.req("post", url, data, function(er, re){

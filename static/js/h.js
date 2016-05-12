@@ -84,6 +84,10 @@ var H = module.exports = (function(){
         return "[" + new Date().toLocaleTimeString().replace(/ AM| PM/, "") + "]"
     }
 
+    H.shortTimeDot = function(){
+        return new Date().toLocaleTimeString() + ". "
+    }
+
     H.shortTime = function(){
         return new Date().toLocaleTimeString()
     }
