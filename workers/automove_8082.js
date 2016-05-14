@@ -62,7 +62,8 @@ var Worker = module.exports = (function(){
         var finalTo = data.to
         var nextTo = null
         var lastSuccessfulMove = new Date("2016").getTime() // some time long ago
-        var bad_moves = [] // stores disallowed moves and retry, ignoring them next time
+        //
+        // mach
         var ercount = 0 // number of bad moves to make in one
                         // iteration. end automove_loop if more than AUTOMOVE_LOOP_MAX_ERCOUNT
         var automove_timeout = setInterval(function(){
@@ -82,7 +83,7 @@ var Worker = module.exports = (function(){
                     })
                 },
                 function(done){
-                    best_move(pieceID, finalTo, bad_moves, function(er, _nextTo){
+                    best_move(pieceID, finalTo, function(er, _nextTo){
                         nextTo = _nextTo
                         done(er)
                     })
@@ -98,19 +99,15 @@ var Worker = module.exports = (function(){
                     clearInterval(automove_timeout)
                     done(er)
                 } else if (er){
+                    // mach instead of retrying right away wait a few seconds
                     // todo only specific errors should go here, everything else goes up ^
                     ercount += 1
-                    if (nextTo) bad_moves.push(nextTo)
-                    else bad_moves = [] // null nextTo means ran out
-                                        // of good moves, so need to
-                                        // clear bad_moves
                     working = false // continue
                 } else if (isAtFinalDst(piece, nextTo, finalTo)){
                     clearInterval(automove_timeout)
                     done(null)
                 } else { // successful move. repeat
                     lastSuccessfulMove = new Date().getTime()
-                    bad_moves = []
                     working = false // continue
                     ercount = 0
                 }
@@ -135,13 +132,12 @@ var Worker = module.exports = (function(){
         }
     }
 
-    function best_move(pieceID, to, bad_moves, done){
+    function best_move(pieceID, to, done){
         var moves = []
         var nTo = [] // [x, y]
         var piece = null
         async.waterfall([
             function(done){
-                // mach remove blocked squares
                 Game.findAvailableMoves(pieceID, function(er, _piece, _moves){
                     piece = _piece
                     moves = _moves
@@ -149,7 +145,7 @@ var Worker = module.exports = (function(){
                 })
             },
             function(done){
-                moves = difference(moves, bad_moves)
+                // moves = difference(moves, bad_moves)
                 from = [piece.x, piece.y]
                 nTo = best_to(moves, from, to)
                 if (!nTo) done("automove.best_move: no more moves")

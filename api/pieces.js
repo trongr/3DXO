@@ -94,39 +94,6 @@ var Pieces = module.exports = (function(){
         });
     }
 
-    Pieces.zoneHasEnemyPieces = function(playerID, x, y, done){
-        Pieces.findPiecesInZone(x, y, function(er, pieces){
-            if (er) return done(["ERROR. Pieces.zoneHasEnemyPieces", playerID, x, y, er])
-            var enemies = pieces.filter(function(piece){
-                return ! piece.player.equals(playerID)
-            })
-            done(null, enemies.length > 0)
-        })
-    }
-
-    Pieces.zonesHaveEnemyPieces = function(playerID, fromX, fromY, toX, toY, done){
-        async.waterfall([
-            function(done){
-                Pieces.zoneHasEnemyPieces(playerID, fromX, fromY, function(er, hasEnemies){
-                    if (er) done(er)
-                    else if (hasEnemies) done(OK, hasEnemies)
-                    else done(null)
-                })
-            },
-            function(done){
-                Pieces.zoneHasEnemyPieces(playerID, toX, toY, function(er, hasEnemies){
-                    if (er) done(er)
-                    else if (hasEnemies) done(OK, hasEnemies)
-                    else done(null)
-                })
-            }
-        ], function(er){
-            if (er == OK) done(null, true) // has enemies
-            else if (er) done(er)
-            else done(null, false) // no enemies
-        })
-    }
-
     Pieces.findPlayerPiecesInZone = function(playerID, _x, _y, done){
         var x = H.toZoneCoordinate(_x, S)
         var y = H.toZoneCoordinate(_y, S)
@@ -160,7 +127,7 @@ var Pieces = module.exports = (function(){
         });
     }
 
-    // NOTE. not used anymore
+    // NOTE. not used anymore mach
     Pieces.countPlayerArmies = function(player, done){
         var playerID = player._id
         Piece.count({
@@ -179,6 +146,7 @@ var Pieces = module.exports = (function(){
         });
     };
 
+    // mach not used
     function correctPlayerArmiesCount(playerID, count){
         Player.update({
             _id: playerID
@@ -191,40 +159,6 @@ var Pieces = module.exports = (function(){
             if (er){
                 H.log("ERROR. Pieces.correctPlayerArmiesCount", playerID, count, er)
             }
-        })
-    }
-
-    Pieces.removeEnemyNonKingsInZone = function(playerID, x, y, done){
-        var X = H.toZoneCoordinate(x, S)
-        var Y = H.toZoneCoordinate(y, S)
-        var pieces = []
-        async.waterfall([
-            function(done){
-                // just find so we can return and publish these
-                Piece.find({
-                    x: {$gte: X, $lt: X + S},
-                    y: {$gte: Y, $lt: Y + S},
-                    kind: {$ne:"king"},
-                    player: {$ne:playerID}
-                }).exec(function(er, _pieces){
-                    pieces = _pieces
-                    done(er)
-                });
-            },
-            function(done){
-                // might not be most efficient to do another dup search here, but eh:
-                Piece.remove({
-                    x: {$gte: X, $lt: X + S},
-                    y: {$gte: Y, $lt: Y + S},
-                    kind: {$ne:"king"},
-                    player: {$ne:playerID}
-                }, function(er) {
-                    done(er)
-                });
-            }
-        ], function(er){
-            if (er) done(["ERROR. Pieces.removeEnemyNonKingsInZone", playerID, x, y, er])
-            else done(null, pieces)
         })
     }
 

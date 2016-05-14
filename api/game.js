@@ -312,22 +312,6 @@ var Move = (function(){
         })
     }
 
-    // moving a single piece in a zone move
-    function zoneMoveOne(piece, to, done){
-        Piece.findOne({
-            x: to[0],
-            y: to[1],
-        }).exec(function(er, _piece){
-            if (er){
-                done(["ERROR. Game.Move.zoneMoveOne.findOne", piece, to, er])
-            } else if (_piece){
-                done(OK) // dst occupied, can't zone move piece there
-            } else {
-                regularMove(piece, to, done)
-            }
-        });
-    }
-
     function regularMove(piece, to, done){
         Piece.findOneAndUpdate({
             _id: piece._id
@@ -409,91 +393,6 @@ var Move = (function(){
         })
     }
 
-    // returns pieces from origin zone, dx and dy == +/-8 == Conf.zone_size
-    Move.validateZoneMove = function(player, king, to, done){
-        var playerID = player._id
-        var x = H.toZoneCoordinate(king.x, S)
-        var y = H.toZoneCoordinate(king.y, S)
-        var X = H.toZoneCoordinate(to[0], S)
-        var Y = H.toZoneCoordinate(to[1], S)
-        var dx = X - x
-        var dy = Y - y
-        var pieces = []
-        async.waterfall([
-            function(done){
-                if (dx == 0 && dy == 0) done("ERROR. dx dy zero")
-                else if (Math.abs(dx) > S || Math.abs(dy) > S) done("ERROR. dx dy gt S")
-                else done(null)
-            },
-            function(done){
-                Pieces.findPiecesInZone(x, y, function(er, _pieces){
-                    pieces = _pieces
-                    done(er)
-                })
-            },
-            function(done){
-                if (checkAllPiecesBelongToPlayer(pieces, playerID)) done(null)
-                else done("ERROR. enemy in origin zone")
-            },
-            function(done){
-                Pieces.findPiecesInZone(X, Y, done)
-            },
-            function(dstPieces, done){
-                if (checkPiecesNonKing(dstPieces)) done(null)
-                else done("ERROR. king in dst zone")
-            },
-            function(done){
-                // only allow the king to move pieces in its army
-                pieces = pieces.filter(function(piece){
-                    return piece.army_id.equals(king.army_id)
-                })
-                done(null)
-            }
-        ], function(er){
-            if (er) done(["ERROR. Game.Move.validateZoneMove", player, king, to, er])
-            else done(null, pieces, dx, dy)
-        })
-    }
-
-    function checkAllPiecesBelongToPlayer(pieces, playerID){
-        return pieces.every(function(piece){
-            return piece.player.equals(playerID)
-        })
-    }
-
-    function checkPiecesNonKing(pieces){
-        return pieces.every(function(piece){
-            return piece.kind != "king"
-        })
-    }
-
-    // Moving pieces from one zone to another.
-    Move.zoneMove = function(pieces, dx, dy, done){
-        var nPieces = []
-        async.eachSeries(pieces, function(piece, done){
-            var to = [piece.x + dx, piece.y + dy]
-            zoneMoveOne(piece, to, function(er, _piece){
-                if (er == OK){
-                    // this means there's a (most likely friendly)
-                    // piece at the dst so this piece can't move
-                    // there. ignore
-                    done(null)
-                } else if (er){
-                    done(er)
-                } else {
-                    nPieces.push(_piece)
-                    done(null)
-                }
-            })
-        }, function(er){
-            if (er){
-                done(["ERROR. Game.Move.zoneMove", dx, dy, er])
-            } else {
-                done(null, nPieces)
-            }
-        })
-    }
-
     return Move
 }())
 
@@ -526,14 +425,6 @@ var Game = module.exports = (function(){
         ["0", "p", "p", "p", "p", "p", "p", "0"],
         ["0", "0", "0", "0", "0", "0", "0", "0"],
     ];
-
-    // // 4 x 4
-    // var ARMY_CONFIG = [
-    //     ["0", "0", "0", "0"],
-    //     ["0", "0", "k", "0"],
-    //     ["0", "q", "0", "0"],
-    //     ["0", "0", "0", "0"],
-    // ];
 
     Game.router.route("/:playerID/buildArmy")
         .post(Auth.authenticate, buildArmy)
@@ -823,37 +714,8 @@ var Game = module.exports = (function(){
                         } else done(null)
                     })
                 },
-                // function(done){
-                //     validatePlayerZoneClocksFromTo(playerID, px, py, to[0], to[1], function(er, ok, msg){
-                //         if (er) done(er)
-                //         else if (ok) done(null)
-                //         else {
-                //             Pub.error(playerID, msg)
-                //             done(OK)
-                //         }
-                //     })
-                // },
-                // function(done){
-                //     Pieces.zonesHaveEnemyPieces(playerID, px, py, to[0], to[1], function(er, _hasEnemies){
-                //         hasEnemies = _hasEnemies
-                //         done(er)
-                //     })
-                // },
                 function(done){
-                    // todo remove zone move: not used anymore
-                    // this means the king is making a zone move:
-                    if (piece.kind == "king" &&
-                        (Math.abs(piece.x - to[0]) > 1 ||
-                         Math.abs(piece.y - to[1]) > 1)){
-                        zoneMove(playerID, player, piece, to, done)
-                    } else { // regular single piece move
-                        oneMove(playerID, player, piece, to, hasEnemies, done)
-                    }
-                },
-                function(done){
-                    if (hasEnemies){
-                        createPlayerZoneClocksFromTo(playerID, piece._id, px, py, to[0], to[1], done)
-                    } else done(null)
+                    oneMove(playerID, player, piece, to, hasEnemies, done)
                 },
             ], function(er){
                 if (er == OK || er == K.code.block ||
@@ -936,72 +798,6 @@ var Game = module.exports = (function(){
             Boss.cancel_automove(pieceID)
         }
 
-        // convenient method to check from and to zone
-        // clocks. TODO. can save a look up by checking if fromX fromY
-        // and toX toY are the same zone
-        function validatePlayerZoneClocksFromTo(playerID, fromX, fromY, toX, toY, done){
-            async.waterfall([
-                function(done){
-                    validatePlayerZoneClock(playerID, fromX,fromY, function(er, ok, msg){
-                        if (er) done(er)
-                        else if (ok) done(null) // no clock
-                        else done(OK, ok, msg) // clock still on
-                    })
-                },
-                function(done){
-                    validatePlayerZoneClock(playerID, toX, toY, function(er, ok, msg){
-                        if (er) done(er)
-                        else if (ok) done(null) // no clock
-                        else done(OK, ok, msg) // clock still on
-                    })
-                },
-            ], function(er, ok, msg){
-                if (er == OK) done(null, ok, msg) // clock still live
-                else if (er) done(er) // er
-                else done(null, true) // no clock
-            })
-        }
-
-        function validatePlayerZoneClock(playerID, x, y, done){
-            var X = H.toZoneCoordinate(x, S)
-            var Y = H.toZoneCoordinate(y, S)
-            Clocks.get(playerID, X, Y, function(er, _clock){
-                if (er){
-                    done(["ERROR. Game.validatePlayerZoneClock", playerID, x, y])
-                } else if (_clock){
-                    var elapsed = new Date().getTime() - new Date(_clock.t).getTime()
-                    if (elapsed >= Conf.recharge){
-                        done(null, true)
-                    } else {
-                        done(null, false, "Next turn in " + parseInt((Conf.recharge - elapsed) / 1000) + " sec.  See Rule 1.")
-                    }
-                } else {
-                    done(null, true)
-                }
-            })
-        }
-
-        function createPlayerZoneClocksFromTo(playerID, pieceID, fromX, fromY, toX, toY, done){
-            async.waterfall([
-                function(done){
-                    createPlayerZoneClock(playerID, pieceID, fromX, fromY, done)
-                },
-                function(done){
-                    createPlayerZoneClock(playerID, pieceID, toX, toY, done)
-                }
-            ], function(er){
-                done(er)
-            })
-        }
-
-        function createPlayerZoneClock(playerID, pieceID, x, y, done){
-            var X = H.toZoneCoordinate(x, S)
-            var Y = H.toZoneCoordinate(y, S)
-            Clocks.upsert(playerID, pieceID, X, Y, new Date(), function(er, _clock){
-                done(er)
-            })
-        }
-
         // regular single piece move, as opposed to moving an entire army from one zone to another
         function oneMove(playerID, player, piece, to, hasEnemies, done){
             var nPiece = null
@@ -1062,65 +858,6 @@ var Game = module.exports = (function(){
                     done(null)
                 }
             })
-        }
-
-        // moving an entire army from one zone to another
-        function zoneMove(playerID, player, king, to, done){
-            var pieces, dx, dy
-            async.waterfall([
-                function(done){
-                    // _pieces are pieces from the origin zone, so
-                    // Move.zoneMove can skip a query to save time
-                    Move.validateZoneMove(player, king, to, function(er, _pieces, _dx, _dy){
-                        pieces = _pieces, dx = _dx, dy = _dy
-                        done(er)
-                    })
-                },
-                function(done){
-                    Pieces.removeEnemyNonKingsInZone(playerID, to[0], to[1], function(er, _pieces){
-                        if (_pieces){
-                            Pub.removeMany(_pieces)
-                            Clocks.removeMany(_pieces)
-                        }
-                        done(er)
-                    })
-                },
-                function(done){
-                    Move.zoneMove(pieces, dx, dy, done)
-                },
-            ], function(er, _pieces){
-                if (er == OK){
-                    done(er)
-                } else if (er){
-                    done(["ERROR. Game.zoneMove", player, king, to, er])
-                } else {
-                    pubZoneMovePieces(_pieces)
-                    done(null)
-                }
-            })
-        }
-
-        function pubZoneMovePieces(pieces){
-            var showClock = false // tell client not to render clocks for each individual pieces
-            pieces.forEach(function(piece){
-                Pub.remove(piece, [
-                    H.toZoneCoordinate(piece.px, S),
-                    H.toZoneCoordinate(piece.py, S)
-                ])
-                Pub.move(piece, {
-                    showClock: showClock,
-                }, [
-                    H.toZoneCoordinate(piece.x, S),
-                    H.toZoneCoordinate(piece.y, S)
-                ])
-            })
-            // tell client to render the zone move clock
-            var piece = pieces[0]
-            if (piece){
-                var x = H.toZoneCoordinate(piece.x, S)
-                var y = H.toZoneCoordinate(piece.y, S)
-                Pub.zoneMoveClock(x, y, [x, y])
-            }
         }
 
         // todo. A fraction (half?) of pieces convert to enemy,
