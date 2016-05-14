@@ -783,7 +783,6 @@ var Game = module.exports = (function(){
                     })
                 },
             ], function(er){
-                H.p("Game.automove", [playerID, pieceID, to], er)
                 if (done) done(er)
             })
         }
@@ -938,13 +937,25 @@ var Game = module.exports = (function(){
                 var range = Conf.range[piece.kind]
                 var x = piece.x
                 var y = piece.y
-                rules.forEach(function(rule){
-                    var move = Move.directions[rule]
-                    for (var i = 1; i <= range; i++){
-                        moves.push([i * move[0] + x, i * move[1] + y])
-                    }
+                // for each direction range one by one to find blocked squares
+                async.eachSeries(rules, function(rule, done){
+                    var direction = Move.directions[rule]
+                    async.timesSeries(range, function(i, done){
+                        var move_x = (1 + i) * direction[0] + x
+                        var move_y = (1 + i) * direction[1] + y
+                        Piece.find_piece_at_xy(move_x, move_y, function(er, _piece){
+                            if (_piece) done(true) // blocked: stop
+                            else { // no piece here, can keep moving
+                                moves.push([move_x, move_y])
+                                done(null)
+                            }
+                        })
+                    }, function(er){
+                        done(null)
+                    })
+                }, function(er){
+                    done(null)
                 })
-                done(null)
             }
         ], function(er){
             done(er, piece, moves)

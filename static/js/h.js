@@ -113,5 +113,29 @@ var H = module.exports = (function(){
         }
     }
 
+    // NOTE. kept for reference. needs lodash
+    // function difference(list1, list2){
+    //     try {
+    //         return list1.filter(function(item){
+    //             return indexOf(list2, item) < 0
+    //         })
+    //     } catch (e){
+    //         return list1
+    //     }
+    // }
+
+    // function indexOf(list, item){
+    //     try {
+    //         for (var i = 0; i < list.length; i++){
+    //             if (_.isEqual(list[i], item)){
+    //                 return i
+    //             }
+    //         }
+    //         return -1
+    //     } catch (e){
+    //         return -1
+    //     }
+    // }
+
     return H
 }())

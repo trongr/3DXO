@@ -16,7 +16,7 @@ var Worker = module.exports = (function(){
 
     var CONCURRENCY = 1000
     var AUTOMOVE_INTERVAL = Conf.recharge
-    var AUTOMOVE_LOOP_MAX_ERCOUNT = 64
+    var AUTOMOVE_LOOP_MAX_ERCOUNT = 4
 
     Worker.init = function(){
         Jobs.listen({port: 8082})
@@ -62,10 +62,10 @@ var Worker = module.exports = (function(){
         var finalTo = data.to
         var nextTo = null
         var lastSuccessfulMove = new Date("2016").getTime() // some time long ago
-        //
-        // mach
-        var ercount = 0 // number of bad moves to make in one
-                        // iteration. end automove_loop if more than AUTOMOVE_LOOP_MAX_ERCOUNT
+        var recent_moves = []
+        var ercount = 0 // number of moves to try in one
+                        // iteration. end automove_loop if more than
+                        // AUTOMOVE_LOOP_MAX_ERCOUNT
         var automove_timeout = setInterval(function(){
             if (working) return
 
@@ -89,6 +89,10 @@ var Worker = module.exports = (function(){
                     })
                 },
                 function(done){
+                    // stop automove if piece goes back to previous position
+                    if (H.compareLists(nextTo, recent_moves[0])){
+                        return done(K.code.job_cancelled)
+                    }
                     data.to = nextTo
                     Game.on.move(player, data, done)
                 }
@@ -99,15 +103,18 @@ var Worker = module.exports = (function(){
                     clearInterval(automove_timeout)
                     done(er)
                 } else if (er){
-                    // mach instead of retrying right away wait a few seconds
                     // todo only specific errors should go here, everything else goes up ^
                     ercount += 1
-                    working = false // continue
+                    setTimeout(function(){ // wait a couple seconds before retrying
+                        working = false // continue
+                    }, 2000)
                 } else if (isAtFinalDst(piece, nextTo, finalTo)){
                     clearInterval(automove_timeout)
                     done(null)
                 } else { // successful move. repeat
                     lastSuccessfulMove = new Date().getTime()
+                    recent_moves.push(nextTo) // keep track of last two moves
+                    recent_moves = recent_moves.slice(-2)
                     working = false // continue
                     ercount = 0
                 }
@@ -145,7 +152,6 @@ var Worker = module.exports = (function(){
                 })
             },
             function(done){
-                // moves = difference(moves, bad_moves)
                 from = [piece.x, piece.y]
                 nTo = best_to(moves, from, to)
                 if (!nTo) done("automove.best_move: no more moves")
@@ -154,30 +160,6 @@ var Worker = module.exports = (function(){
         ], function(er){
             done(er, nTo)
         })
-    }
-
-    // mach move to h.js
-    function difference(list1, list2){
-        try {
-            return list1.filter(function(item){
-                return indexOf(list2, item) < 0
-            })
-        } catch (e){
-            return list1
-        }
-    }
-
-    function indexOf(list, item){
-        try {
-            for (var i = 0; i < list.length; i++){
-                if (_.isEqual(list[i], item)){
-                    return i
-                }
-            }
-            return -1
-        } catch (e){
-            return -1
-        }
     }
 
     function best_to(moves, from, to){

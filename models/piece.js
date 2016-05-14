@@ -113,18 +113,13 @@ schema.statics.remove_by_player_and_army_id = function(playerID, army_id, done){
     })
 }
 
-// mach
-        // Piece.findOne({
-        //     x: to[0],
-        //     y: to[1],
-        // }).exec(function(er, _piece){
-        //     if (er){
-        //         done(["ERROR. Game.Move.zoneMoveOne.findOne", piece, to, er])
-        //     } else if (_piece){
-        //         done(OK) // dst occupied, can't zone move piece there
-        //     } else {
-        //         regularMove(piece, to, done)
-        //     }
-        // });
+schema.statics.find_piece_at_xy = function(x, y, done){
+    this.findOne({
+        x: x,
+        y: y,
+    }).exec(function(er, _piece){
+        done(er, _piece)
+    });
+}
 
 module.exports = mongoose.model('Piece', schema);
