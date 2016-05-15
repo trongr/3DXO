@@ -72,27 +72,6 @@ var Move = (function(){
         }
     }
 
-    function validatePawnToKingMove(piece, to, done){
-        var playerID = piece.player._id || piece.player
-        var x = piece.x, y = piece.y
-        var X = to[0], Y = to[1]
-        Pieces.findPlayerKingsInZone(playerID, x, y, function(er, kings){
-            if (er){
-                done(er)
-            } else if (kings.length){
-                for (var i = 0; i < kings.length; i++){
-                    var king = kings[i]
-                    var before = Math.abs(king.x - x) + Math.abs(king.y - y)
-                    var after = Math.abs(king.x - X) + Math.abs(king.y - Y)
-                    if (after < before){
-                        return done(["ERROR. Game.validatePawnToKingMove", piece, to])
-                    }
-                }
-                return done(null)
-            } else done(null)
-        })
-    }
-
     // Check if there are any pieces in the way
     //
     // TODO. this method checks blocking for both moving and
@@ -341,13 +320,7 @@ var Move = (function(){
             function(done){
                 dstPiece.remove(function(er){
                     if (er) done(["remove dst piece", er])
-                    else {
-                        // remove piece's clock if any, so player can
-                        // immediately move if dstPiece was the piece on the
-                        // clock
-                        Clocks.removeOne(dstPiece.player, dstPiece._id)
-                        done(null)
-                    }
+                    else done(null)
                 })
             },
             function(done){
@@ -511,7 +484,6 @@ var Game = module.exports = (function(){
     Game.delay_remove_army = function(playerID, army_alive, done){
         var king = null
         var army_id = null
-        H.p("Game.delay_remove_army", [playerID, army_alive])
         async.waterfall([
             function(done){
                 Piece.findPlayerKing(playerID, function(er, _king){
@@ -609,7 +581,6 @@ var Game = module.exports = (function(){
         })
     }
 
-    // todo limit so we don't get infinite loop?
     // direction = {dx:+-1, dy:+-1}
     // returns zone = [x, y]
     Game.doWhilstCheckNeighbourZoneEmpty = function(piece, direction, done){
@@ -629,7 +600,6 @@ var Game = module.exports = (function(){
                 })
             },
             function(){
-                H.p("Game.zoneSearch", [nPiece.x, nPiece.y, count])
                 count++
                 // mach binary search for empty land
                 if (count > 1000){
@@ -821,13 +791,6 @@ var Game = module.exports = (function(){
                         done(er)
                     })
                 },
-                // optional
-                // function(done){
-                //     // todo disable this
-                //     if (piece.kind == "pawn"){
-                //         validatePawnToKingMove(piece, to, done)
-                //     } else done(null)
-                // },
                 function(done){
                     // capturedKing not null means this is a KING_KILLER move, and game over for capturedKing.player
                     Move.oneMove(piece, to, function(er, _piece, capturedKing){
@@ -895,19 +858,6 @@ var Game = module.exports = (function(){
                         Pub.defect(defector_army_id, defectee_army_id, playerID, enemyID, zone)
                     })
                 },
-                // TODO. remove
-                // function(done){
-                //     Players.incArmies(playerID, -1, function(er, _player){
-                //         player = _player
-                //         done(er)
-                //     })
-                // },
-                // function(done){
-                //     Players.incArmies(enemyID, +1, function(er, _enemy){
-                //         enemy = _enemy
-                //         done(er)
-                //     })
-                // },
             ], function(er){
                 if (er){
                     H.log("ERROR. Game.on.gameover", playerID, enemyID, king, er)

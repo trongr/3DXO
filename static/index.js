@@ -449,11 +449,6 @@ var Charge = (function(){
 
     function makeRechargeClock(x, y, z, percent, hasEnemies){
         var mat = CLOCK_MAT_YELLOW
-        // if (hasEnemies){
-        //     var mat = CLOCK_MAT_YELLOW
-        // } else {
-        //     var mat = CLOCK_MAT_GREEN
-        // }
         var clock_geo = new THREE.RingGeometry(CLOCK_INNER_RADIUS, CLOCK_OUTER_RADIUS, 32, 8, Math.PI / 2, 2 * Math.PI * (percent - 1));
         var ring = new THREE.Mesh(clock_geo, mat);
         Obj.move(ring, new THREE.Vector3(x, y, z), K.CLOCK_OFFSET)

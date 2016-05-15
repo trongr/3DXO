@@ -110,58 +110,6 @@ var Pieces = module.exports = (function(){
         });
     }
 
-    Pieces.findPlayerKingsInZone = function(playerID, _x, _y, done){
-        var x = H.toZoneCoordinate(_x, S)
-        var y = H.toZoneCoordinate(_y, S)
-        Piece.find({
-            player: playerID,
-            x: {$gte: x, $lt: x + S},
-            y: {$gte: y, $lt: y + S},
-            kind: "king",
-        }).exec(function(er, _pieces){
-            if (_pieces){
-                done(null, _pieces)
-            } else {
-                done(["ERROR. Pieces.findPlayerKingsInZone", playerID, _x, _y, er])
-            }
-        });
-    }
-
-    // NOTE. not used anymore mach
-    Pieces.countPlayerArmies = function(player, done){
-        var playerID = player._id
-        Piece.count({
-            player: playerID,
-            kind: "king", // each army has a unique king
-        }, function(er, count){
-            if (er){
-                done(["ERROR. Piece.countPlayerArmies", playerID, er])
-            } else {
-                done(null, count)
-                if (count != player.armies){
-                    H.log("ERROR. Pieces.countPlayerArmies: count mismatch", player, count)
-                    correctPlayerArmiesCount(playerID, count)
-                }
-            }
-        });
-    };
-
-    // mach not used
-    function correctPlayerArmiesCount(playerID, count){
-        Player.update({
-            _id: playerID
-        }, {
-            $set: {
-                armies: count,
-                modified: new Date(), // need this cause update bypasses mongoose's pre save middleware
-            },
-        }, function(er, num){
-            if (er){
-                H.log("ERROR. Pieces.correctPlayerArmiesCount", playerID, count, er)
-            }
-        })
-    }
-
     Pieces.set_player_army_alive = function(playerID, army_id, alive, done){
         Piece.update({
             player: playerID,
