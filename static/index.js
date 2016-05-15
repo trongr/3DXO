@@ -786,10 +786,11 @@ var Select = (function(){
 
     var MULTI_SELECT_MAT = new THREE.MeshLambertMaterial({color:0x66FF66, opacity:0.3, transparent:true})
 
+    var _is_dragging = false
     var _multi_select_start_x = null
     var _multi_select_start_y = null
     var _multi_select_rect = null // rectangle select threejs obj
-    var _is_dragging = false
+    var _multi_select_last_rendered = new Date() // to rate limit refreshing rect, just in case
 
     Select.init = function(){
         _isSelecting = false
@@ -813,6 +814,10 @@ var Select = (function(){
     }
 
     function create_multi_select(start_x, start_y, end_x, end_y){
+        // don't draw more than once every 10ms
+        if (new Date().getTime() - _multi_select_last_rendered.getTime() < 10) return
+        _multi_select_last_rendered = new Date()
+
         remove_multi_select()
 
         var rectLength = end_x - start_x
