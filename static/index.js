@@ -102,7 +102,7 @@ var Menu = (function(){
             +           "<button id='play_as_guest_button' href='#'>Play as guest</button>"
             +           "<button id='toggle_register' href='#'>REGISTER</button>"
             +           "<button id='toggle_login' href='#'>LOGIN</button>"
-            +           "<div id='menu_info_box'>mach</div>"
+            +           "<div id='menu_info_box'></div>"
             +           "<div id='register_box' class='input_parent'>"
             +               "<input id='register_username' type='text' placeholder='username'><br>"
             +               "<input id='register_password' type='password' placeholder='passphrase'><br>"
@@ -135,7 +135,6 @@ var Menu = (function(){
 
     }
 
-    // mach
     Menu.toggle_logged_in_menu_box = function(is_logged_in){
         if (is_logged_in){
             $("#logged_in_menu_box").show()
@@ -406,11 +405,11 @@ var Charge = (function(){
         _clocks[pieceID].interval = setInterval(function(){
             removeClockMesh(pieceID)
             time = time - delta
-            var clock = makeRechargeClock(piece.x, piece.y, 1, time / total, hasEnemies)
+            var clock = makeRechargeClock(piece.x, piece.y, 1, time / total)
             _clocks[pieceID].clock = clock
             Scene.add(clock)
 
-            // var origin_clock = makeRechargeClock(piece.px, piece.py, 1, time / total, hasEnemies)
+            // var origin_clock = makeRechargeClock(piece.px, piece.py, 1, time / total)
             // _clocks[pieceID].origin_clock = origin_clock
             // Scene.add(origin_clock)
 
@@ -447,7 +446,7 @@ var Charge = (function(){
         if (origin_clock) origin_clock.geometry.dispose();
     }
 
-    function makeRechargeClock(x, y, z, percent, hasEnemies){
+    function makeRechargeClock(x, y, z, percent){
         var mat = CLOCK_MAT_YELLOW
         var clock_geo = new THREE.RingGeometry(CLOCK_INNER_RADIUS, CLOCK_OUTER_RADIUS, 32, 8, Math.PI / 2, 2 * Math.PI * (percent - 1));
         var ring = new THREE.Mesh(clock_geo, mat);
@@ -785,6 +784,13 @@ var Select = (function(){
     var _mouse
     var _selected
 
+    var MULTI_SELECT_MAT = new THREE.MeshLambertMaterial({color:0x66FF66, opacity:0.3, transparent:true})
+
+    var _multi_select_start_x = null
+    var _multi_select_start_y = null
+    var _multi_select_rect = null // rectangle select threejs obj
+    var _is_dragging = false
+
     Select.init = function(){
         _isSelecting = false
         _raycaster = new THREE.Raycaster();
@@ -797,7 +803,54 @@ var Select = (function(){
         return _raycaster.intersectObjects(Obj.objs)[0];
     }
 
-    Select.select = function(clientX, clientY){
+    Select.render_multi_select = function(){
+        if (!_is_dragging) return
+        var pos = Select.get_mouse_pos()
+        create_multi_select(_multi_select_start_x,
+                            _multi_select_start_y,
+                            pos.x,
+                            pos.y)
+    }
+
+    function create_multi_select(start_x, start_y, end_x, end_y){
+        remove_multi_select()
+
+        var rectLength = end_x - start_x
+        var rectWidth = end_y - start_y
+
+        var rectShape = new THREE.Shape();
+        rectShape.moveTo( 0,0 );
+        rectShape.lineTo( 0, rectWidth );
+        rectShape.lineTo( rectLength, rectWidth );
+        rectShape.lineTo( rectLength, 0 );
+        rectShape.lineTo( 0, 0 );
+
+        var rectGeom = new THREE.ShapeGeometry( rectShape );
+        _multi_select_rect = new THREE.Mesh(rectGeom, MULTI_SELECT_MAT);
+        Obj.move(_multi_select_rect, new THREE.Vector3(start_x, start_y, 3))
+
+        Scene.add(_multi_select_rect);
+    }
+
+    function remove_multi_select(){
+        if (_multi_select_rect){
+            Scene.remove(_multi_select_rect)
+            _multi_select_rect.geometry.dispose();
+        }
+    }
+
+    Select.start = function(){
+        var pos = Select.get_mouse_pos()
+        _multi_select_start_x = pos.x
+        _multi_select_start_y = pos.y
+        _is_dragging = true
+    }
+
+    // mach highlight all selected pieces
+    Select.end = function(clientX, clientY){
+        remove_multi_select()
+        _is_dragging = false
+
         var intersect = Select.getIntersect(clientX, clientY)
         if (!intersect) return
 
@@ -835,6 +888,20 @@ var Select = (function(){
 
     Select.getSelected = function(){
         return _selected
+    }
+
+    Select.get_mouse_pos = function(){
+        var vector = new THREE.Vector3();
+        vector.set(
+            ( Events.mouse_x / window.innerWidth ) * 2 - 1,
+                - ( Events.mouse_y / window.innerHeight ) * 2 + 1,
+            0.5 );
+        vector.unproject( Scene.camera );
+        var dir = vector.sub( Scene.camera.position ).normalize();
+        var distance = - Scene.camera.position.z / dir.z;
+
+        var pos = Scene.camera.position.clone().add( dir.multiplyScalar( distance ) );
+        return pos
     }
 
     return Select
@@ -1904,19 +1971,7 @@ var Move = (function(){
         _validatedMoves = moves.filter(function(item){ // Cache available moves
             return item.kill == false || item.killMove == true // Only interested in actual moveable positions
         })
-
-        // if (obj.game.piece.kind == "pawn"){
-        //     _validatedMoves = filterPawnToKingMoves(obj, _validatedMoves)
-        // }
-
         Highlight.highlightCells(_validatedMoves)
-
-        // mach remove disable zone move: too confusing
-        // // highlight available zones so you can move an entire army by
-        // // clicking on the king
-        // if (obj.game.piece.kind == "king"){
-        //     highlightZoneMoves(obj.game.piece)
-        // }
     }
 
     function filterPawnToKingMoves(obj, validatedMoves){
@@ -1942,14 +1997,6 @@ var Move = (function(){
             }
         }
         return false
-    }
-
-    function highlightZoneMoves(king){
-        // _validatedZoneMoves will be used later in Game.move to
-        // check that a zone move is allowed (provisionally) before
-        // sending to server for its own validation
-        _validatedZoneMoves = findAvailableZoneMoves(king)
-        Highlight.highlightZones(_validatedZoneMoves)
     }
 
     function findAvailableZoneMoves(king){
@@ -2161,14 +2208,35 @@ var Move = (function(){
 var Events = (function(){
     var Events = {}
 
+    Events.mouse_x
+    Events.mouse_y
+
     Events.init = function(){
+        document.addEventListener('mousemove', on_document_mousemove, false);
         document.addEventListener('mousedown', on_document_mousedown, false);
+        document.addEventListener('mouseup', on_document_mouseup, false);
         window.addEventListener('resize', onWindowResize, false);
+    }
+
+    function on_document_mousemove(event){
+        Select.render_multi_select()
+        Events.mouse_x = event.clientX
+        Events.mouse_y = event.clientY
     }
 
     function on_document_mousedown(event){
         if (event.which == 1){ // left mouse button
-            Select.select(event.clientX, event.clientY)
+            Select.start()
+        } else if (event.which == 2){ // middle mouse
+
+        } else if (event.which == 3){ // right mouse
+
+        }
+    }
+
+    function on_document_mouseup(event){
+        if (event.which == 1){ // left mouse button
+            Select.end(event.clientX, event.clientY)
             Scene.render()
         } else if (event.which == 2){ // middle mouse
 
@@ -2720,32 +2788,6 @@ var Game = (function(){
         Obj.highlight(Select.getSelected(), false)
         Highlight.hideAllHighlights()
         Scene.render()
-        // async.waterfall([
-        //     function(done){
-        //         // return done(null) // NOTE. toggle to test server validation
-        //         if (Move.isValidated(x, y, z)){
-        //             done(null)
-        //             // mach remove zonemove
-        //         } else if (piece.kind == "king" && Move.isValidatedZoneMove(x, y)){
-        //             // NOTE. regular move takes precedence over zone move
-        //             done(null)
-        //         } else {
-        //             done("ERROR. Invalid move.")
-        //         }
-        //     },
-        //     function(done){
-        //         done(null)
-        //         Sock.send("move", {
-        //             playerID: player._id,
-        //             pieceID: piece._id,
-        //             to: [x, y],
-        //         })
-        //     },
-        // ], function(er){
-        //     Obj.highlight(Select.getSelected(), false)
-        //     Highlight.hideAllHighlights()
-        //     Scene.render()
-        // })
     }
 
     Game.on = (function(){
