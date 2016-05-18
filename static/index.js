@@ -832,7 +832,7 @@ var Select = (function(){
 
         var rectGeom = new THREE.ShapeGeometry( rectShape );
         _multi_select_rect = new THREE.Mesh(rectGeom, MULTI_SELECT_MAT);
-        Obj.move(_multi_select_rect, new THREE.Vector3(start_x, start_y, 3))
+        Obj.move_precise(_multi_select_rect, new THREE.Vector3(start_x, start_y, 1.1))
 
         Scene.add(_multi_select_rect);
     }
@@ -851,6 +851,7 @@ var Select = (function(){
         _is_dragging = true
     }
 
+    // mach highlight piece on Select.start otw selection feels sluggish
     // mach highlight all selected pieces
     Select.end = function(clientX, clientY){
         remove_multi_select()
@@ -861,8 +862,7 @@ var Select = (function(){
 
         var obj = intersect.object
         if (obj.game){
-            var p = obj.game.piece
-            var pos = new THREE.Vector3(p.x, p.y, 1)
+            var pos = new THREE.Vector3(obj.game.piece.x, obj.game.piece.y, 1)
         } else {
             var pos = new THREE.Vector3().copy(intersect.point).add(
                 new THREE.Vector3().copy(intersect.face.normal).multiplyScalar(0.5)
@@ -883,9 +883,7 @@ var Select = (function(){
         if (_isSelecting){ // try to move the piece
             Game.move(_selected, pos)
             _isSelecting = false
-        } else {
-            // selecting someone else's piece or empty space
-            // Obj.highlight(_selected, false)
+        } else { // selecting someone else's piece or empty space
             Highlight.hideAllHighlights()
             _isSelecting = false
         }
@@ -1562,6 +1560,10 @@ var Obj = (function(){
             obj.position.y = obj.position.y + d.y
             obj.position.z = obj.position.z + d.z
         }
+    }
+
+    Obj.move_precise = function(obj, point){
+        obj.position.copy(point)
     }
 
     Obj.highlight = function(obj, isHigh){
