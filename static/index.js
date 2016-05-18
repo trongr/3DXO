@@ -10,6 +10,9 @@ var K = (function(){
     var K = {
         CUBE_SIZE: S,
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
+
+        CAM_NEAR: 1,
+        CAM_FAR: 200,
         CAM_DIST_MIN: 50,
 
         // CAM_DIST_MAX: 100,
@@ -844,49 +847,54 @@ var Select = (function(){
         }
     }
 
-    Select.start = function(){
+    // mach
+    Select.start = function(clientX, clientY){
         var pos = Select.get_mouse_pos()
         _multi_select_start_x = pos.x
         _multi_select_start_y = pos.y
         _is_dragging = true
-    }
-
-    // mach highlight piece on Select.start otw selection feels sluggish
-    // mach highlight all selected pieces
-    Select.end = function(clientX, clientY){
-        remove_multi_select()
-        _is_dragging = false
 
         var intersect = Select.getIntersect(clientX, clientY)
         if (!intersect) return
 
         var obj = intersect.object
-        if (obj.game){
-            var pos = new THREE.Vector3(obj.game.piece.x, obj.game.piece.y, 1)
-        } else {
-            var pos = new THREE.Vector3().copy(intersect.point).add(
-                new THREE.Vector3().copy(intersect.face.normal).multiplyScalar(0.5)
-            ) // normal's unit length so gotta scale by half to fit inside the box
-        }
 
-        // todo right click (no drag) cancels selection
         if (Player.objBelongsToPlayer(obj)){ // selecting your own piece
             Highlight.hideAllHighlights()
-            _selected = obj
             Obj.highlight(obj, true)
             Move.highlightAvailableMoves(obj)
             _isSelecting = true
             Game.cancel_automove(_selected)
-            return
         }
+    }
 
-        if (_isSelecting){ // try to move the piece
-            Game.move(_selected, pos)
-            _isSelecting = false
-        } else { // selecting someone else's piece or empty space
-            Highlight.hideAllHighlights()
-            _isSelecting = false
-        }
+    // mach highlight all selected pieces
+    Select.end = function(){
+        remove_multi_select()
+        _is_dragging = false
+        var pos = Select.get_mouse_pos()
+
+        var selected_pieces = find_player_pieces(_multi_select_start_x,
+                                                 _multi_select_start_y,
+                                                 pos.x, pos.y)
+
+        // if (_isSelecting){ // try to move the piece
+        //     Game.move(_selected, pos)
+        //     _isSelecting = false
+        // } else { // selecting someone else's piece or empty space
+        //     Highlight.hideAllHighlights()
+        //     _isSelecting = false
+        // }
+        Scene.render()
+    }
+
+    // mach
+    function find_player_pieces(startX, startY, endX, endY){
+        var x = Math.floor(startX)
+        var y = Math.floor(startY)
+        var X = Math.floor(endX)
+        var Y = Math.floor(endY)
+        var objs = Obj.findObjsInclusive(x, y, X, Y)
     }
 
     Select.getSelected = function(){
@@ -1612,12 +1620,28 @@ var Obj = (function(){
         var x = H.toZoneCoordinate(_x, S)
         var y = H.toZoneCoordinate(_y, S)
         var X = x + S, Y = y + S
+        return Obj.findObjs(x, y, X, Y)
+    }
+
+    Obj.findObjs = function(startX, startY, endX, endY){
+        var x = Math.min(startX, endX)
+        var y = Math.min(startY, endY)
+        var X = Math.max(startX, endX)
+        var Y = Math.max(startY, endY)
         return Obj.objs.filter(function(obj){
             if (!obj.game || !obj.game.piece) return false
             var ex = obj.game.piece.x
             var wy = obj.game.piece.y
             return (x <= ex && ex < X && y <= wy && wy < Y)
         })
+    }
+
+    Obj.findObjsInclusive = function(startX, startY, endX, endY){
+        var x = Math.min(startX, endX)
+        var y = Math.min(startY, endY)
+        var X = Math.max(startX, endX)
+        var Y = Math.max(startY, endY)
+        return Obj.findObjs(x, y, X + 1, Y + 1)
     }
 
     Obj.findKingsInZoneBelongingToPlayer = function(playerID, x, y){
@@ -2233,7 +2257,7 @@ var Events = (function(){
 
     function on_document_mousedown(event){
         if (event.which == 1){ // left mouse button
-            Select.start()
+            Select.start(event.clientX, event.clientY)
         } else if (event.which == 2){ // middle mouse
 
         } else if (event.which == 3){ // right mouse
@@ -2243,8 +2267,7 @@ var Events = (function(){
 
     function on_document_mouseup(event){
         if (event.which == 1){ // left mouse button
-            Select.end(event.clientX, event.clientY)
-            Scene.render()
+            Select.end()
         } else if (event.which == 2){ // middle mouse
 
         } else if (event.which == 3){ // right mouse
@@ -2413,9 +2436,7 @@ var Scene = (function(){
     function initCamera(x, y){
         var fov = 10
         var aspect = window.innerWidth / window.innerHeight
-        var near = 1
-        var far = 200
-        Scene.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+        Scene.camera = new THREE.PerspectiveCamera(fov, aspect, K.CAM_NEAR, K.CAM_FAR);
         Scene.camera.position.z = K.CAM_DIST_INIT
         Scene.camera.position.x = x
         Scene.camera.position.y = y
@@ -2768,6 +2789,7 @@ var Game = (function(){
     }
 
     Game.cancel_automove = function(selected){
+        if (!selected) return
         var piece = selected.game.piece
         var player = Player.getPlayer()
         Sock.send("cancel_automove", {
