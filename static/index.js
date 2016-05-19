@@ -782,10 +782,9 @@ var Sock = (function(){
 var Select = (function(){
     var Select = {}
 
-    var _isSelecting
     var _raycaster
     var _mouse
-    var _selected
+    var _selected = [] // objs (pieces) currently selected
 
     var MULTI_SELECT_MAT = new THREE.MeshLambertMaterial({color:0x66FF66, opacity:0.3, transparent:true})
 
@@ -796,7 +795,6 @@ var Select = (function(){
     var _multi_select_last_rendered = new Date() // to rate limit refreshing rect, just in case
 
     Select.init = function(){
-        _isSelecting = false
         _raycaster = new THREE.Raycaster();
         _mouse = new THREE.Vector2();
     }
@@ -847,54 +845,55 @@ var Select = (function(){
         }
     }
 
-    // mach
     Select.start = function(clientX, clientY){
         var pos = Select.get_mouse_pos()
         _multi_select_start_x = pos.x
         _multi_select_start_y = pos.y
         _is_dragging = true
 
-        var intersect = Select.getIntersect(clientX, clientY)
-        if (!intersect) return
-
-        var obj = intersect.object
-
+        var obj = Obj.findGameObjAtXY(_multi_select_start_x, _multi_select_start_y)
         if (Player.objBelongsToPlayer(obj)){ // selecting your own piece
             Highlight.hideAllHighlights()
-            Obj.highlight(obj, true)
-            Move.highlightAvailableMoves(obj)
-            _isSelecting = true
-            Game.cancel_automove(_selected)
+            Highlight.highlight_pieces([obj])
         }
     }
 
-    // mach highlight all selected pieces
     Select.end = function(){
         remove_multi_select()
         _is_dragging = false
+
         var pos = Select.get_mouse_pos()
 
-        var selected_pieces = find_player_pieces(_multi_select_start_x,
-                                                 _multi_select_start_y,
-                                                 pos.x, pos.y)
+        // mach do this on mouseup for multiple and single piece
+        // Game.cancel_automove(obj)
 
-        // if (_isSelecting){ // try to move the piece
-        //     Game.move(_selected, pos)
-        //     _isSelecting = false
-        // } else { // selecting someone else's piece or empty space
-        //     Highlight.hideAllHighlights()
-        //     _isSelecting = false
-        // }
-        Scene.render()
-    }
+        // mouse up in a diff square than mouse down, i.e. was
+        // dragging: select pieces (don't bother highlighting
+        // available moves; too many).  dragging always initiates
+        // select, never moving pieces.
+        if (Math.floor(_multi_select_start_x) - Math.floor(pos.x) ||
+            Math.floor(_multi_select_start_y) - Math.floor(pos.y)){
+            _selected = Obj.find_player_piece_objs(_multi_select_start_x,
+                                                   _multi_select_start_y,
+                                                   pos.x, pos.y)
+            Highlight.hideAllHighlights()
+            if (_selected.length){
+                Highlight.highlight_pieces(_selected)
+            }
+            return
+        }
 
-    // mach
-    function find_player_pieces(startX, startY, endX, endY){
-        var x = Math.floor(startX)
-        var y = Math.floor(startY)
-        var X = Math.floor(endX)
-        var Y = Math.floor(endY)
-        var objs = Obj.findObjsInclusive(x, y, X, Y)
+        // mouse up same square as mouse down: either selecting a
+        // single piece or moving selected pieces to an empty square
+        var selected = Obj.find_player_piece_objs(pos.x, pos.y, pos.x, pos.y)
+        if (selected.length){ // not an empty square: selecting a single piece
+            _selected = selected
+            Move.highlightAvailableMoves(_selected[0])
+        } else if (_selected.length) { // empty square: move selected pieces
+            Game.move_pieces(_selected, pos)
+            _selected = []
+            Highlight.hideAllHighlights()
+        }
     }
 
     Select.getSelected = function(){
@@ -918,91 +917,46 @@ var Select = (function(){
     return Select
 }())
 
-var Rollover = (function(){
-    var Rollover = {}
-
-    var ROLLOVER_MATERIAL = new THREE.MeshLambertMaterial({color:0x66FF66, opacity:0.5, transparent:true})
-    var ROLLOVER_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, 0.01)
-    var _rollover = null
-
-    Rollover.init = function(){
-        _rollover = new THREE.Mesh(ROLLOVER_GEOMETRY, ROLLOVER_MATERIAL);
-        Rollover.hide()
-        Scene.add(_rollover)
-    }
-
-    Rollover.getMesh = function(){
-        return _rollover
-    }
-
-    Rollover.hide = function(){
-        Obj.move(_rollover, new THREE.Vector3(0, 0, -1000)) // just move the rollover out of sight
-    }
-
-    return Rollover
-}())
-
 var Highlight = (function(){
     var Highlight = {}
 
     var HIGHLIGHT_GEOMETRY = new THREE.BoxGeometry(K.CUBE_SIZE + 0.01, K.CUBE_SIZE + 0.01, 0.01)
     var HIGHLIGHT_MATERIALS = {
         red: new THREE.MeshLambertMaterial({color:0xFF4D4D, shading:THREE.FlatShading, opacity:0.7, transparent:true}),
-        // green: new THREE.MeshLambertMaterial({color:0x00ff00, shading:THREE.FlatShading, opacity:0.5, transparent:true}),
         green: new THREE.MeshLambertMaterial({color:0x66FF66, shading:THREE.FlatShading, opacity:0.5, transparent:true}),
+        piece: new THREE.MeshLambertMaterial({color:0x66FF66, shading:THREE.FlatShading, opacity:0.5, transparent:true}),
     }
-    var HIGHLIGHT_ZONE_GEOMETRY = null // can't init here cause Conf.zone_size isn't loaded yet
-    var HIGHLIGHT_ZONE_MATERIAL = new THREE.MeshLambertMaterial({color:0x66FF66, shading:THREE.FlatShading, opacity:0.5, transparent:true})
 
     var _highlights = {
         red: [],
         green: [],
-        zone: [], // highlights for zone moves
+        piece: [],
     }
 
-    Highlight.highlightCells = function(moves){
-        for (var i = 0; i < moves.length; i++){
-            var move = moves[i]
-            var position = move.xyz
-            var color = move.kill ? "red" : "green"
-            var highlight = _highlights[color][i] || Highlight.makeHighlight(color)
-            highlight.visible = true
-            Obj.move(highlight, new THREE.Vector3(position.x, position.y, position.z), K.HIGHLIGHT_OFFSET)
+    function highlightCells(cells){
+        for (var i = 0; i < cells.length; i++){
+            var cell = cells[i]
+            highlightCell(i, cell.x, cell.y, cell.z, cell.color)
         }
     }
 
-    Highlight.highlightZones = function(zones){
-        var S = Conf.zone_size
-        for (var i = 0; i < zones.length; i++){
-            var highlight = _highlights.zone[i] || makeZoneHighlight()
-            highlight.visible = true
-            Obj.move(highlight, new THREE.Vector3(
-                zones[i][0] + S / 2, zones[i][1] + S / 2, 1.5
-            ), K.HIGHLIGHT_ZONE_OFFSET)
+    function highlightCell(i, x, y, z, color){
+        var highlight = _highlights[color][i]
+        if (!highlight){
+            highlight = makeHighlight(color)
+            _highlights[color].push(highlight)
         }
+        highlight.visible = true
+        Obj.move(highlight, new THREE.Vector3(x, y, z), K.HIGHLIGHT_OFFSET)
     }
 
-    function makeZoneHighlight(){
-        // have to load HIGHLIGHT_ZONE_GEOMETRY here cause it uses
-        // Conf.zone_size, which is shared with server and loaded from
-        // there. by the time we use makeZoneHighlight it'll be ready,
-        // but not before
-        HIGHLIGHT_ZONE_GEOMETRY = HIGHLIGHT_ZONE_GEOMETRY
-            || new THREE.BoxGeometry(K.CUBE_SIZE * Conf.zone_size + 0.01, K.CUBE_SIZE * Conf.zone_size + 0.01, 0.01);
-        var highlight = new THREE.Mesh(HIGHLIGHT_ZONE_GEOMETRY, HIGHLIGHT_ZONE_MATERIAL);
-        Scene.add(highlight)
-        _highlights.zone.push(highlight)
-        return highlight
-    }
-
-    Highlight.makeHighlight = function(color){
+    function makeHighlight(color){
         var highlight = new THREE.Mesh(HIGHLIGHT_GEOMETRY, HIGHLIGHT_MATERIALS[color]);
         Scene.add(highlight)
-        _highlights[color].push(highlight)
         return highlight
     }
 
-    Highlight.hideHighlights = function(highlightType){
+    function hideHighlights(highlightType){
         for (var i = 0; i < _highlights[highlightType].length; i++){
             _highlights[highlightType][i].visible = false
         }
@@ -1010,8 +964,33 @@ var Highlight = (function(){
 
     Highlight.hideAllHighlights = function(){
         Object.keys(_highlights).forEach(function(highlightType){
-            Highlight.hideHighlights(highlightType)
+            hideHighlights(highlightType)
         })
+    }
+
+    Highlight.highlight_moves = function(moves){
+        var cells = moves.map(function(move){
+            return {
+                x: move.xyz.x,
+                y: move.xyz.y,
+                z: move.xyz.z,
+                color: move.kill ? "red" : "green"
+            }
+        })
+        highlightCells(cells)
+    }
+
+    Highlight.highlight_pieces = function(objs){
+        var pieces = Obj.objs_to_pieces(objs)
+        var cells = pieces.map(function(piece){
+            return {
+                x: piece.x,
+                y: piece.y,
+                z: 1.1,
+                color: "piece"
+            }
+        })
+        highlightCells(cells)
     }
 
     return Highlight
@@ -1153,7 +1132,7 @@ var Player = (function(){
     }
 
     Player.objBelongsToPlayer = function(obj){
-        if (!obj.game || !obj.game.piece) return false
+        if (!obj || !obj.game || !obj.game.piece) return false
         else return Player.isFriendly(obj.game.piece)
     }
 
@@ -1574,20 +1553,16 @@ var Obj = (function(){
         obj.position.copy(point)
     }
 
-    Obj.highlight = function(obj, isHigh){
-        if (!obj) return
-        if (isHigh) Obj.move(Rollover.getMesh(), obj.position, K.ROLLOVER_OFFSET)
-        else Rollover.hide()
-    }
-
     Obj.findGameObjAtXY = function(x, y){
+        var _x = Math.floor(x)
+        var _y = Math.floor(y)
         for (var i = 0; i < Obj.objs.length; i++){
             var obj = Obj.objs[i]
             var X = Math.floor(obj.position.x)
             var Y = Math.floor(obj.position.y)
             // need to check that obj.game exists, cause ground planes
             // don't have that and we don't want ground planes
-            if (X == x && Y == y && obj.game) return obj
+            if (X == _x && Y == _y && obj.game) return obj
         }
         return null
     }
@@ -1595,7 +1570,7 @@ var Obj = (function(){
     Obj.findObjsByPieceID = function(pieceID){
         return Obj.objs.filter(function(obj){
             return (obj.game && obj.game.piece &&
-                   obj.game.piece._id == pieceID)
+                    obj.game.piece._id == pieceID)
         })
     }
 
@@ -1624,10 +1599,10 @@ var Obj = (function(){
     }
 
     Obj.findObjs = function(startX, startY, endX, endY){
-        var x = Math.min(startX, endX)
-        var y = Math.min(startY, endY)
-        var X = Math.max(startX, endX)
-        var Y = Math.max(startY, endY)
+        var x = Math.floor(Math.min(startX, endX))
+        var y = Math.floor(Math.min(startY, endY))
+        var X = Math.floor(Math.max(startX, endX))
+        var Y = Math.floor(Math.max(startY, endY))
         return Obj.objs.filter(function(obj){
             if (!obj.game || !obj.game.piece) return false
             var ex = obj.game.piece.x
@@ -1642,6 +1617,20 @@ var Obj = (function(){
         var X = Math.max(startX, endX)
         var Y = Math.max(startY, endY)
         return Obj.findObjs(x, y, X + 1, Y + 1)
+    }
+
+    Obj.find_player_piece_objs = function(startX, startY, endX, endY){
+        return Obj.findObjsInclusive(startX, startY, endX, endY)
+            .filter(function(obj){
+                return Player.objBelongsToPlayer(obj)
+            })
+    }
+
+    // objs must be contain valid pieces
+    Obj.objs_to_pieces = function(objs){
+        return objs.map(function(obj){
+            return obj.game.piece
+        })
     }
 
     Obj.findKingsInZoneBelongingToPlayer = function(playerID, x, y){
@@ -2002,7 +1991,7 @@ var Move = (function(){
         _validatedMoves = moves.filter(function(item){ // Cache available moves
             return item.kill == false || item.killMove == true // Only interested in actual moveable positions
         })
-        Highlight.highlightCells(_validatedMoves)
+        Highlight.highlight_moves(_validatedMoves)
     }
 
     function filterPawnToKingMoves(obj, validatedMoves){
@@ -2392,7 +2381,6 @@ var Scene = (function(){
         initRenderer()
         Sun.init(x, y)
 
-        Rollover.init()
         Select.init()
 
         animate();
@@ -2798,11 +2786,17 @@ var Game = (function(){
         })
     }
 
-    Game.move = function(selected, pos){
+    // mach move from center of pieces to pos
+    Game.move_pieces = function(objs, pos){
+        Obj.objs_to_pieces(objs).forEach(function(piece){
+            Game.move(piece, pos)
+        })
+    }
+
+    Game.move = function(piece, pos){
         var x = Math.floor(pos.x)
         var y = Math.floor(pos.y)
         var z = 1 // height of every game piece
-        var piece = selected.game.piece
         var player = Player.getPlayer()
         if (Move.isValidated(x, y, z)){
             var move_name = "move"
@@ -2814,7 +2808,6 @@ var Game = (function(){
             pieceID: piece._id,
             to: [x, y],
         })
-        Obj.highlight(Select.getSelected(), false)
         Highlight.hideAllHighlights()
         Scene.render()
     }
@@ -2838,9 +2831,7 @@ var Game = (function(){
                 var deadPiece = Game.removeObjByPieceID(data.piece._id)
                 Charge.resetObjClock(deadPiece)
             } catch (e){
-                Console.error("ERROR. Can't remove piece: " + e
-                             + " This can sometimes happen when the browser is out of sync with the "
-                             + "server. Please refresh the game by pressing F5 or Ctrl + R or Cmd + R.")
+                console.log("game.on.remove.catch", JSON.stringify(data.piece, 0, 2))
             }
         }
 
@@ -2942,7 +2933,7 @@ var Game = (function(){
 
     // Returns removed obj
     Game.removeObjAtXY = function(x, y){
-        var obj = Obj.findGameObjAtXY(Math.floor(x), Math.floor(y))
+        var obj = Obj.findGameObjAtXY(x, y)
         Game.removeObj(obj)
         return obj
     }
@@ -2964,7 +2955,7 @@ var Game = (function(){
             Game.removeObj(obj)
             return obj
         } else {
-            throw "Piece not found."
+            throw "Piece not found " + pieceID
         }
     }
 

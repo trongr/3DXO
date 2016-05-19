@@ -25,7 +25,7 @@ var schema = mongoose.Schema({
     automove: {type: mongoose.Schema.Types.ObjectId, ref: 'Job'},
 });
 
-schema.index({x:1, y:1})
+schema.index({x:1, y:1}, {unique:true})
 
 // todo time this for performance
 schema.statics.random = function(callback) {

@@ -16,7 +16,7 @@ var Worker = module.exports = (function(){
 
     var CONCURRENCY = 1000
     var AUTOMOVE_INTERVAL = Conf.recharge
-    var AUTOMOVE_LOOP_MAX_ERCOUNT = 4
+    var AUTOMOVE_LOOP_MAX_ERCOUNT = 10
 
     Worker.init = function(){
         Jobs.listen({port: 8082})
@@ -103,8 +103,8 @@ var Worker = module.exports = (function(){
                     clearInterval(automove_timeout)
                     done(er)
                 } else if (er){
-                    // todo only specific errors should go here, everything else goes up ^
                     ercount += 1
+                    // H.p("debug worker.automove_loop", [pieceID, ercount], er)
                     setTimeout(function(){ // wait a couple seconds before retrying
                         working = false // continue
                     }, 2000)

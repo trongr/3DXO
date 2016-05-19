@@ -13,7 +13,7 @@
         "cannon": 8,
         "bishop": 8,
         "queen": 8,
-        "king": 1,
+        "king": 2,
         "knight": 1
     },
     "killrange": {

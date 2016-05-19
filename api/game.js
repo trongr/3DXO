@@ -250,11 +250,7 @@ var Move = (function(){
         var dstPiece, capturedKing = null
         async.waterfall([
             function(done){
-                // Check if dst has an enemy piece. (Since we're
-                // already here at Move.oneMove if there's anything
-                // here it has to be an enemy.) EDIT. not necessarily:
-                // someone could have moved here while this sequence
-                // was executing. TODO do something about that
+                // Check if dst has an enemy piece.
                 Piece.findOne({
                     x: to[0],
                     y: to[1],
@@ -265,17 +261,15 @@ var Move = (function(){
                 });
             },
             function(done){
-                if (dstPiece){
+                if (dstPiece && !dstPiece.player.equals(piece.player)){
                     if (dstPiece.kind == "king"){
                         capturedKing = dstPiece
-                        // kept for reference:
-                        // kingKillerMove(piece, function(er, _piece){
-                        //     done(er, _piece)
-                        // })
                     }
                     killMove(dstPiece, piece, to, function(er, _piece){
                         done(er, _piece)
                     })
+                } else if (dstPiece){
+                    done("WARNING. game.oneMove: illegal move: regular move friendly fire")
                 } else {
                     regularMove(piece, to, function(er, _piece){
                         done(er, _piece)
@@ -346,23 +340,6 @@ var Move = (function(){
         ], function(er, nPiece){
             if (er) done(["ERROR. Game.killMove", dstPiece, piece, to, er])
             else done(null, nPiece)
-        })
-    }
-
-    function kingKillerMove(piece, done){
-        Piece.findOneAndUpdate({
-            _id: piece._id
-        }, {
-            $set: {
-                // not setting x and y because not moving piece on king killing move
-                moved: new Date(), // for piece timeout
-                modified: new Date(),
-            }
-        }, {
-            new: true,
-            runValidators: true,
-        }, function(er, _piece){
-            done(er, _piece)
         })
     }
 
@@ -692,7 +669,7 @@ var Game = module.exports = (function(){
                     er == K.code.piece_timeout){
                     // ignore
                 } else if (er){
-                    H.log("ERROR. Game.move", playerID, pieceID, to, er)
+                    H.p("Game.move", [playerID, pieceID, to], er)
                 }
                 if (done) done(er)
             })
