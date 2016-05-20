@@ -94,6 +94,7 @@ var Worker = module.exports = (function(){
                         return done(K.code.job_cancelled)
                     }
                     data.to = nextTo
+                    data.nopub = true
                     Game.on.move(player, data, done)
                 }
             ], function(er){
@@ -165,12 +166,17 @@ var Worker = module.exports = (function(){
     function best_to(moves, from, to){
         try {
             var moves_with_dist = []
+            var dist = Math.sqrt(Math.pow(Math.abs(from[0] - to[0]), 2) +
+                                 Math.pow(Math.abs(from[1] - to[1]), 2))
             moves.forEach(function(move){
-                moves_with_dist.push({
-                    move: move,
-                    dist: Math.sqrt(Math.pow(Math.abs(move[0] - to[0]), 2) +
-                                    Math.pow(Math.abs(move[1] - to[1]), 2)),
-                })
+                var move_dist = Math.sqrt(Math.pow(Math.abs(move[0] - to[0]), 2) +
+                                          Math.pow(Math.abs(move[1] - to[1]), 2))
+                if (move_dist < dist){
+                    moves_with_dist.push({
+                        move: move,
+                        dist: move_dist,
+                    })
+                }
             })
             moves_with_dist.sort(function(a, b){
                 return a.dist - b.dist

@@ -624,7 +624,8 @@ var Game = module.exports = (function(){
                     Math.floor(data.to[0]),
                     Math.floor(data.to[1]),
                 ]
-                var hasEnemies = false
+                var nopub = data.nopub // for automove: don't pub to player
+                var ermsg = null
             } catch (e){
                 return H.p("Game.move", [player, data, e.stack], "invalid input")
             }
@@ -648,7 +649,7 @@ var Game = module.exports = (function(){
                 function(done){
                     Move.validatePlayerPiece(player, piece, function(er, msg){
                         if (er == OK){
-                            Pub.error(playerID, msg)
+                            ermsg = msg
                             done(OK)
                         } else done(er)
                     })
@@ -656,13 +657,13 @@ var Game = module.exports = (function(){
                 function(done){
                     Pieces.validatePieceTimeout(piece, function(er){
                         if (er){
-                            Pub.error(playerID, er)
+                            ermsg = er
                             done(K.code.piece_timeout)
                         } else done(null)
                     })
                 },
                 function(done){
-                    oneMove(playerID, player, piece, to, hasEnemies, done)
+                    oneMove(playerID, player, piece, to, done)
                 },
             ], function(er){
                 if (er == OK || er == K.code.block ||
@@ -671,6 +672,7 @@ var Game = module.exports = (function(){
                 } else if (er){
                     H.p("Game.move", [playerID, pieceID, to], er)
                 }
+                if (ermsg && !nopub) Pub.error(playerID, ermsg)
                 if (done) done(er)
             })
         }
@@ -744,8 +746,8 @@ var Game = module.exports = (function(){
             Boss.cancel_automove(pieceID)
         }
 
-        // regular single piece move, as opposed to moving an entire army from one zone to another
-        function oneMove(playerID, player, piece, to, hasEnemies, done){
+        // regular single piece move
+        function oneMove(playerID, player, piece, to, done){
             var nPiece = null
             var from = [piece.x, piece.y] // save this to pub remove from later this method
             var distance, direction
@@ -789,7 +791,6 @@ var Game = module.exports = (function(){
                     ])
                     Pub.move(nPiece, {
                         showClock: showClock,
-                        hasEnemies: hasEnemies,
                     }, [
                         H.toZoneCoordinate(nPiece.x, S),
                         H.toZoneCoordinate(nPiece.y, S)

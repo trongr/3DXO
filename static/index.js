@@ -398,7 +398,7 @@ var Charge = (function(){
         transparent:true, opacity:0.8
     });
 
-    Charge.start = function(piece, hasEnemies){
+    Charge.start = function(piece){
         var pieceID = piece._id
         var total = Conf.recharge
         var delta = 100 // change this for smoother or rougher ticks
@@ -864,9 +864,6 @@ var Select = (function(){
 
         var pos = Select.get_mouse_pos()
 
-        // mach do this on mouseup for multiple and single piece
-        // Game.cancel_automove(obj)
-
         // mouse up in a diff square than mouse down, i.e. was
         // dragging: select pieces (don't bother highlighting
         // available moves; too many).  dragging always initiates
@@ -879,6 +876,7 @@ var Select = (function(){
             Highlight.hideAllHighlights()
             if (_selected.length){
                 Highlight.highlight_pieces(_selected)
+                Game.cancel_automove(_selected)
             }
             return
         }
@@ -2205,15 +2203,6 @@ var Move = (function(){
         }).length > 0
     }
 
-    // Checks that xyz is in the list of validated zone moves that we just calculated
-    Move.isValidatedZoneMove = function(x, y){
-        var X = H.toZoneCoordinate(x, Conf.zone_size)
-        var Y = H.toZoneCoordinate(y, Conf.zone_size)
-        return _validatedZoneMoves.filter(function(move){
-            return move[0] == X && move[1] == Y
-        }).length > 0
-    }
-
     Move.getRange = function(objKind){
         return Conf.range[objKind]
     }
@@ -2479,22 +2468,22 @@ var SFX = (function(){
         king: {
             i: 0,
             move: [
-                new Audio('/static/snd/king/cinematicfg.mp3'),
-                new Audio('/static/snd/king/cinematicfg.mp3'),
-                new Audio('/static/snd/king/cinematicfg.mp3'),
-                new Audio('/static/snd/king/cinematicfg.mp3'),
-                new Audio('/static/snd/king/cinematicfg.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
             ],
             kill: null
         },
         queen: {
             i: 0,
             move: [
-                new Audio('/static/snd/queen/cinematicfg.mp3'),
-                new Audio('/static/snd/queen/cinematicfg.mp3'),
-                new Audio('/static/snd/queen/cinematicfg.mp3'),
-                new Audio('/static/snd/queen/cinematicfg.mp3'),
-                new Audio('/static/snd/queen/cinematicfg.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick14.mp3'),
             ],
             kill: null
         },
@@ -2777,28 +2766,33 @@ var Game = (function(){
     }
 
     Game.cancel_automove = function(selected){
-        if (!selected) return
-        var piece = selected.game.piece
+        if (!selected || !selected.length) return
         var player = Player.getPlayer()
-        Sock.send("cancel_automove", {
-            playerID: player._id,
-            pieceID: piece._id,
+        selected.forEach(function(obj){
+            var piece = obj.game.piece
+            Sock.send("cancel_automove", {
+                playerID: player._id,
+                pieceID: piece._id,
+            })
         })
     }
 
-    // mach move from center of pieces to pos
     Game.move_pieces = function(objs, pos){
+        if (objs.length > 1) var multi = true
         Obj.objs_to_pieces(objs).forEach(function(piece){
-            Game.move(piece, pos)
+            Game.move(piece, pos, multi)
         })
+        Highlight.hideAllHighlights()
     }
 
-    Game.move = function(piece, pos){
+    Game.move = function(piece, pos, multi){
         var x = Math.floor(pos.x)
         var y = Math.floor(pos.y)
         var z = 1 // height of every game piece
         var player = Player.getPlayer()
-        if (Move.isValidated(x, y, z)){
+        if (multi){
+            var move_name = "automove"
+        } else if (Move.isValidated(x, y, z)){
             var move_name = "move"
         } else {
             var move_name = "automove"
@@ -2808,8 +2802,6 @@ var Game = (function(){
             pieceID: piece._id,
             to: [x, y],
         })
-        Highlight.hideAllHighlights()
-        Scene.render()
     }
 
     Game.on = (function(){
@@ -2843,7 +2835,7 @@ var Game = (function(){
             // create new piece at dst
             var obj = Piece.make(data.piece)
             Game.addObj(obj)
-            if (data.opts.showClock) Charge.start(data.piece, data.opts.hasEnemies)
+            if (data.opts.showClock) Charge.start(data.piece)
 
             SFX.move(data.piece.kind)
         }
