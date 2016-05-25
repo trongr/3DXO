@@ -4,6 +4,7 @@ var async = require("async")
 var express = require('express');
 var H = require("../static/js/h.js")
 var Conf = require("../static/conf.json") // shared with client
+var DB = require("../db.js")
 var Job = require("../models/job.js")
 var Piece = require("../models/piece.js")
 var Player = require("../models/player.js")

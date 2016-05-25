@@ -5,11 +5,11 @@ var DB = require("../db.js")
 
 var schema = mongoose.Schema({
     kind: {type: String, required: true}, // pawn, knight, rook, bishop, queen, king
-    x: {type: Number, required: true, validate: [Validate.isInt, "x not int"]},
-    y: {type: Number, required: true, validate: [Validate.isInt, "y not int"]},
+    x: {type: Number, required: true},
+    y: {type: Number, required: true},
     // previous x and y
-    px: {type: Number, required: true, validate: [Validate.isInt, "x not int"]},
-    py: {type: Number, required: true, validate: [Validate.isInt, "y not int"]},
+    px: {type: Number, required: true},
+    py: {type: Number, required: true},
     army_id: {type: mongoose.Schema.Types.ObjectId, required: true},
     player: {type: mongoose.Schema.Types.ObjectId, ref: 'Player', required: true},
     // team: {

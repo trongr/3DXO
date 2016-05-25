@@ -6,7 +6,7 @@ var Player = require("../models/player.js")
 var H = require("../static/js/h.js")
 var Conf = require("../static/conf.json") // shared with client
 var Sanitize = require("../lib/sanitize.js")
-
+var DB = require("../db.js")
 var S = Conf.zone_size
 
 var OK = "OK"
@@ -28,29 +28,29 @@ var Pieces = module.exports = (function(){
             } catch (e){
                 return res.send({info:ERROR_GET_PIECES})
             }
-            Piece.find({
+            DB.find("pieces", {
                 x: {$gte: x, $lt: x + r},
                 y: {$gte: y, $lt: y + r},
-            }).exec(function(er, pieces){
+            }, function(er, pieces){
                 if (pieces){
                     res.send({ok:true, pieces:pieces})
                 } else {
                     res.send({info:ERROR_GET_PIECES})
                 }
-            });
+            })
         })
 
-    Pieces.makePiece = function(data, done){
-        var piece = new Piece(data)
-        piece.save(function(er){
-            if (er) done(["ERROR. Pieces.makePiece", data, er])
-            else done(null, piece)
+    Pieces.makePiece = function(piece, done){
+        piece.player = piece.player._id
+        DB.insert("pieces", piece, function(er, pieces){
+            if (pieces && pieces.length) done(null, pieces[0])
+            else done(["ERROR. Pieces.makePiece", piece, er])
         })
     }
 
     // Converts player's losing army to enemy's side
     Pieces.defect = function(playerID, enemyID, defector_army_id, defectee_army_id, done){
-        Piece.update({
+        DB.update("pieces", {
             player: playerID,
             army_id: defector_army_id,
         }, {
@@ -82,18 +82,19 @@ var Pieces = module.exports = (function(){
     Pieces.findPiecesInZone = function(_x, _y, done){
         var x = H.toZoneCoordinate(_x, S)
         var y = H.toZoneCoordinate(_y, S)
-        Piece.find({
+        DB.find("pieces", {
             x: {$gte: x, $lt: x + S},
             y: {$gte: y, $lt: y + S},
-        }).exec(function(er, _pieces){
+        }, function(er, _pieces){
             if (_pieces){
                 done(null, _pieces)
             } else {
                 done(["ERROR. Pieces.findPiecesInZone", _x, _y, er])
             }
-        });
+        })
     }
 
+    // mach remove
     Pieces.findPlayerPiecesInZone = function(playerID, _x, _y, done){
         var x = H.toZoneCoordinate(_x, S)
         var y = H.toZoneCoordinate(_y, S)
@@ -111,7 +112,7 @@ var Pieces = module.exports = (function(){
     }
 
     Pieces.set_player_army_alive = function(playerID, army_id, alive, done){
-        Piece.update({
+        DB.update({
             player: playerID,
             army_id: army_id,
         }, {
@@ -120,8 +121,8 @@ var Pieces = module.exports = (function(){
             }
         }, {
             multi: true,
-        }, function(er, num){
-            if (er) done(["ERROR. Pieces.disable_player_army", playerID, army_id, alive, er])
+        }, function(er, re){
+            if (er) done(["ERROR. Pieces.disable_player_army", playerID, army_id, alive, er, re])
             else done(null)
         })
     }

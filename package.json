@@ -34,6 +34,7 @@
     "validator": "~4.5.1",
     "kue": "~0.10.5",
     "q": "~1.4.1",
-    "randomstring": "~1.1.4"
+    "randomstring": "~1.1.4",
+    "mongodb": "~2.1.20"
   }
 }
