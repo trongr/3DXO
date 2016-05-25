@@ -75,6 +75,8 @@ var Worker = module.exports = (function(){
             // case we can retry a second later with this approach
             if (new Date().getTime() - lastSuccessfulMove < AUTOMOVE_INTERVAL) return
 
+            var start = new Date().getTime()
+
             async.waterfall([
                 function(done){
                     Job.checkJobCancelled(jobID, function(er, job){
@@ -94,13 +96,13 @@ var Worker = module.exports = (function(){
                         return done(K.code.job_cancelled)
                     }
                     data.to = nextTo
-                    data.nopub = true
+                    data.erpub = false
                     Game.on.move(player, data, done)
                 }
             ], function(er){
-                if ((er && ercount > AUTOMOVE_LOOP_MAX_ERCOUNT) ||
-                    er == K.code.job_cancelled ||
-                    er == K.code.piece_timeout){
+                // mach run automove until piece dies
+                // if ((er && ercount > AUTOMOVE_LOOP_MAX_ERCOUNT) || er == K.code.piece_timeout
+                if (er == K.code.job_cancelled){
                     clearInterval(automove_timeout)
                     done(er)
                 } else if (er){
@@ -109,13 +111,17 @@ var Worker = module.exports = (function(){
                     setTimeout(function(){ // wait a couple seconds before retrying
                         working = false // continue
                     }, 2000)
-                } else if (isAtFinalDst(piece, nextTo, finalTo)){
+                } else if (nextTo && isAtFinalDst(piece, nextTo, finalTo)){
+                    // need to check nextTo cause when CPU / MEM
+                    // overloads it can be null and er will be null
                     clearInterval(automove_timeout)
                     done(null)
                 } else { // successful move. repeat
                     lastSuccessfulMove = new Date().getTime()
-                    recent_moves.push(nextTo) // keep track of last two moves
-                    recent_moves = recent_moves.slice(-2)
+                    if (nextTo){
+                        recent_moves.push(nextTo) // keep track of last two moves
+                        recent_moves = recent_moves.slice(-2)
+                    }
                     working = false // continue
                     ercount = 0
                 }

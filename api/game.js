@@ -624,7 +624,7 @@ var Game = module.exports = (function(){
                     Math.floor(data.to[0]),
                     Math.floor(data.to[1]),
                 ]
-                var nopub = data.nopub // for automove: don't pub to player
+                var erpub = (data.erpub == null ? true : data.erpub)  // pub er msg by default unless otw spec
                 var ermsg = null
             } catch (e){
                 return H.p("Game.move", [player, data, e.stack], "invalid input")
@@ -672,7 +672,7 @@ var Game = module.exports = (function(){
                 } else if (er){
                     H.p("Game.move", [playerID, pieceID, to], er)
                 }
-                if (ermsg && !nopub) Pub.error(playerID, ermsg)
+                if (erpub && ermsg) Pub.error(playerID, ermsg)
                 if (done) done(er)
             })
         }

@@ -12,11 +12,13 @@ var K = (function(){
         CUBE_GEO: new THREE.BoxGeometry(S, S, S),
 
         CAM_NEAR: 1,
-        CAM_FAR: 200,
+        CAM_FAR: 2000,
         CAM_DIST_MIN: 50,
 
         // CAM_DIST_MAX: 100,
-        CAM_DIST_MAX: 150,
+        // CAM_DIST_MAX: 150,
+        CAM_DIST_MAX: 200,
+        // CAM_DIST_MAX: 2000,
         // CAM_DIST_MAX: 1000,
 
         CAM_DIST_INIT: 65,
@@ -457,47 +459,6 @@ var Charge = (function(){
         return ring
     }
 
-    Charge.startZoneMoveClock = function(x, y){
-        var zone = [x, y]
-        var total = Conf.recharge
-        var delta = 50 // change this for smoother or rougher ticks
-        var time = total
-        resetZoneClock(zone)
-        _zoneClocks[zone] = {}
-        _zoneClocks[zone].interval = setInterval(function(){
-            removeZoneClockMesh(zone)
-            time = time - delta
-            var clock = makeRechargeZoneClock(x, y, 1, time / total)
-            _zoneClocks[zone].clock = clock
-            Scene.add(clock)
-            if (time < 1){
-                resetZoneClock(zone)
-            }
-        }, delta);
-    }
-
-    function resetZoneClock(zone){
-        var clock = _zoneClocks[zone]
-        if (clock){
-            clearInterval(clock.interval)
-            removeZoneClockMesh(zone)
-            _zoneClocks[zone] = {}
-        }
-    }
-
-    function removeZoneClockMesh(zone){
-        var obj = _zoneClocks[zone].clock
-        Scene.remove(obj)
-        if (obj) obj.geometry.dispose();
-    }
-
-    function makeRechargeZoneClock(x, y, z, percent){
-        var zone_clock_geo = new THREE.RingGeometry(ZONE_CLOCK_INNER_RADIUS, ZONE_CLOCK_OUTER_RADIUS, 64, 8, Math.PI / 2, 2 * Math.PI * (percent - 1));
-        var ring = new THREE.Mesh(zone_clock_geo, ZONE_CLOCK_MAT);
-        Obj.move(ring, new THREE.Vector3(x, y, z), K.ZONE_CLOCK_OFFSET)
-        return ring
-    }
-
     return Charge
 }())
 
@@ -887,6 +848,7 @@ var Select = (function(){
         if (selected.length){ // not an empty square: selecting a single piece
             _selected = selected
             Move.highlightAvailableMoves(_selected[0])
+            Game.cancel_automove(_selected)
         } else if (_selected.length) { // empty square: move selected pieces
             Game.move_pieces(_selected, pos)
             _selected = []
@@ -2468,77 +2430,77 @@ var SFX = (function(){
         king: {
             i: 0,
             move: [
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
             ],
             kill: null
         },
         queen: {
             i: 0,
             move: [
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
             ],
             kill: null
         },
         bishop: {
             i: 0,
             move: [
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
-                new Audio('/static/snd/bishop/acoustickick14.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
+                new Audio('/static/snd/bishop/acoustickick2.mp3'),
             ],
             kill: null
         },
         knight: {
             i: 0,
             move: [
-                new Audio('/static/snd/knight/horsetrot.mp3'),
-                new Audio('/static/snd/knight/horsetrot.mp3'),
-                new Audio('/static/snd/knight/horsetrot.mp3'),
-                new Audio('/static/snd/knight/horsetrot.mp3'),
-                new Audio('/static/snd/knight/horsetrot.mp3'),
+                new Audio('/static/snd/knight/horsetrot2.mp3'),
+                new Audio('/static/snd/knight/horsetrot2.mp3'),
+                new Audio('/static/snd/knight/horsetrot2.mp3'),
+                new Audio('/static/snd/knight/horsetrot2.mp3'),
+                new Audio('/static/snd/knight/horsetrot2.mp3'),
             ],
             kill: null
         },
         rook: {
             i: 0,
             move: [
-                new Audio('/static/snd/rook/knockwood01.mp3'),
-                new Audio('/static/snd/rook/knockwood01.mp3'),
-                new Audio('/static/snd/rook/knockwood01.mp3'),
-                new Audio('/static/snd/rook/knockwood01.mp3'),
-                new Audio('/static/snd/rook/knockwood01.mp3'),
+                new Audio('/static/snd/rook/knockwood2.mp3'),
+                new Audio('/static/snd/rook/knockwood2.mp3'),
+                new Audio('/static/snd/rook/knockwood2.mp3'),
+                new Audio('/static/snd/rook/knockwood2.mp3'),
+                new Audio('/static/snd/rook/knockwood2.mp3'),
             ],
             kill: null
         },
         cannon: {
             i: 0,
             move: [
-                new Audio('/static/snd/cannon/acekick.mp3'),
-                new Audio('/static/snd/cannon/acekick.mp3'),
-                new Audio('/static/snd/cannon/acekick.mp3'),
-                new Audio('/static/snd/cannon/acekick.mp3'),
-                new Audio('/static/snd/cannon/acekick.mp3'),
+                new Audio('/static/snd/cannon/acekick2.mp3'),
+                new Audio('/static/snd/cannon/acekick2.mp3'),
+                new Audio('/static/snd/cannon/acekick2.mp3'),
+                new Audio('/static/snd/cannon/acekick2.mp3'),
+                new Audio('/static/snd/cannon/acekick2.mp3'),
             ],
             kill: null
         },
         pawn: {
             i: 0,
             move: [
-                new Audio('/static/snd/pawn/ethniclodrum01.mp3'),
-                new Audio('/static/snd/pawn/ethniclodrum01.mp3'),
-                new Audio('/static/snd/pawn/ethniclodrum01.mp3'),
-                new Audio('/static/snd/pawn/ethniclodrum01.mp3'),
-                new Audio('/static/snd/pawn/ethniclodrum01.mp3'),
+                new Audio('/static/snd/pawn/ethniclodrum2.mp3'),
+                new Audio('/static/snd/pawn/ethniclodrum2.mp3'),
+                new Audio('/static/snd/pawn/ethniclodrum2.mp3'),
+                new Audio('/static/snd/pawn/ethniclodrum2.mp3'),
+                new Audio('/static/snd/pawn/ethniclodrum2.mp3'),
             ],
             kill: null
         },
@@ -2835,13 +2797,9 @@ var Game = (function(){
             // create new piece at dst
             var obj = Piece.make(data.piece)
             Game.addObj(obj)
-            if (data.opts.showClock) Charge.start(data.piece)
+            // if (data.opts.showClock) Charge.start(data.piece)
 
             SFX.move(data.piece.kind)
-        }
-
-        on.zonemoveclock = function(data){
-            Charge.startZoneMoveClock(data.x, data.y)
         }
 
         // todo big splash screen and menu for loser
