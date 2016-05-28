@@ -20,7 +20,9 @@ var Boss = require("../workers/boss.js")
 var S = Conf.zone_size
 var OK = "OK"
 
+// mach unique mongodb x y index
 var REMOVE_ARMY_TIMEOUT = 10 * 60 * 1000 // ms. 10 mins
+// var REMOVE_ARMY_TIMEOUT = 15 * 1000 // ms. 10 mins
 var NEW_ARMY_RATE_LIMIT = 60 * 1000 // ms
 var NEW_ARMY_RATE_LIMIT_MSG = "Please wait "
     + parseInt(NEW_ARMY_RATE_LIMIT / 1000)
@@ -85,10 +87,10 @@ var Move = (function(){
         var obstacle_count = 0
         async.timesSeries(distance, function(i, done){
             var j = i + 1
-            Piece.findOne({
+            DB.findOne("pieces", {
                 x: piece.x + j * dx,
                 y: piece.y + j * dy,
-            }).exec(function(er, _piece){
+            }, function(er, _piece){
                 if (er) return done(["Piece.findOne", er])
 
                 // cannon move
@@ -130,12 +132,10 @@ var Move = (function(){
                     done(["Move blocked by friendly", _piece])
                 }
                 else done(null) // Nothing's in the way
-            });
+            })
         }, function(er){
             if (er) done(K.code.block)
             else done(null)
-            // if (er) done(["ERROR. Move.validateBlock", piece, distance, direction, er])
-            // else done(null)
         })
     }
 
@@ -252,10 +252,10 @@ var Move = (function(){
         async.waterfall([
             function(done){
                 // Check if dst has an enemy piece.
-                Piece.findOne({
+                DB.findOne("pieces", {
                     x: to[0],
                     y: to[1],
-                }).exec(function(er, _piece){
+                }, function(er, _piece){
                     dstPiece = _piece
                     if (er) done(["Piece.findOne", to, er])
                     else done(null)
@@ -287,7 +287,7 @@ var Move = (function(){
     }
 
     function regularMove(piece, to, done){
-        Piece.findOneAndUpdate({
+        DB.findOneAndUpdate("pieces", {
             _id: piece._id
         }, {
             $set: {
@@ -298,10 +298,7 @@ var Move = (function(){
                 moved: new Date(), // for piece timeout
                 modified: new Date(),
             }
-        }, {
-            new: true,
-            runValidators: true,
-        }, function(er, _piece){
+        }, null, function(er, _piece){
             if (_piece){
                 done(null, _piece)
             } else {
@@ -313,13 +310,19 @@ var Move = (function(){
     function killMove(dstPiece, piece, to, done){
         async.waterfall([
             function(done){
-                dstPiece.remove(function(er){
+                DB.remove("pieces", {
+                    _id: dstPiece._id
+                }, function(er, num){
                     if (er) done(["remove dst piece", er])
                     else done(null)
                 })
+                // dstPiece.remove(function(er){
+                //     if (er) done(["remove dst piece", er])
+                //     else done(null)
+                // })
             },
             function(done){
-                Piece.findOneAndUpdate({
+                DB.findOneAndUpdate("pieces", {
                     _id: piece._id
                 }, {
                     $set: {
@@ -330,10 +333,7 @@ var Move = (function(){
                         moved: new Date(), // for piece timeout
                         modified: new Date(),
                     }
-                }, {
-                    new: true,
-                    runValidators: true,
-                }, function(er, _piece){
+                }, null, function(er, _piece){
                     if (_piece) done(null, _piece)
                     else done(["update dst piece", er])
                 })
@@ -432,9 +432,6 @@ var Game = module.exports = (function(){
             function(done){
                 var army = generateArmy(player, zone)
                 async.each(army, function(pieceData, done){
-                    // todo game logic should check if upserting is
-                    // allowed: check if there's another piece at the
-                    // same location. do the same for moving pieces
                     Pieces.makePiece(pieceData, function(er, piece){
                         pieces.push(piece)
                         done(er)
@@ -464,7 +461,7 @@ var Game = module.exports = (function(){
         var army_id = null
         async.waterfall([
             function(done){
-                Piece.findPlayerKing(playerID, function(er, _king){
+                Pieces.findPlayerKing(playerID, function(er, _king){
                     king = _king
                     if (er) done(er)
                     else if (king) done(null)
@@ -512,7 +509,7 @@ var Game = module.exports = (function(){
                         y: zone[1] + i,
                         px: zone[0] + j, // previous x and y same as x and y for new pieces
                         py: zone[1] + i,
-                        player: player,
+                        player: player._id,
                         army_id: army_id
                     })
                 }
@@ -638,7 +635,7 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Piece.findOneByID(pieceID, function(er, _piece){
+                    DB.findOneByID("pieces", pieceID, function(er, _piece){
                         piece = _piece
                         if (piece){
                             px = piece.x
@@ -703,7 +700,7 @@ var Game = module.exports = (function(){
                     })
                 },
                 function(done){
-                    Piece.findOneByID(pieceID, function(er, _piece){
+                    DB.findOneByID("pieces", pieceID, function(er, _piece){
                         piece = _piece
                         if (piece){
                             px = piece.x
@@ -856,7 +853,7 @@ var Game = module.exports = (function(){
         var moves = []
         async.waterfall([
             function(done){
-                Piece.findOneByID(pieceID, function(er, _piece){
+                DB.findOneByID("pieces", pieceID, function(er, _piece){
                     piece = _piece
                     done(er)
                 })
@@ -872,7 +869,8 @@ var Game = module.exports = (function(){
                     async.timesSeries(range, function(i, done){
                         var move_x = (1 + i) * direction[0] + x
                         var move_y = (1 + i) * direction[1] + y
-                        Piece.find_piece_at_xy(move_x, move_y, function(er, _piece){
+
+                        Pieces.find_piece_at_xy(move_x, move_y, function(er, _piece){
                             if (_piece) done(true) // blocked: stop
                             else { // no piece here, can keep moving
                                 moves.push([move_x, move_y])
@@ -902,46 +900,6 @@ var Test = (function(){
         var method = process.argv[2]
         var args = process.argv.slice(3)
         Test[method](args)
-    }
-
-    Test.make = function(args){
-        H.log("USAGE. node game.js make rook 0 1 playerID")
-        var kind = args[0]
-        var x = args[1]
-        var y = args[2]
-        var player = args[3]
-        setTimeout(function(){
-            Pieces.makePiece({
-                kind: kind,
-                x: x,
-                y: y,
-                player: player
-            }, function(er, piece){
-                console.log(JSON.stringify({piece:piece, er:er}, 0, 2))
-                process.exit(0)
-            })
-        }, 2000)
-    }
-
-    Test.clean = function(args){
-        H.log("USAGE. node game.js clean")
-        setTimeout(function(){
-            async.waterfall([
-                function(done){
-                    Player.remove({}, function(er) {
-                        done(er)
-                    });
-                },
-                function(done){
-                    Piece.remove({}, function(er) {
-                        done(er)
-                    });
-                },
-            ], function(er){
-                console.log(JSON.stringify(er, 0, 2))
-                process.exit(0)
-            })
-        }, 2000)
     }
 
     return Test

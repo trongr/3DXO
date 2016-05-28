@@ -1,5 +1,6 @@
 var MongoClient = require('mongodb').MongoClient
-  , assert = require('assert');
+var assert = require('assert');
+var ObjectID = require('mongodb').ObjectID
 var mongoose = require('mongoose');
 var H = require("./static/js/h.js")
 
@@ -36,6 +37,11 @@ var DB = module.exports = (function(){
             assert.equal(null, err);
             console.log("Connected to mongodb");
             _db = db
+
+            _db.collection("pieces").ensureIndex({x:1, y:1}, {unique:true}, function(err, indexName){
+                assert.equal(null, err);
+                console.log("pieces.ensureIndex", indexName, err)
+            });
         });
     }
 
@@ -57,6 +63,37 @@ var DB = module.exports = (function(){
         });
     }
 
+    DB.findOne = function(table, query, done){
+        _db.collection(table).findOne(query, function(err, doc) {
+            done(err, doc)
+        });
+    }
+
+    DB.findOneByID = function(table, id, done){
+        try {
+            var _id = DB.ObjectID(id)
+        } catch (e){
+            return done(["ERROR. DB.findOneByID: invalid data", table, id])
+        }
+        _db.collection(table).findOne({
+            _id: _id
+        }, function(err, doc) {
+            done(err, doc)
+        });
+    }
+
+    // opts.returnOriginal: true returns original, false returns modified
+    DB.findOneAndUpdate = function(table, query, update, opts, done){
+        opts = opts || {}
+        if (opts.returnOriginal == null){
+            opts.returnOriginal = false
+        }
+        _db.collection(table).findOneAndUpdate(query, update, opts, function(err, re){
+            if (re && re.value) done(null, re.value)
+            else done(["ERROR. DB.findOneAndUpdate: item not found", table, query, update, opts, err, re])
+        });
+    }
+
     DB.update = function(table, query, update, opts, done){
         _db.collection(table).update(query, update, opts, function(err, r) {
             // assert.equal(2, r.matchedCount);
@@ -72,6 +109,16 @@ var DB = module.exports = (function(){
             if (r) done(null, r.ops)
             else done(["ERROR. db.insert", table, data, err, r])
         });
+    }
+
+    DB.remove = function(table, query, done){
+        _db.collection(table).remove(query, function(err, numberOfRemovedDocs){
+            done(err, numberOfRemovedDocs)
+        });
+    }
+
+    DB.ObjectID = function(id){
+        return new ObjectID(id)
     }
 
     return DB

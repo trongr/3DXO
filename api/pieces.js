@@ -41,7 +41,8 @@ var Pieces = module.exports = (function(){
         })
 
     Pieces.makePiece = function(piece, done){
-        piece.player = piece.player._id
+        piece.created = new Date()
+        piece.alive = true
         DB.insert("pieces", piece, function(er, pieces){
             if (pieces && pieces.length) done(null, pieces[0])
             else done(["ERROR. Pieces.makePiece", piece, er])
@@ -67,10 +68,10 @@ var Pieces = module.exports = (function(){
     }
 
     Pieces.validatePieceTimeout = function(piece, done){
-        // piece.moved == null by default, so new Date(null) ==
-        // Start of Epoch, so if else check will work out: piece
-        // can move
-        var elapsed = new Date().getTime() - new Date(piece.moved).getTime()
+        // new Date(null) == Start of Epoch, so if else check will
+        // work out: piece can move.
+        // NOTE. new Date(undefined) == invalid date so need to || null
+        var elapsed = Date.now() - new Date(piece.moved || null).getTime()
         if (elapsed >= Conf.recharge){
             done(null, 0)
         } else {
@@ -94,23 +95,6 @@ var Pieces = module.exports = (function(){
         })
     }
 
-    // mach remove
-    Pieces.findPlayerPiecesInZone = function(playerID, _x, _y, done){
-        var x = H.toZoneCoordinate(_x, S)
-        var y = H.toZoneCoordinate(_y, S)
-        Piece.find({
-            player: playerID,
-            x: {$gte: x, $lt: x + S},
-            y: {$gte: y, $lt: y + S},
-        }).exec(function(er, _pieces){
-            if (_pieces){
-                done(null, _pieces)
-            } else {
-                done(["ERROR. Pieces.findPlayerPiecesInZone", playerID, _x, _y, er])
-            }
-        });
-    }
-
     Pieces.set_player_army_alive = function(playerID, army_id, alive, done){
         DB.update({
             player: playerID,
@@ -126,6 +110,32 @@ var Pieces = module.exports = (function(){
             else done(null)
         })
     }
+
+    Pieces.findPlayerKing = function(playerID, done){
+        try {
+            nPlayerID = DB.ObjectID(playerID)
+        } catch (e){
+            return done(["ERROR. Pieces.findPlayerKing: invalid data", playerID])
+        }
+        DB.findOne("pieces", {
+            player: nPlayerID,
+            kind: "king"
+        }, function(er, king){
+            if (er) done(["ERROR. Pieces.findPlayerKing", playerID, er])
+            else if (king) done(null, king)
+            else done(null, null)
+        })
+    }
+
+    Pieces.find_piece_at_xy = function(x, y, done){
+        DB.findOne("pieces", {
+            x: x,
+            y: y,
+        }, function(er, _piece){
+            done(er, _piece)
+        });
+    }
+
 
     return Pieces
 }())
