@@ -96,7 +96,7 @@ var Pieces = module.exports = (function(){
     }
 
     Pieces.set_player_army_alive = function(playerID, army_id, alive, done){
-        DB.update({
+        DB.update("pieces", {
             player: playerID,
             army_id: army_id,
         }, {

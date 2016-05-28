@@ -20,7 +20,6 @@ var Boss = require("../workers/boss.js")
 var S = Conf.zone_size
 var OK = "OK"
 
-// mach unique mongodb x y index
 var REMOVE_ARMY_TIMEOUT = 10 * 60 * 1000 // ms. 10 mins
 // var REMOVE_ARMY_TIMEOUT = 15 * 1000 // ms. 10 mins
 var NEW_ARMY_RATE_LIMIT = 60 * 1000 // ms

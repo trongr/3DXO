@@ -1,5 +1,5 @@
 {
-  "name": "3dxo",
+  "name": "ragnarook",
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/trongr/3DXO.git"
+    "url": "git+https://github.com/trongr/ragnarook.git"
   },
   "author": "devgruxcon",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/trongr/3DXO/issues"
+    "url": "https://github.com/trongr/ragnarook/issues"
   },
-  "homepage": "https://github.com/trongr/3DXO#readme",
+  "homepage": "https://github.com/trongr/ragnarook#readme",
   "dependencies": {
     "async": "^1.3.0",
     "bcrypt": "^0.8.4",
