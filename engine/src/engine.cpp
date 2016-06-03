@@ -1,3 +1,4 @@
+#include <queue>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -29,6 +30,12 @@ public:
 
 private:
 
+    posix::stream_descriptor _input;
+    posix::stream_descriptor _output;
+    boost::asio::streambuf _input_buffer;
+    InputMsg _input_msg;
+    queue<string> _msgs;
+
     void async_read_input(){
         boost::asio::async_read_until(_input, _input_buffer, '\n',
                                       boost::bind(&Game::handle_read_input, this,
@@ -42,10 +49,11 @@ private:
             _input_buffer.sgetn(_input_msg.buf(), length - 1);
             _input_buffer.consume(1); // Remove newline from input.
             _input_msg.push(length - 1);
+            _msgs.push(_input_msg.data());
             _input_msg.flush();
-
             async_read_input();
 
+            // mach ref
             // static char eol[] = { '\n' };
             // boost::array<boost::asio::const_buffer, 2> buffers = {{
             //         boost::asio::buffer(_input_msg.data(), strlen(_input_msg.data())),
@@ -58,18 +66,7 @@ private:
         } else if (error == boost::asio::error::not_found){ // Didn't get a newline
             _input_buffer.sgetn(_input_msg.buf(), InputMsg::max_length);
             _input_msg.push(InputMsg::max_length);
-
             async_read_input();
-
-            // static char eol[] = { '\n' };
-            // boost::array<boost::asio::const_buffer, 2> buffers = {{
-            //         boost::asio::buffer(_input_msg.data(), strlen(_input_msg.data())),
-            //         boost::asio::buffer(eol)
-            //     }};
-            // boost::asio::async_write(_output, buffers,
-            //                          boost::bind(&Game::handle_write_output, this,
-            //                                      boost::asio::placeholders::error));
-
         } else { // mach restart stdin and stdout if er
             close();
             throw error.message();
@@ -89,11 +86,6 @@ private:
         }
     }
 
-private:
-    posix::stream_descriptor _input;
-    posix::stream_descriptor _output;
-    InputMsg _input_msg;
-    boost::asio::streambuf _input_buffer;
 };
 
 int main(int argc, char* argv[]){

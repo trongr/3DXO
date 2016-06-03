@@ -24,11 +24,13 @@ public:
         return _msg.c_str();
     }
 
+    // pushes buffer content to _msg
     void push(size_t length){
         _buf[length] = '\0';
         _msg.append(_buf);
     }
 
+    // clears _msg for next user input
     void flush(){
         _msg = "";
     }

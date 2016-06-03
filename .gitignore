@@ -4,3 +4,4 @@ logs
 tmp
 node_modules
 dump.rdb
+obj
