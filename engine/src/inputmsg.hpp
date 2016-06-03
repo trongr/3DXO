@@ -1,40 +1,41 @@
-#ifndef INPUT_HPP
-#define INPUT_HPP
+#ifndef INPUTMSG_HPP
+#define INPUTMSG_HPP
 
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 
-class InputMsg
-{
+using namespace std;
+
+class InputMsg {
 public:
     enum { max_length = 10 };
 
-    InputMsg()
-        : _length(0)
-    {
+    InputMsg(){
+
     }
 
-    char* data()
-    {
-        return data_;
+    char* buf(){
+        return _buf;
     }
 
-    size_t length() const
-    {
-        return _length;
+    const char* data(){
+        return _msg.c_str();
     }
 
-    void length(size_t new_length)
-    {
-        _length = new_length;
-        if (_length > max_length)
-            _length = max_length;
+    void push(size_t length){
+        _buf[length] = '\0';
+        _msg.append(_buf);
+    }
+
+    void flush(){
+        _msg = "";
     }
 
 private:
-    char data_[max_length];
-    size_t _length;
+    string _msg;
+    char _buf[max_length + 1]; // +1 for null terminator
 };
 
-#endif // INPUT_HPP
+#endif // INPUTMSG_HPP

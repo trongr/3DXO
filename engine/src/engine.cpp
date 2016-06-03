@@ -10,6 +10,7 @@
 
 using boost::asio::ip::tcp;
 namespace posix = boost::asio::posix;
+using namespace std;
 
 class Game {
 public:
@@ -38,31 +39,36 @@ private:
     void handle_read_input(const boost::system::error_code& error,
                            std::size_t length){
         if (!error){
-            _input_msg.length(length - 1);
-            _input_buffer.sgetn(_input_msg.data(), length - 1);
+            _input_buffer.sgetn(_input_msg.buf(), length - 1);
             _input_buffer.consume(1); // Remove newline from input.
+            _input_msg.push(length - 1);
+            _input_msg.flush();
 
-            static char eol[] = { '\n' };
-            boost::array<boost::asio::const_buffer, 2> buffers = {{
-                    boost::asio::buffer(_input_msg.data(), _input_msg.length()),
-                    boost::asio::buffer(eol)
-                }};
-            boost::asio::async_write(_output, buffers,
-                                     boost::bind(&Game::handle_write_output, this,
-                                                 boost::asio::placeholders::error));
+            async_read_input();
+
+            // static char eol[] = { '\n' };
+            // boost::array<boost::asio::const_buffer, 2> buffers = {{
+            //         boost::asio::buffer(_input_msg.data(), strlen(_input_msg.data())),
+            //         boost::asio::buffer(eol)
+            //     }};
+            // boost::asio::async_write(_output, buffers,
+            //                          boost::bind(&Game::handle_write_output, this,
+            //                                      boost::asio::placeholders::error));
 
         } else if (error == boost::asio::error::not_found){ // Didn't get a newline
-            _input_msg.length(_input_buffer.size());
-            _input_buffer.sgetn(_input_msg.data(), _input_buffer.size());
+            _input_buffer.sgetn(_input_msg.buf(), InputMsg::max_length);
+            _input_msg.push(InputMsg::max_length);
 
-            static char eol[] = { '\n' };
-            boost::array<boost::asio::const_buffer, 2> buffers = {{
-                    boost::asio::buffer(_input_msg.data(), _input_msg.length()),
-                    boost::asio::buffer(eol)
-                }};
-            boost::asio::async_write(_output, buffers,
-                                     boost::bind(&Game::handle_write_output, this,
-                                                 boost::asio::placeholders::error));
+            async_read_input();
+
+            // static char eol[] = { '\n' };
+            // boost::array<boost::asio::const_buffer, 2> buffers = {{
+            //         boost::asio::buffer(_input_msg.data(), strlen(_input_msg.data())),
+            //         boost::asio::buffer(eol)
+            //     }};
+            // boost::asio::async_write(_output, buffers,
+            //                          boost::bind(&Game::handle_write_output, this,
+            //                                      boost::asio::placeholders::error));
 
         } else { // mach restart stdin and stdout if er
             close();
