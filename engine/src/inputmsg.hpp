@@ -16,28 +16,28 @@ public:
 
     }
 
-    char* buf(){
-        return _buf;
+    char* getBuf(){
+        return buf;
     }
 
-    const char* data(){
-        return _msg.c_str();
+    const char* getData(){
+        return msg.c_str();
     }
 
-    // pushes buffer content to _msg
+    // pushes buffer content to msg
     void push(size_t length){
-        _buf[length] = '\0';
-        _msg.append(_buf);
+        buf[length] = '\0';
+        msg.append(buf);
     }
 
-    // clears _msg for next user input
+    // clears msg for next user input
     void flush(){
-        _msg = "";
+        msg = "";
     }
 
 private:
-    string _msg;
-    char _buf[max_length + 1]; // +1 for null terminator
+    string msg;
+    char buf[max_length + 1]; // +1 for null terminator
 };
 
 #endif // INPUTMSG_HPP

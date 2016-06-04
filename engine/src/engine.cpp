@@ -16,9 +16,9 @@ using namespace std;
 class Game {
 public:
     Game(boost::asio::io_service& io_service)
-        : _input(io_service, ::dup(STDIN_FILENO)),
-          _output(io_service, ::dup(STDOUT_FILENO)),
-          _input_buffer(InputMsg::max_length){
+        : input(io_service, ::dup(STDIN_FILENO)),
+          output(io_service, ::dup(STDOUT_FILENO)),
+          inputbuf(InputMsg::max_length){
 
         async_read_input();
 
@@ -30,42 +30,52 @@ public:
 
 private:
 
-    posix::stream_descriptor _input;
-    posix::stream_descriptor _output;
-    boost::asio::streambuf _input_buffer;
-    InputMsg _input_msg;
-    queue<string> _msgs;
+    posix::stream_descriptor input;
+    posix::stream_descriptor output;
+    boost::asio::streambuf inputbuf;
+    InputMsg inputmsg;
+    queue<string> msgs;
 
     void async_read_input(){
-        boost::asio::async_read_until(_input, _input_buffer, '\n',
+        boost::asio::async_read_until(input, inputbuf, '\n',
                                       boost::bind(&Game::handle_read_input, this,
                                                   boost::asio::placeholders::error,
                                                   boost::asio::placeholders::bytes_transferred));
     }
 
+    int count = 0; // mach
+
     void handle_read_input(const boost::system::error_code& error,
                            std::size_t length){
         if (!error){
-            _input_buffer.sgetn(_input_msg.buf(), length - 1);
-            _input_buffer.consume(1); // Remove newline from input.
-            _input_msg.push(length - 1);
-            _msgs.push(_input_msg.data());
-            _input_msg.flush();
+            inputbuf.sgetn(inputmsg.getBuf(), length - 1);
+            inputbuf.consume(1); // Remove newline from input.
+            inputmsg.push(length - 1);
+            msgs.push(inputmsg.getData());
+            inputmsg.flush();
             async_read_input();
+
+            // mach
+            if (count++ % 4 == 0){
+                while (!msgs.empty()){
+                    cout << "you sent: " << msgs.front() << endl;
+                    msgs.pop();
+                }
+            }
 
             // mach ref
             // static char eol[] = { '\n' };
             // boost::array<boost::asio::const_buffer, 2> buffers = {{
-            //         boost::asio::buffer(_input_msg.data(), strlen(_input_msg.data())),
+            //         boost::asio::buffer(inputmsg.getData(), strlen(inputmsg.getData())),
             //         boost::asio::buffer(eol)
             //     }};
-            // boost::asio::async_write(_output, buffers,
+            // boost::asio::async_write(output, buffers,
             //                          boost::bind(&Game::handle_write_output, this,
             //                                      boost::asio::placeholders::error));
 
         } else if (error == boost::asio::error::not_found){ // Didn't get a newline
-            _input_buffer.sgetn(_input_msg.buf(), InputMsg::max_length);
-            _input_msg.push(InputMsg::max_length);
+            inputbuf.sgetn(inputmsg.getBuf(), InputMsg::max_length);
+            inputmsg.push(InputMsg::max_length);
             async_read_input();
         } else { // mach restart stdin and stdout if er
             close();
@@ -79,8 +89,8 @@ private:
 
     void close(){
         try {
-            _input.close();
-            _output.close();
+            input.close();
+            output.close();
         } catch (std::exception& e){
 
         }
@@ -91,7 +101,7 @@ private:
 int main(int argc, char* argv[]){
     try {
         if (argc != 1){
-            std::cerr << "Usage: game\n";
+            std::cerr << "Usage: engine\n";
             return 1;
         }
         boost::asio::io_service io_service;
