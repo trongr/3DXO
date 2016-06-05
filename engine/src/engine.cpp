@@ -5,6 +5,7 @@
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include "inputmsg.hpp"
 
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
@@ -16,12 +17,14 @@ using namespace std;
 class Game {
 public:
     Game(boost::asio::io_service& io_service)
-        : input(io_service, ::dup(STDIN_FILENO)),
+        : io_service(io_service),
+          timer(io_service, boost::posix_time::millisec(UPDATE_INTERVAL)),
+          input(io_service, ::dup(STDIN_FILENO)),
           output(io_service, ::dup(STDOUT_FILENO)),
           inputbuf(InputMsg::max_length){
 
         async_read_input();
-
+        loop();
     }
 
     ~Game(){
@@ -30,11 +33,28 @@ public:
 
 private:
 
+    const int UPDATE_INTERVAL = 250; // game loop period in ms
+
+    boost::asio::io_service& io_service;
+    boost::asio::deadline_timer timer;
     posix::stream_descriptor input;
     posix::stream_descriptor output;
     boost::asio::streambuf inputbuf;
     InputMsg inputmsg;
     queue<string> msgs;
+
+    void loop(){
+        timer.async_wait(boost::bind(&Game::update, this));
+    }
+
+    void update(){
+        while (!msgs.empty()){
+            cout << "you sent: " << msgs.front() << endl;
+            msgs.pop();
+        }
+        timer.expires_at(timer.expires_at() + boost::posix_time::millisec(UPDATE_INTERVAL));
+        timer.async_wait(boost::bind(&Game::update, this));
+    }
 
     void async_read_input(){
         boost::asio::async_read_until(input, inputbuf, '\n',
@@ -42,8 +62,6 @@ private:
                                                   boost::asio::placeholders::error,
                                                   boost::asio::placeholders::bytes_transferred));
     }
-
-    int count = 0; // mach
 
     void handle_read_input(const boost::system::error_code& error,
                            std::size_t length){
@@ -54,14 +72,6 @@ private:
             msgs.push(inputmsg.getData());
             inputmsg.flush();
             async_read_input();
-
-            // mach
-            if (count++ % 4 == 0){
-                while (!msgs.empty()){
-                    cout << "you sent: " << msgs.front() << endl;
-                    msgs.pop();
-                }
-            }
 
             // mach ref
             // static char eol[] = { '\n' };
