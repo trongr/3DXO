@@ -6,4 +6,4 @@ node_modules
 dump.rdb
 
 obj
-engine
+engine/engine
