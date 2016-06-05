@@ -17,3 +17,6 @@ sudo apt-get update
 sudo apt-get install -y mongodb-org
 
 sudo apt-get install -y htop
+
+./bin/install/boost.sh
+./bin/install/rapidjson.sh

@@ -1,3 +1,5 @@
+#define NDEBUG
+
 #include <queue>
 #include <cstdlib>
 #include <cstring>
@@ -6,12 +8,16 @@
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 #include "inputmsg.hpp"
 
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 
 using boost::asio::ip::tcp;
 namespace posix = boost::asio::posix;
+using namespace rapidjson;
 using namespace std;
 
 class Game {
@@ -49,8 +55,31 @@ private:
 
     void update(){
         while (!msgs.empty()){
-            cout << "you sent: " << msgs.front() << endl;
+            Document d;
+            d.Parse(msgs.front().c_str());
             msgs.pop();
+
+            if (!d.HasMember("method") ||
+                !d.HasMember("i") ||
+                !d.HasMember("count") ||
+                !d.HasMember("data")){
+                continue;
+            }
+            cout << "receiving method: " << d["method"].GetString() << endl;
+            cout << "receiving i: " << d["i"].GetInt() << endl;
+            cout << "receiving count: " << d["count"].GetInt() << endl;
+            {
+                const Value& data = d["data"];
+                if (!data.IsArray()) continue;
+                for (SizeType i = 0; i < data.Size(); i++){
+                    cout << "receiving data " << data[i].GetString() << endl;
+                }
+            }
+
+            // StringBuffer buffer;
+            // Writer<StringBuffer> writer(buffer);
+            // d.Accept(writer);
+            // std::cout << buffer.GetString() << std::endl;
         }
         timer.expires_at(timer.expires_at() + boost::posix_time::millisec(UPDATE_INTERVAL));
         timer.async_wait(boost::bind(&Game::update, this));
@@ -118,7 +147,7 @@ int main(int argc, char* argv[]){
         Game game(io_service);
         io_service.run();
     } catch (std::exception& e){
-        std::cerr << "Exception: " << e.what() << "\n";
+        std::cerr << "engine.main: " << e.what() << "\n";
     }
     return 0;
 }

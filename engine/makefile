@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -g -Wall -std=c++11
-INCLUDES = -I$(HOME)/
+INCLUDES = -I$(HOME)/include
 LFLAGS = -L$(HOME)/lib
 LIBS = -lboost_system -lboost_thread -lpthread
 MAIN = engine
