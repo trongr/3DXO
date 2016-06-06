@@ -2,7 +2,7 @@
 
 #include <queue>
 #include <cstdlib>
-#include <cstring>
+#include <string>
 #include <iostream>
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
@@ -12,6 +12,7 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 #include "inputmsg.hpp"
+#include "grid.hpp"
 
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 
@@ -24,10 +25,10 @@ class Game {
 public:
     Game(boost::asio::io_service& io_service)
         : io_service(io_service),
-          timer(io_service, boost::posix_time::millisec(UPDATE_INTERVAL)),
-          input(io_service, ::dup(STDIN_FILENO)),
-          output(io_service, ::dup(STDOUT_FILENO)),
-          inputbuf(InputMsg::max_length){
+        timer(io_service, boost::posix_time::millisec(UPDATE_INTERVAL)),
+        input(io_service, ::dup(STDIN_FILENO)),
+        output(io_service, ::dup(STDOUT_FILENO)),
+        inputbuf(InputMsg::max_length){
 
         async_read_input();
         loop();
@@ -48,6 +49,7 @@ private:
     boost::asio::streambuf inputbuf;
     InputMsg inputmsg;
     queue<string> msgs;
+    Grid grid;
 
     void loop(){
         timer.async_wait(boost::bind(&Game::update, this));
@@ -56,13 +58,19 @@ private:
     void update(){
         while (!msgs.empty()){
             Document d;
-            d.Parse(msgs.front().c_str());
+            string s = msgs.front();
             msgs.pop();
+
+            if (d.Parse(s.c_str()).HasParseError()){
+                cerr << "ERROR. engine.update.rapidjson.zero: " << s << endl;
+                continue;
+            }
 
             if (!d.HasMember("method") ||
                 !d.HasMember("i") ||
                 !d.HasMember("count") ||
                 !d.HasMember("data")){
+                cerr << "ERROR. engine.update.rapidjson.one: " << s << endl;
                 continue;
             }
             cout << "receiving method: " << d["method"].GetString() << endl;
@@ -70,7 +78,10 @@ private:
             cout << "receiving count: " << d["count"].GetInt() << endl;
             {
                 const Value& data = d["data"];
-                if (!data.IsArray()) continue;
+                if (!data.IsArray()){
+                    cerr << "ERROR. engine.update.rapidjson.two: " << s << endl;
+                    continue;
+                }
                 for (SizeType i = 0; i < data.Size(); i++){
                     cout << "receiving data " << data[i].GetString() << endl;
                 }
@@ -147,7 +158,7 @@ int main(int argc, char* argv[]){
         Game game(io_service);
         io_service.run();
     } catch (std::exception& e){
-        std::cerr << "engine.main: " << e.what() << "\n";
+        std::cerr << "ERROR. engine.main: " << e.what() << "\n";
     }
     return 0;
 }
