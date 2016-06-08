@@ -3,7 +3,6 @@
 
 #include <string>
 #include <vector>
-#include <unordered_map>
 #include "tile.hpp"
 
 class Grid {
@@ -11,12 +10,11 @@ public:
 
 Grid();
 ~Grid();
+bool addUnit(std::string type, std::vector<int> xyz);
 
 private:
 
 const int WIDTH = 10; // mach adjust
-// mach make it an index of game objects instead of Tile
-std::unordered_map<int, Tile> index;
 std::vector<std::vector<Tile>> grid;
 
 void genTiles();

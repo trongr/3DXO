@@ -57,36 +57,9 @@ private:
 
     void update(){
         while (!msgs.empty()){
-            Document d;
             string s = msgs.front();
             msgs.pop();
-
-            if (d.Parse(s.c_str()).HasParseError()){
-                cerr << "ERROR. engine.update.rapidjson.zero: " << s << endl;
-                continue;
-            }
-
-            if (!d.HasMember("method") ||
-                !d.HasMember("i") ||
-                !d.HasMember("count") ||
-                !d.HasMember("data")){
-                cerr << "ERROR. engine.update.rapidjson.one: " << s << endl;
-                continue;
-            }
-            cout << "receiving method: " << d["method"].GetString() << endl;
-            cout << "receiving i: " << d["i"].GetInt() << endl;
-            cout << "receiving count: " << d["count"].GetInt() << endl;
-            {
-                const Value& data = d["data"];
-                if (!data.IsArray()){
-                    cerr << "ERROR. engine.update.rapidjson.two: " << s << endl;
-                    continue;
-                }
-                for (SizeType i = 0; i < data.Size(); i++){
-                    cout << "receiving data " << data[i].GetString() << endl;
-                }
-            }
-
+            processInput(s);
             // StringBuffer buffer;
             // Writer<StringBuffer> writer(buffer);
             // d.Accept(writer);
@@ -144,6 +117,36 @@ private:
         } catch (std::exception& e){
 
         }
+    }
+
+    void processInput(string s){
+        Document d;
+        if (d.Parse(s.c_str()).HasParseError()){
+            cerr << "ERROR. engine.update.rapidjson.zero: " << s << endl;
+            return;
+        }
+
+        if (!d.HasMember("method") ||
+            !d.HasMember("i") ||
+            !d.HasMember("count") ||
+            !d.HasMember("data")){
+            cerr << "ERROR. engine.update.rapidjson.one: " << s << endl;
+            return;
+        }
+        cout << "receiving method: " << d["method"].GetString() << endl;
+        cout << "receiving i: " << d["i"].GetInt() << endl;
+        cout << "receiving count: " << d["count"].GetInt() << endl;
+        {
+            const Value& data = d["data"];
+            if (!data.IsArray()){
+                cerr << "ERROR. engine.update.rapidjson.two: " << s << endl;
+                return;
+            }
+            for (SizeType i = 0; i < data.Size(); i++){
+                cout << "receiving data " << data[i].GetString() << endl;
+            }
+        }
+
     }
 
 };
