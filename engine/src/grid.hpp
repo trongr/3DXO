@@ -8,16 +8,20 @@
 class Grid {
 public:
 
-Grid();
-~Grid();
-bool addUnit(std::string type, std::vector<int> xyz);
+    Grid();
+    ~Grid();
+
+    void printTiles();
+
+    void makeArmy(int playerID);
+    bool makeUnit(int playerID, std::string type, std::vector<int> xyz);
 
 private:
 
-const int WIDTH = 10; // mach adjust
-std::vector<std::vector<Tile>> grid;
+    const int WIDTH = 10; // mach adjust
+    std::vector<std::vector<Tile>> grid;
 
-void genTiles();
+    void makeTiles();
 
 };
 

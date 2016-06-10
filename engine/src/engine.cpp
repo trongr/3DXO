@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <string>
 #include <iostream>
+#include <unordered_map>
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
@@ -13,10 +14,10 @@
 #include "rapidjson/stringbuffer.h"
 #include "inputmsg.hpp"
 #include "grid.hpp"
+#include "player.hpp"
 
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 
-using boost::asio::ip::tcp;
 namespace posix = boost::asio::posix;
 using namespace rapidjson;
 using namespace std;
@@ -50,6 +51,7 @@ private:
     InputMsg inputmsg;
     queue<string> msgs;
     Grid grid;
+    std::unordered_map<int, std::shared_ptr<Player>> players;
 
     void loop(){
         timer.async_wait(boost::bind(&Game::update, this));
@@ -122,31 +124,48 @@ private:
     void processInput(string s){
         Document d;
         if (d.Parse(s.c_str()).HasParseError()){
-            cerr << "ERROR. engine.update.rapidjson.zero: " << s << endl;
+            cerr << "ERROR. engine.processInput.rapidjson.zero: " << s << endl;
             return;
         }
 
-        if (!d.HasMember("method") ||
-            !d.HasMember("i") ||
-            !d.HasMember("count") ||
-            !d.HasMember("data")){
-            cerr << "ERROR. engine.update.rapidjson.one: " << s << endl;
+        if (!d.HasMember("method")){
+            cerr << "ERROR. engine.processInput.rapidjson.one: " << s << endl;
             return;
         }
-        cout << "receiving method: " << d["method"].GetString() << endl;
-        cout << "receiving i: " << d["i"].GetInt() << endl;
-        cout << "receiving count: " << d["count"].GetInt() << endl;
-        {
-            const Value& data = d["data"];
-            if (!data.IsArray()){
-                cerr << "ERROR. engine.update.rapidjson.two: " << s << endl;
-                return;
-            }
-            for (SizeType i = 0; i < data.Size(); i++){
-                cout << "receiving data " << data[i].GetString() << endl;
-            }
-        }
+        string method = d["method"].GetString();
 
+        if (method == "makeplayer") makePlayer();
+        else if (method == "getzone") getZone(d);
+
+        // {
+        //     const Value& data = d["data"];
+        //     if (!data.IsArray()){
+        //         cerr << "ERROR. engine.processInput.rapidjson.two: " << s << endl;
+        //         return;
+        //     }
+        //     for (SizeType i = 0; i < data.Size(); i++){
+        //         cout << "receiving data " << data[i].GetString() << endl;
+        //     }
+        // }
+
+    }
+
+    void makePlayer(){
+        auto p = make_shared<Player>();
+        int playerID = p->getID();
+        players[playerID] = p;
+        // grid.makeArmy(playerID);
+        // grid.printTiles();
+    }
+
+    void getZone(const rapidjson::Document& d){
+        if (!d.HasMember("x") || !d.HasMember("y")){
+            cerr << "ERROR. engine.getZone.rapidjson\n";
+            return;
+        }
+        int x = d["x"].GetInt();
+        int y = d["y"].GetInt();
+        cerr << "getting zone " << x << " " << y << endl;
     }
 
 };

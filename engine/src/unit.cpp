@@ -11,8 +11,9 @@ Unit::Unit(){
 
 }
 
-Unit::Unit(string type, std::vector<int> xyz):
+Unit::Unit(int playerID, string type, std::vector<int> xyz):
     id(curID++),
+    playerID(playerID),
     type(type),
     xyz(xyz)
 {

@@ -27,10 +27,12 @@ function main(){
         var count = 0
         setInterval(function(){
             cmd.stdin.write(JSON.stringify({
-                method: "post",
-                i: i,
-                count: count,
-                data: [randomstring.generate(10)]
+                method: "makeplayer",
+                x: 10,
+                y: 21,
+                // i: i,
+                // count: count,
+                // data: [randomstring.generate(10)]
             }) + "\n");
         }, 1000)
         done(null)

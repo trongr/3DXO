@@ -9,7 +9,7 @@ public:
 
     Unit();
     ~Unit();
-    Unit(std::string type, std::vector<int> xyz);
+    Unit(int playerID, std::string type, std::vector<int> xyz);
 
     int getID(){ return id; }
     std::string getType(){ return type; }
@@ -21,6 +21,7 @@ private:
     static std::unordered_map<int, std::shared_ptr<Unit>> index;
 
     int id;
+    int playerID;
     std::string type;
     std::vector<int> xyz;
 
