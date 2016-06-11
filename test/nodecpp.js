@@ -25,7 +25,7 @@ function main(){
     var N = 1
     async.times(N, function(i, done){
         var count = 0
-        setInterval(function(){
+        // setInterval(function(){
             cmd.stdin.write(JSON.stringify({
                 method: "makeplayer",
                 x: 10,
@@ -34,7 +34,7 @@ function main(){
                 // count: count,
                 // data: [randomstring.generate(10)]
             }) + "\n");
-        }, 1000)
+        // }, 1000)
         done(null)
     }, function(er){
         console.log("async.times.done", er)

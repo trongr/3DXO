@@ -154,8 +154,8 @@ private:
         Player p = Player();
         int playerID = p.getID();
         players.emplace(playerID, p);
-        // grid.makeArmy(playerID);
-        // grid.printTiles();
+        grid.makeArmy(playerID);
+        grid.printTiles();
     }
 
     void getZone(const rapidjson::Document& d){

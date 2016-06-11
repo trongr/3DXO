@@ -18,6 +18,9 @@ public:
 
 private:
 
+    int unitCount; // increasing unit ID
+    std::unordered_map<int, std::shared_ptr<Unit>> unitIndex;
+
     const int WIDTH = 10; // mach adjust
     std::vector<std::vector<Tile>> grid;
 

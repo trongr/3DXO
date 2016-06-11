@@ -4,6 +4,7 @@
 using namespace std;
 
 Grid::Grid():
+    unitCount(0),
     grid(WIDTH, vector<Tile>(WIDTH))
 {
     makeTiles();
@@ -16,7 +17,7 @@ Grid::~Grid(){
 void Grid::printTiles(){
     for (int i = 0; i < WIDTH; i++){
         for (int j = 0; j < WIDTH; j++){
-            Tile t = Tile({i, j, 0});
+            Tile t = grid[i][j];
             if (t.isEmpty()){
                 cerr << ".";
             } else {
@@ -44,10 +45,12 @@ void Grid::makeTiles(){
 }
 
 bool Grid::makeUnit(int playerID, Unit::Type type, vector<int> xyz){
-    std::shared_ptr<Unit> u(new Unit(playerID, type, xyz));
-    Tile t = grid[xyz[0]][xyz[1]];
-    if (t.isEmpty()){
-        t.setUnit(u);
+    std::shared_ptr<Unit> u(new Unit(unitCount++, playerID, type, xyz));
+    unitIndex.emplace(u->getID(), u);
+    int x = xyz[0];
+    int y = xyz[1];
+    if (grid[x][y].isEmpty()){
+        grid[x][y].setUnit(u);
         return true;
     } else {
         return false;

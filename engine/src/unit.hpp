@@ -15,16 +15,13 @@ public:
 
     Unit();
     ~Unit();
-    Unit(int playerID, Type type, std::vector<int> xyz);
+    Unit(int unitID, int playerID, Type type, std::vector<int> xyz);
 
     int getID(){ return id; }
     Type getType(){ return type; }
     std::vector<int> getXYZ() const { return xyz; }
 
 private:
-
-    static int curID; // increasing unit ID
-    static std::unordered_map<int, std::shared_ptr<Unit>> index;
 
     int id;
     int playerID;
