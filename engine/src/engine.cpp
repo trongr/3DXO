@@ -51,7 +51,7 @@ private:
     InputMsg inputmsg;
     queue<string> msgs;
     Grid grid;
-    std::unordered_map<int, std::shared_ptr<Player>> players;
+    std::unordered_map<int, Player> players;
 
     void loop(){
         timer.async_wait(boost::bind(&Game::update, this));
@@ -151,9 +151,9 @@ private:
     }
 
     void makePlayer(){
-        auto p = make_shared<Player>();
-        int playerID = p->getID();
-        players[playerID] = p;
+        Player p = Player();
+        int playerID = p.getID();
+        players.emplace(playerID, p);
         // grid.makeArmy(playerID);
         // grid.printTiles();
     }

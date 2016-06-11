@@ -1,5 +1,3 @@
-#include <vector>
-#include <iostream>
 #include "tile.hpp"
 
 using namespace std;

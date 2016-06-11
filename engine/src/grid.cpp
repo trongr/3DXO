@@ -1,4 +1,3 @@
-#include <vector>
 #include <iostream>
 #include "grid.hpp"
 
@@ -21,18 +20,18 @@ void Grid::printTiles(){
             if (t.isEmpty()){
                 cerr << ".";
             } else {
-                cerr << t.getUnit()->getType();
+                cerr << Unit::TypeStrings[t.getUnit()->getType()];
             }
         }
-        cerr << endl;
+        cerr << "\n";
     }
 }
 
 // mach
 void Grid::makeArmy(int playerID){
-    makeUnit(playerID, "p", {0, 0, 0});
-    makeUnit(playerID, "p", {0, 1, 0});
-    makeUnit(playerID, "p", {0, 2, 0});
+    makeUnit(playerID, Unit::PAWN, {0, 0, 0});
+    makeUnit(playerID, Unit::PAWN, {0, 1, 0});
+    makeUnit(playerID, Unit::PAWN, {0, 2, 0});
 }
 
 void Grid::makeTiles(){
@@ -44,7 +43,7 @@ void Grid::makeTiles(){
     }
 }
 
-bool Grid::makeUnit(int playerID, string type, vector<int> xyz){
+bool Grid::makeUnit(int playerID, Unit::Type type, vector<int> xyz){
     std::shared_ptr<Unit> u(new Unit(playerID, type, xyz));
     Tile t = grid[xyz[0]][xyz[1]];
     if (t.isEmpty()){

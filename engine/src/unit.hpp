@@ -2,17 +2,23 @@
 #define UNIT_HPP
 
 #include <memory>
+#include <vector>
 #include <unordered_map>
+#include <map>
 
 class Unit: public std::enable_shared_from_this<Unit> {
 public:
 
+    enum Type {
+        PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING, CANNON
+    }; static std::map<Type, const char*> TypeStrings;
+
     Unit();
     ~Unit();
-    Unit(int playerID, std::string type, std::vector<int> xyz);
+    Unit(int playerID, Type type, std::vector<int> xyz);
 
     int getID(){ return id; }
-    std::string getType(){ return type; }
+    Type getType(){ return type; }
     std::vector<int> getXYZ() const { return xyz; }
 
 private:
@@ -22,7 +28,7 @@ private:
 
     int id;
     int playerID;
-    std::string type;
+    Type type;
     std::vector<int> xyz;
 
 };

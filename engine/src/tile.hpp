@@ -1,6 +1,7 @@
 #ifndef TILE_HPP
 #define TILE_HPP
 
+#include <vector>
 #include <memory>
 #include "unit.hpp"
 

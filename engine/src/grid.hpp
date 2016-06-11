@@ -14,7 +14,7 @@ public:
     void printTiles();
 
     void makeArmy(int playerID);
-    bool makeUnit(int playerID, std::string type, std::vector<int> xyz);
+    bool makeUnit(int playerID, Unit::Type type, std::vector<int> xyz);
 
 private:
 
