@@ -1,19 +1,19 @@
 #ifndef PLAYER_HPP
 #define PLAYER_HPP
 
+#include <string>
+
 class Player {
 public:
 
-    Player();
+    Player(std::string playerID);
 
     ~Player();
-    int getID() const { return id; }
+    std::string getID() const { return id; }
 
 private:
 
-    static int curID; // increasing unit ID
-
-    int id;
+    std::string id;
 
 };
 

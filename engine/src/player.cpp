@@ -4,12 +4,10 @@
 
 using namespace std;
 
-int Player::curID = 0;
-
-Player::Player():
-    id(curID++)
+Player::Player(string playerID):
+    id(playerID)
 {
-    cerr << "my player id " << id << " curID " << curID << endl;
+    // cerr << "my player id " << id << " playerCount " << playerCount << endl;
 }
 
 Player::~Player(){

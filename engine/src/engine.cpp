@@ -51,7 +51,7 @@ private:
     InputMsg inputmsg;
     queue<string> msgs;
     Grid grid;
-    std::unordered_map<int, Player> players;
+    std::unordered_map<string, Player> players;
 
     void loop(){
         timer.async_wait(boost::bind(&Game::update, this));
@@ -102,7 +102,7 @@ private:
             inputbuf.sgetn(inputmsg.getBuf(), InputMsg::max_length);
             inputmsg.push(InputMsg::max_length);
             async_read_input();
-        } else { // mach restart stdin and stdout if er
+        } else { // todo restart stdin and stdout if er
             close();
             throw error.message();
         }
@@ -124,17 +124,17 @@ private:
     void processInput(string s){
         Document d;
         if (d.Parse(s.c_str()).HasParseError()){
-            cerr << "ERROR. engine.processInput.rapidjson.zero: " << s << endl;
+            cerr << "ERROR. engine.processInput: invalid data " << s << endl;
             return;
         }
 
         if (!d.HasMember("method")){
-            cerr << "ERROR. engine.processInput.rapidjson.one: " << s << endl;
+            cerr << "ERROR. engine.processInput: no method " << s << endl;
             return;
         }
         string method = d["method"].GetString();
 
-        if (method == "makeplayer") makePlayer();
+        if (method == "makeplayer") makePlayer(d);
         else if (method == "getzone") getZone(d);
 
         // {
@@ -150,17 +150,21 @@ private:
 
     }
 
-    void makePlayer(){
-        Player p = Player();
-        int playerID = p.getID();
+    void makePlayer(const rapidjson::Document& d){
+        if (!d.HasMember("playerID")){
+            cerr << "ERROR. engine.makePlayer: invalid data\n";
+            return;
+        }
+        string playerID = d["playerID"].GetString();
+        Player p = Player(playerID);
         players.emplace(playerID, p);
         grid.makeArmy(playerID);
-        grid.printTiles();
+        // grid.printTiles();
     }
 
     void getZone(const rapidjson::Document& d){
         if (!d.HasMember("x") || !d.HasMember("y")){
-            cerr << "ERROR. engine.getZone.rapidjson\n";
+            cerr << "ERROR. engine.getZone: invalid data\n";
             return;
         }
         int x = d["x"].GetInt();

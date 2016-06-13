@@ -16,7 +16,7 @@ Unit::Unit(){
 
 }
 
-Unit::Unit(int unitID, int playerID, Type type, std::vector<int> xyz):
+Unit::Unit(int unitID, std::string playerID, Type type, std::vector<int> xyz):
     id(unitID),
     playerID(playerID),
     type(type),

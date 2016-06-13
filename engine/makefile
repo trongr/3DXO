@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -g -Wall -std=c++11
+CFLAGS = -g -Wall -std=c++11 -lstdc++
 INCLUDES = -I$(HOME)/include
 LFLAGS = -L$(HOME)/lib
 LIBS = -lboost_system -lboost_thread -lpthread

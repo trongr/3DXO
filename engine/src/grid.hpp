@@ -13,18 +13,20 @@ public:
 
     void printTiles();
 
-    void makeArmy(int playerID);
-    bool makeUnit(int playerID, Unit::Type type, std::vector<int> xyz);
+    void makeArmy(std::string playerID);
+    bool makeUnit(std::string playerID, Unit::Type type, std::vector<int> xyz);
+    const std::vector<std::vector<int>>& getPlayerPositions(){ return playerPositions; }
 
 private:
 
+    const int WIDTH = 50; // mach adjust
     int unitCount; // increasing unit ID
     std::unordered_map<int, std::shared_ptr<Unit>> unitIndex;
-
-    const int WIDTH = 10; // mach adjust
     std::vector<std::vector<Tile>> grid;
+    std::vector<std::vector<int>> playerPositions; // prefilled player positions
 
     void makeTiles();
+    void makePlayerPositions();
 
 };
 

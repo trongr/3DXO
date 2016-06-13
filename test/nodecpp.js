@@ -11,12 +11,18 @@ function main(){
     }).on('line', function(line) {
         console.log(line);
     });
+    readline.createInterface({
+        input     : cmd.stderr,
+        terminal  : false
+    }).on('line', function(line) {
+        console.log(line);
+    });
     // cmd.stdout.on('data', function(data){
     //     console.log(data.toString().trim())
     // })
-    cmd.stderr.on('data', function(data){
-        console.log(data.toString().trim())
-    })
+    // cmd.stderr.on('data', function(data){
+    //     console.log(data.toString().trim())
+    // })
     cmd.on('close', function(code){
         console.log("done", code)
         process.exit(code) // mach
@@ -28,8 +34,9 @@ function main(){
         // setInterval(function(){
             cmd.stdin.write(JSON.stringify({
                 method: "makeplayer",
-                x: 10,
-                y: 21,
+                playerID: "myplayeridstring",
+                // x: 10,
+                // y: 21,
                 // i: i,
                 // count: count,
                 // data: [randomstring.generate(10)]

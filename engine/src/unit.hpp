@@ -15,7 +15,7 @@ public:
 
     Unit();
     ~Unit();
-    Unit(int unitID, int playerID, Type type, std::vector<int> xyz);
+    Unit(int unitID, std::string playerID, Type type, std::vector<int> xyz);
 
     int getID(){ return id; }
     Type getType(){ return type; }
@@ -24,7 +24,7 @@ public:
 private:
 
     int id;
-    int playerID;
+    std::string playerID;
     Type type;
     std::vector<int> xyz;
 

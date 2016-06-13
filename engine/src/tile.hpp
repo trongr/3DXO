@@ -18,6 +18,7 @@ public:
     std::shared_ptr<Unit> getUnit(){ return unit; }
     void removeUnit(){ unit = nullptr; } // mach move this pointer to another tile
     void destroyUnit(){ unit = nullptr; }
+
     bool isEmpty(){ return unit == nullptr; }
 
 private:
