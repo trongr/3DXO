@@ -124,12 +124,12 @@ private:
     void processInput(string s){
         Document d;
         if (d.Parse(s.c_str()).HasParseError()){
-            cerr << "ERROR. engine.processInput: invalid data " << s << endl;
+            cerr << "ERROR. Game.processInput: invalid data " << s << endl;
             return;
         }
 
         if (!d.HasMember("method")){
-            cerr << "ERROR. engine.processInput: no method " << s << endl;
+            cerr << "ERROR. Game.processInput: no method " << s << endl;
             return;
         }
         string method = d["method"].GetString();
@@ -140,7 +140,7 @@ private:
         // {
         //     const Value& data = d["data"];
         //     if (!data.IsArray()){
-        //         cerr << "ERROR. engine.processInput.rapidjson.two: " << s << endl;
+        //         cerr << "ERROR. Game.processInput.rapidjson.two: " << s << endl;
         //         return;
         //     }
         //     for (SizeType i = 0; i < data.Size(); i++){
@@ -152,19 +152,23 @@ private:
 
     void makePlayer(const rapidjson::Document& d){
         if (!d.HasMember("playerID")){
-            cerr << "ERROR. engine.makePlayer: invalid data\n";
+            cerr << "ERROR. Game.makePlayer: invalid data\n";
             return;
         }
         string playerID = d["playerID"].GetString();
         Player p = Player(playerID);
         players.emplace(playerID, p);
         grid.makeArmy(playerID);
-        // grid.printTiles();
+        // bool ok = grid.makeArmy(playerID);
+        // if (!ok) // todo error to node
+
+        grid.printTiles();
+        cerr << "\n";
     }
 
     void getZone(const rapidjson::Document& d){
         if (!d.HasMember("x") || !d.HasMember("y")){
-            cerr << "ERROR. engine.getZone: invalid data\n";
+            cerr << "ERROR. Game.getZone: invalid data\n";
             return;
         }
         int x = d["x"].GetInt();
@@ -184,7 +188,7 @@ int main(int argc, char* argv[]){
         Game game(io_service);
         io_service.run();
     } catch (std::exception& e){
-        std::cerr << "ERROR. engine.main: " << e.what() << "\n";
+        std::cerr << "ERROR. Game.main: " << e.what() << "\n";
     }
     return 0;
 }

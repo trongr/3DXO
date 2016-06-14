@@ -28,17 +28,15 @@ function main(){
         process.exit(code) // mach
     })
 
-    var N = 1
+    var N = 10
     async.times(N, function(i, done){
-        var count = 0
         // setInterval(function(){
             cmd.stdin.write(JSON.stringify({
                 method: "makeplayer",
-                playerID: "myplayeridstring",
+                playerID: "player-" + i,
                 // x: 10,
                 // y: 21,
                 // i: i,
-                // count: count,
                 // data: [randomstring.generate(10)]
             }) + "\n");
         // }, 1000)

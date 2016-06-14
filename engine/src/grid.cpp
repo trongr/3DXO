@@ -32,23 +32,20 @@ void Grid::printTiles(){
     }
 }
 
-// mach
-void Grid::makeArmy(std::string playerID){
-    // makeUnit(playerID, Unit::PAWN, {0, 0, 0});
-    // makeUnit(playerID, Unit::PAWN, {0, 1, 0});
-    // makeUnit(playerID, Unit::PAWN, {0, 2, 0});
+bool Grid::makeArmy(std::string playerID){
     if (playerPositions.empty()){
-        cerr << "ERROR. grid.makeArmy: no more positions. TODO: generate more positions\n";
-        return;
+        cerr << "ERROR. Grid.makeArmy: no more positions. TODO: generate more positions\n";
+        return false;
     }
     vector<int> xy = playerPositions.back();
     playerPositions.pop_back();
     int x = xy.at(0);
     int y = xy.at(1);
-    cerr << "making army:" << x << " " << y << endl;
+    makeUnit(playerID, Unit::KING, {x, y, 0});
     // for (auto &pp : playerPositions){
     //     cerr << "what's going on " << pp[0] << " " << pp[1] << std::endl;
     // }
+    return true;
 }
 
 void Grid::makeTiles(){
@@ -61,15 +58,21 @@ void Grid::makeTiles(){
 
 void Grid::makePlayerPositions(){
     // PoissonGenerator's NumPoints isn't exact: roughly NumPoints *
-    // pi / 4, so we prefill extra player positions, just in case
-    int NumPoints = 10 * 3;
-	PoissonGenerator::DefaultPRNG PRNG;
-	const auto Points = PoissonGenerator::GeneratePoissonPoints( NumPoints, PRNG );
-	for ( auto i = Points.begin(); i != Points.end(); i++ ){
-		int x = int( i->x * WIDTH );
-		int y = int( i->y * WIDTH );
+    // pi / 4, so we prefill twice as many player positions, just in
+    // case:
+    int NumPoints = 2.0 * MAX_PLAYERS * 4.0 / 3.14;
+    PoissonGenerator::DefaultPRNG PRNG;
+    const auto Points = PoissonGenerator::GeneratePoissonPoints( NumPoints, PRNG );
+    for ( auto i = Points.begin(); i != Points.end(); i++ ){
+        if (i->x >= 1 || i->y >= 1 ||
+            i->x <  0 || i->y <  0){
+            cerr << "ERROR. Grid.makePlayerPositions: PoissonGenerator out of bounds\n";
+            continue;
+        }
+        int x = int( i->x * WIDTH );
+        int y = int( i->y * WIDTH );
         playerPositions.push_back({x, y});
-	}
+    }
 }
 
 bool Grid::makeUnit(std::string playerID, Unit::Type type, vector<int> xyz){
