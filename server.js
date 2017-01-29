@@ -64,6 +64,7 @@ app.use("/static", express.static('static'));
 app.get('/', function(req, res){
     res.sendFile(path.join(__dirname + '/static/index.html'))
 });
+app.get("/health", function(req, res){res.send({ok: true})})
 
 app.use('/api/v1/auth', Auth.router); // login and register
 app.use('/api/v1/piece', Pieces.router);
