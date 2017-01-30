@@ -514,8 +514,8 @@ var Console = (function(){
         Console.print("<h2 class='console_header' data-console-line='about'>About</h2>")
         Console.print("<div class='console_content' data-console-line='about'>Hello! My name is Trong. I'm a developer from Toronto, and Ragnarook is my first game. Enjoy!<br><br>"
                       // + "<a href='https://www.facebook.com/groups/1755519304678543/' target='_blank'>facebook</a> <a href='http://chessv2.tumblr.com/' target='_blank'>blog</a>"
-                      + "Join our <a href='https://www.facebook.com/groups/1755519304678543/' target='_blank'>facebook group</a> to give feedback.<br>"
-                      + "Watch me code Ragnarook live on <a href='https://www.twitch.tv/devgruxcon' target='_blank'>twitch.</a>"
+                      // + "Join our <a href='https://www.facebook.com/groups/1755519304678543/' target='_blank'>facebook group</a> to give feedback.<br>"
+                      // + "Watch me code Ragnarook live on <a href='https://www.twitch.tv/devgruxcon' target='_blank'>twitch.</a>"
                       // + "<br><br>Similar games. See <a href='https://en.wikipedia.org/wiki/Kung-Fu_Chess' target='_blank'>Kung-Fu Chess</a> "
                       // + "for a variant for two or four players. Recently a team from Japan has also made a physical two-player board: "
                       // + "<a href='https://www.reddit.com/r/gaming/comments/3lyryx/chess_too_boring_for_ya_not_anymore/' target='_blank'>Dengekisen.</a> "
