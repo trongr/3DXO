@@ -48,7 +48,7 @@ function initScans() {
             working = false
             console.log(new Date(), "Autokill: scan complete")
         })
-    }, 1000)
+    }, 3000)
 }
 
 function scanPieceAndAutokill(pieceID, done) {
@@ -84,7 +84,6 @@ function best_kill(pieceID, done) {
     })
 }
 
-
 function findAvailableKills(pieceID, done) {
     var piece = null
     var kills = []
@@ -117,7 +116,9 @@ function findAvailableKills(pieceID, done) {
                     Pieces.find_piece_at_xy(move_x, move_y, function(er, _piece) {
                         if (_piece) {
                             if (!_piece.player.equals(piece.player)) { // enemy piece: add to kill list
-                                kills.push([move_x, move_y])
+                                if (killProb(piece.kind, _piece.kind)){
+                                    kills.push([move_x, move_y])
+                                }
                             }
                             done(true) // stop looping this direction
                         } else done(null)
@@ -132,4 +133,26 @@ function findAvailableKills(pieceID, done) {
     ], function(er) {
         done(er, piece, kills)
     })
+}
+
+// return true if friendly can kill enemy
+function killProb(friendlyPieceKind, enemyPieceKind){
+    let friendlyFlip = flip(Conf.killProb[friendlyPieceKind])
+    let enemyFlip = flip(Conf.killProb[enemyPieceKind])
+    if (friendlyFlip > enemyFlip){
+        return true  
+    } else {
+        return false
+    }
+}
+
+// Flip a coin with probability p of getting H. E.g. a fair coin has
+// probability p = 0.5 of getting H, so it's 50-50 flip(.5) is 1 or 0. OTOH if
+// p = 0.1, that means the coin has a very low probability, 0.1, of getting H,
+// so flip(0.1) is more likely to return 0.
+// 
+// return 1 for H and 0 for T.
+function flip(p){
+    if (Math.random() < p) return 1
+    return 0
 }

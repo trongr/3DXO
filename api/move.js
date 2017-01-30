@@ -5,6 +5,8 @@ var Conf = require("../static/conf.json") // shared with client
 var DB = require("../db.js")
 var K = require("../k.js")
 
+const OK = "OK"
+
 var Move = module.exports = (function(){
     var Move = {}
 

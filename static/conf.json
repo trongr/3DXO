@@ -1,5 +1,5 @@
 {
-    "recharge": 1000,
+    "recharge": 3000,
     "zone_size": 8,
     "active_zone_half_width": 5,
     "max_chatters": 100,
@@ -24,5 +24,14 @@
         "queen": 8,
         "king": 1,
         "knight": 1
+    },
+    "killProb": {
+        "pawn": 0.3,
+        "rook": 0.5,
+        "cannon": 0.6,
+        "bishop": 0.4,
+        "knight": 0.4,
+        "queen": 0.7,
+        "king": 0.5
     }
 }

@@ -18,11 +18,11 @@ var K = (function(){
 
         // CAM_DIST_MAX: 100,
         // CAM_DIST_MAX: 150,
-        CAM_DIST_MAX: 200,
+        CAM_DIST_MAX: 120,
         // CAM_DIST_MAX: 2000,
         // CAM_DIST_MAX: 1000,
 
-        CAM_DIST_INIT: 65,
+        CAM_DIST_INIT: 100,
         // CAM_DIST_INIT: 150,
         // CAM_DIST_INIT: 700,
 

@@ -16,7 +16,7 @@ var Worker = module.exports = (function(){
 
     var CONCURRENCY = 1000
     var AUTOMOVE_INTERVAL = Conf.recharge
-    var AUTOMOVE_LOOP_MAX_ERCOUNT = 10
+    var AUTOMOVE_LOOP_MAX_ERCOUNT = 30
 
     Worker.init = function(){
         Jobs.listen({port: 8082})
@@ -123,7 +123,7 @@ var Worker = module.exports = (function(){
                         recent_moves = recent_moves.slice(-2)
                     }
                     working = false // continue
-                    ercount = 0
+                    // ercount = 0 // for now don't reset to save CPU cycles
                 }
             })
         }, 1000)
