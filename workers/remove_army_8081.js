@@ -22,7 +22,6 @@ var Worker = module.exports = (function(){
         var playerID = job.data.playerID
         var army_id = job.data.army_id
         Piece.remove_by_player_and_army_id(playerID, army_id, function(er, pieces){
-            console.log("mach remove_army", er, pieces)
             if (pieces){
                 Pub.removeMany(pieces)
                 Clocks.removeMany(pieces)

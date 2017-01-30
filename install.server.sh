@@ -11,7 +11,8 @@ cd "$root_dir"
 
 mkdir -p tmp logs
 forever stop server.js
-SESSION_SECRET="$1" REDIS_PASS="$2" MONGO_PASS="$3" forever start -o logs/server.o.txt -e logs/server.e.txt server.js
+SESSION_SECRET="$1" REDIS_PASS="$2" MONGO_PASS="$3" NODE_ENV=production \
+	forever start -o logs/server.o.txt -e logs/server.e.txt server.js
 
 # todo install scripts
 # if [[ $DEPS == true ]]; then

@@ -96,6 +96,13 @@ var Pieces = module.exports = (function(){
     }
 
     Pieces.set_player_army_alive = function(playerID, army_id, alive, done){
+        try {
+            playerID = DB.ObjectID(playerID)
+            army_id = DB.ObjectID(army_id)            
+        } catch (e){
+            console.log("ERROR. Pieces.set_player_army_alive: invalid playerID and army_id")
+            return done({error:"Pieces.set_player_army_alive"})
+        }
         DB.update("pieces", {
             player: playerID,
             army_id: army_id,

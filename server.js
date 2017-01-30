@@ -16,6 +16,9 @@ var Players = require("./api/players.js")
 var Teams = require("./api/teams.js")
 var Game = require("./api/game.js")
 var H = require("./static/js/h.js")
+const Autokill = require("./api/autokill.js")
+
+Autokill.init()
 
 app.use(session({
     store: new RedisStore({

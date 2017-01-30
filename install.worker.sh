@@ -11,4 +11,6 @@ worker="$1"
 worker_basename=$(basename "$worker")
 mkdir -p ../{tmp,logs}
 forever stop $worker_basename
-REDIS_PASS="$2" MONGO_PASS="$3" forever start -o ../logs/$worker_basename.o.txt -e ../logs/$worker_basename.e.txt $worker_basename
+REDIS_PASS="$2" MONGO_PASS="$3" NODE_ENV=production forever start \
+	-o ../logs/$worker_basename.o.txt \
+	-e ../logs/$worker_basename.e.txt $worker_basename

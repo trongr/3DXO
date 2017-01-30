@@ -77,8 +77,10 @@ var DB = module.exports = (function(){
         }
         _db.collection(table).findOne({
             _id: _id
-        }, function(err, doc) {
-            done(err, doc)
+        }, function(err, doc){
+            if (err) done(er)
+            else if (doc) done(null, doc)
+            else done({code: 404, info:"DB.findOneByID: item not found"})
         });
     }
 
