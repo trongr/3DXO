@@ -101,8 +101,7 @@ var Worker = module.exports = (function(){
                 }
             ], function(er){
                 // mach run automove until piece dies
-                // if ((er && ercount > AUTOMOVE_LOOP_MAX_ERCOUNT) || er == K.code.piece_timeout
-                if (er == K.code.job_cancelled){
+                if (ercount > AUTOMOVE_LOOP_MAX_ERCOUNT || er == K.code.job_cancelled){
                     clearInterval(automove_timeout)
                     done(er)
                 } else if (er){

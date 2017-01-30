@@ -122,10 +122,10 @@ var Move = module.exports = (function(){
             } else if (player._id.equals(piece.player)){
                 done(null)
             } else {
-                done(["ERROR. Game.Move.validatePlayerPiece", player, piece])
+                done(["ERROR. Move.validatePlayerPiece", player, piece])
             }
         } catch (e){
-            done(["ERROR. Game.Move.validatePlayerPiece.catch", player, piece, e.stack])
+            done(["ERROR. Move.validatePlayerPiece.catch", player, piece, e.stack])
         }
     }
 
